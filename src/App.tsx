@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import AuthPage from './AuthPage';
@@ -23,7 +23,17 @@ import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentM
 
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: User }) => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive activeTab cleanly from the browser URL path
+  const currentPath = location.pathname.replace('/', '') as ActiveTab;
+  const validTabs: ActiveTab[] = ['dashboard', 'timeline', 'bookings', 'finance', 'logs', 'settings'];
+  const activeTab: ActiveTab = validTabs.includes(currentPath) ? currentPath : 'dashboard';
+
+  const setActiveTab = (tab: ActiveTab) => {
+    navigate(`/${tab}`);
+  };
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [selectedBookingForAddOrder, setSelectedBookingForAddOrder] = useState<Booking | null>(null);
@@ -627,6 +637,30 @@ export function App() {
         <Route
           path="/dashboard"
           element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/timeline"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/bookings"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/finance"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/logs"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/settings"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/"
+          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
         />
         <Route
           path="*"

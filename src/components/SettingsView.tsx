@@ -60,7 +60,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <form onSubmit={handleSubmit} className="space-y-4 font-['Prompt'] max-w-5xl mx-auto pb-10">
       
       {/* Header & Save Action Bar */}
-      <div className="bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-16 z-20">
+      <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
             <Settings className="w-5 h-5 text-emerald-600" />
@@ -425,6 +425,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Bottom Save Action Bar */}
+      <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <span className="text-xs text-slate-500 font-medium">
+          ตรวจสอบข้อมูลให้ถูกต้องก่อนกดบันทึก
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleResetDefaults}
+            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
+          >
+            คืนค่าเริ่มต้น
+          </button>
+          <button
+            type="submit"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
+          >
+            {saveSuccess ? (
+              <>
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>บันทึกสำเร็จ!</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>บันทึกการตั้งค่า</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
     </form>
