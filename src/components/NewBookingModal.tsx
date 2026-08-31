@@ -11,6 +11,7 @@ import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
 import { ThaiDatePicker } from './ThaiDatePicker';
 import { sanitizePhoneInput } from '../utils/phoneUtils';
+import { generateBookingCode } from '../utils/dateUtils';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -153,7 +154,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
     const newBooking: Booking = {
       id: 'b-' + Date.now(),
-      bookingCode: 'BK-' + Math.floor(1000 + Math.random() * 9000),
+      bookingCode: generateBookingCode(checkInDate),
       guestName,
       guestPhone,
       channel: 'LINE Official',

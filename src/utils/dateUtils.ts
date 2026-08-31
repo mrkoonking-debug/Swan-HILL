@@ -62,3 +62,14 @@ export const formatThaiDateFull = (dateInput?: string | Date): string => {
 
   return `${dayName}ที่ ${day} ${month} ${yearBE}`;
 };
+
+/**
+ * Generates unified standard booking code: BK-YYYYMMDD-XXX
+ * Example: BK-20260831-101
+ */
+export const generateBookingCode = (dateInput: string | Date = new Date()): string => {
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const dateStr = !isNaN(d.getTime()) ? d.toISOString().slice(0, 10).replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.floor(100 + Math.random() * 900);
+  return `BK-${dateStr}-${rand}`;
+};

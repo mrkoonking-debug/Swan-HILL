@@ -11,6 +11,7 @@ import {
   Clock,
   CheckCircle2,
   User,
+  Users,
   MessageCircle,
   FileSpreadsheet,
   UtensilsCrossed,
@@ -268,7 +269,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           </div>
         ) : (
           displayedBookings.map((b) => {
-            const initials = b.guestName.replace(/คุณ/g, '').trim().slice(0, 2);
             const remainingBalance = Math.max(0, b.totalAmount - b.paidAmount);
 
             return (
@@ -282,10 +282,31 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               >
                 {/* Section 1: Customer Profile & Booking Code */}
                 <div className="flex items-start gap-3 min-w-[230px]">
-                  {/* Avatar Circle */}
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0 border border-slate-700">
-                    {initials || <User className="w-5 h-5" />}
-                  </div>
+                  {/* Left Status Badge (กำลังพัก / รอเช็คอิน / เช็คเอาท์ / ยกเลิก) */}
+                  {b.status === 'checked_in' && (
+                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-blue-500">
+                      <Users className="w-4 h-4 mb-0.5" />
+                      <span className="text-[10px] font-black tracking-tight leading-none">กำลังพัก</span>
+                    </div>
+                  )}
+                  {b.status === 'confirmed' && (
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-emerald-500">
+                      <Clock className="w-4 h-4 mb-0.5" />
+                      <span className="text-[10px] font-black tracking-tight leading-none">รอเช็คอิน</span>
+                    </div>
+                  )}
+                  {b.status === 'checked_out' && (
+                    <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-200 flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-slate-700">
+                      <CheckCircle2 className="w-4 h-4 mb-0.5 text-slate-400" />
+                      <span className="text-[10px] font-black tracking-tight leading-none">เช็คเอาท์</span>
+                    </div>
+                  )}
+                  {(b.status === 'cancelled' || !!b.deletedAt) && (
+                    <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-red-500">
+                      <Trash2 className="w-4 h-4 mb-0.5" />
+                      <span className="text-[10px] font-black tracking-tight leading-none">ยกเลิก</span>
+                    </div>
+                  )}
 
                   <div>
                     {/* Booking Code & Timestamp */}
