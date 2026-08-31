@@ -51,7 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenCheckoutModal,
 }) => {
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
-  const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
+  const [viewMode, setViewMode] = useState<'map' | 'grid'>('grid');
 
   const totalRooms = rooms.length;
   const availableRooms = rooms.filter(r => r.status === 'available').length;
@@ -59,14 +59,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const totalMonthRevenue = bookings.reduce((sum, b) => sum + b.paidAmount, 0);
 
-  // Group rooms by category
-  const largeRooms = rooms.filter(r => r.sizeCategory === 'large' || r.roomNumber === 'S3' || r.roomNumber === 'S4');
-  const mediumRooms = rooms.filter(r => r.sizeCategory === 'medium' || r.roomNumber === 'S1' || r.roomNumber === 'S2');
-  const smallRooms = rooms.filter(r => r.sizeCategory === 'small' || r.roomNumber === 'S5' || r.roomNumber === 'S6');
-
   // Map room lookup by number
   const roomMap: Record<string, Room | undefined> = {};
   rooms.forEach(r => { roomMap[r.roomNumber] = r; });
+
+  // Strictly order rooms sequentially: S1, S2 -> S3, S4 -> S5, S6
+  const mediumRooms = [roomMap['S1'], roomMap['S2']].filter((r): r is Room => Boolean(r));
+  const largeRooms = [roomMap['S3'], roomMap['S4']].filter((r): r is Room => Boolean(r));
+  const smallRooms = [roomMap['S5'], roomMap['S6']].filter((r): r is Room => Boolean(r));
 
   const renderRoomCard = (room: Room) => {
     const isAvailable = room.status === 'available';
@@ -336,7 +336,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2 pl-2">
           <Map className="w-4 h-4 text-emerald-600" />
           <span className="text-xs font-black text-slate-800">
-            {viewMode === 'map' ? 'ผังรีสอร์ทพื้นที่จริงรูปตัว L (Resort Map)' : 'มุมมองรายการการ์ดบ้านพัก (Grid View)'}
+            {viewMode === 'map' ? 'ผังรีสอร์ทพื้นที่จริงรูปตัว L' : 'มุมมองรายการการ์ดบ้านพักแยกตามขนาด'}
           </span>
         </div>
 
@@ -442,22 +442,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* VIEW 2: CATEGORIZED GRID VIEW */}
       {viewMode === 'grid' && (
         <div className="space-y-4">
-          {/* SECTION 1: บ้านพักหลังใหญ่ (S3, S4 - ฿1,500) */}
+          {/* SECTION 1: บ้านพักหลังกลาง (S1, S2 - ฿1,200) */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
-                <Home className="w-4 h-4 text-emerald-700" />
-                <span>บ้านพักหลังใหญ่ (1,500 บาท/คืน) - ห้อง S3, S4</span>
-              </h2>
-              <span className="text-[11px] text-emerald-700 font-bold">฿1,500</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
-              {largeRooms.map(renderRoomCard)}
-            </div>
-          </div>
-
-          {/* SECTION 2: บ้านพักหลังกลาง (S1, S2 - ฿1,200) */}
-          <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
                 <Home className="w-4 h-4 text-blue-700" />
@@ -467,6 +453,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
               {mediumRooms.map(renderRoomCard)}
+            </div>
+          </div>
+
+          {/* SECTION 2: บ้านพักหลังใหญ่ (S3, S4 - ฿1,500) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-emerald-700" />
+                <span>บ้านพักหลังใหญ่ (1,500 บาท/คืน) - ห้อง S3, S4</span>
+              </h2>
+              <span className="text-[11px] text-emerald-700 font-bold">฿1,500</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
+              {largeRooms.map(renderRoomCard)}
             </div>
           </div>
 
