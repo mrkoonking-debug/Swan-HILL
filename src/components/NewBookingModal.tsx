@@ -9,6 +9,7 @@ import {
 } from './MenuIcons';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
+import { sanitizePhoneInput } from '../utils/phoneUtils';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -223,15 +224,18 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-900 mb-1">
-                เบอร์โทรศัพท์ <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-900">
+                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">ใส่ได้ 1-2 เบอร์ (คั่นด้วย , ได้)</span>
+              </div>
               <input
-                type="tel"
+                type="text"
                 required
-                placeholder="เช่น 0812345678"
+                placeholder="เช่น 0812345678, 0899876543"
                 value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
+                onChange={(e) => setGuestPhone(sanitizePhoneInput(e.target.value))}
                 className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
               />
             </div>

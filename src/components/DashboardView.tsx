@@ -467,10 +467,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <Users className="w-3.5 h-3.5 text-blue-600" />
                     ชื่อผู้พัก: {selectedRoomModal.currentGuest.name}
                   </p>
-                  <p className="flex items-center gap-1.5 text-slate-700">
-                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                    เบอร์โทร: <a href={`tel:${selectedRoomModal.currentGuest.phone.replace(/[^0-9+]/g, '')}`} className="text-emerald-700 font-bold underline">{selectedRoomModal.currentGuest.phone} (กดโทร)</a>
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap text-slate-700">
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>เบอร์โทร:</span>
+                    </span>
+                    {selectedRoomModal.currentGuest.phone.split(/[,/\n]+/).map(p => p.trim()).filter(Boolean).map((ph, pIdx) => (
+                      <a 
+                        key={pIdx}
+                        href={`tel:${ph.replace(/[^0-9+]/g, '')}`} 
+                        className="text-emerald-700 font-bold bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200"
+                        title={`โทรหาเบอร์ ${ph}`}
+                      >
+                        {ph}
+                      </a>
+                    ))}
+                  </div>
                   <p className="text-slate-600 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     เข้าพัก: {selectedRoomModal.currentGuest.checkIn} ถึง {selectedRoomModal.currentGuest.checkOut}

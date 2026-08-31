@@ -294,15 +294,19 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {b.guestName}
                     </h3>
 
-                    {/* Phone & Channel */}
-                    <div className="flex items-center gap-2 text-xs text-slate-600 mt-1 flex-wrap font-medium">
-                      <a 
-                        href={`tel:${b.guestPhone.replace(/[^0-9+]/g, '')}`} 
-                        className="flex items-center gap-1 font-bold text-emerald-700 underline"
-                      >
-                        <Phone className="w-3 h-3 text-emerald-600" />
-                        {b.guestPhone}
-                      </a>
+                    {/* Phone Numbers & Channel */}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1 flex-wrap font-medium">
+                      {b.guestPhone.split(/[,/\n]+/).map(p => p.trim()).filter(Boolean).map((ph, pIdx) => (
+                        <a 
+                          key={pIdx}
+                          href={`tel:${ph.replace(/[^0-9+]/g, '')}`} 
+                          className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
+                          title={`โทรหาเบอร์ ${ph}`}
+                        >
+                          <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>{ph}</span>
+                        </a>
+                      ))}
                       <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                         <MessageCircle className="w-2.5 h-2.5 text-emerald-600" />
                         {b.channel}
