@@ -219,7 +219,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   title="รับชำระเงินส่วนที่ค้าง"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
-                  <span>รับเงิน ฿{remainingBalance.toLocaleString()}</span>
+                  <span>การชำระเงิน</span>
                 </button>
               )}
 
@@ -609,7 +609,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
                       >
                         <CreditCard className="w-4 h-4" />
-                        <span>บันทึกรับเงินที่ค้าง ฿{modalRemaining.toLocaleString()}</span>
+                        <span>จัดการการชำระเงิน (ค้าง ฿{modalRemaining.toLocaleString()})</span>
                       </button>
                     )}
 

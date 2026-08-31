@@ -448,7 +448,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                           title="รับชำระเงินส่วนที่ค้าง"
                         >
                           <CreditCard className="w-3.5 h-3.5" />
-                          <span>รับเงิน ฿{remainingBalance.toLocaleString()}</span>
+                          <span>การชำระเงิน</span>
                         </button>
                       )}
 
