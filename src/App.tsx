@@ -584,14 +584,19 @@ const MainDashboard = ({ user }: { user: User }) => {
         booking={selectedBookingForReceipt}
       />
 
-      {/* Record Payment Modal */}
+      {/* Record Payment Modal (FlowAccount Standard) */}
       <PaymentModal
         isOpen={!!selectedBookingForPayment}
         onClose={() => setSelectedBookingForPayment(null)}
         booking={selectedBookingForPayment}
+        settings={settings}
         onRecordPayment={handleRecordPayment}
         onUpdatePaymentTransaction={handleUpdatePaymentTransaction}
         onDeletePaymentTransaction={handleDeletePaymentTransaction}
+        onOpenReceipt={(b) => {
+          setSelectedBookingForPayment(null);
+          setSelectedBookingForReceipt(b);
+        }}
       />
 
       {/* Smart Checkout Confirmation Guard Modal */}

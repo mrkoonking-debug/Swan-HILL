@@ -24,7 +24,7 @@ export interface Room {
 
 export type BookingStatus = 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled';
 export type PaymentStatus = 'paid' | 'deposit' | 'pending';
-export type PaymentMethod = 'transfer' | 'cash' | 'qr';
+export type PaymentMethod = 'transfer' | 'cash' | 'qr' | 'credit_card' | 'other';
 
 export type AddOnCategory = 'bed' | 'mookata_small' | 'mookata_large' | 'breakfast' | 'drink' | 'custom';
 
@@ -41,9 +41,13 @@ export interface PaymentTransaction {
   id: string;
   amount: number;
   method: PaymentMethod;
+  bankAccount?: string; // e.g. "กสิกรไทย (098-X-XXXXX)"
+  slipImageUrl?: string; // Base64 or URL of payment slip image
   note?: string;
   paidAt: string; // ISO datetime string
   recordedBy?: string;
+  cashReceived?: number; // Cash received from guest
+  cashChange?: number; // Change given to guest
 }
 
 export interface Booking {
