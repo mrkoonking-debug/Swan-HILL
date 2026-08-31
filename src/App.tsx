@@ -13,8 +13,10 @@ import { FinanceView } from './components/FinanceView';
 import { NewBookingModal } from './components/NewBookingModal';
 import { AddOrderModal } from './components/AddOrderModal';
 import { ReceiptModal } from './components/ReceiptModal';
+import { PaymentModal } from './components/PaymentModal';
+import { CheckoutModal } from './components/CheckoutModal';
 import { initialRooms, initialBookings } from './data/initialData';
-import type { Room, Booking, RoomStatus, AddOnItem } from './types/pms';
+import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentMethod } from './types/pms';
 
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: User }) => {
@@ -22,6 +24,8 @@ const MainDashboard = ({ user }: { user: User }) => {
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [selectedBookingForAddOrder, setSelectedBookingForAddOrder] = useState<Booking | null>(null);
   const [selectedBookingForReceipt, setSelectedBookingForReceipt] = useState<Booking | null>(null);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
+  const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState<Booking | null>(null);
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,7 +36,6 @@ const MainDashboard = ({ user }: { user: User }) => {
     if (!saved) return initialRooms;
     try {
       const parsed: Room[] = JSON.parse(saved);
-      // If cached rooms don't match 6 rooms (S1-S6), reload initialRooms
       if (parsed.length !== 6 || !parsed.some(r => r.roomNumber === 'S6')) {
         return initialRooms;
       }
@@ -47,7 +50,6 @@ const MainDashboard = ({ user }: { user: User }) => {
     if (!saved) return initialBookings;
     try {
       const parsed: Booking[] = JSON.parse(saved);
-      // Auto-purge items in trash older than 15 days
       const now = Date.now();
       const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
       return parsed.filter(b => {
@@ -99,70 +101,91 @@ const MainDashboard = ({ user }: { user: User }) => {
     ));
   };
 
-  // Action: Check-out Guest
-  const handleCheckOutGuest = (bookingId: string) => {
+  // Action: Record Payment Transaction
+  const handleRecordPayment = (bookingId: string, transaction: PaymentTransaction) => {
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      
+      const newTransactions = [...(b.transactions || []), transaction];
+      const newPaidAmount = b.paidAmount + transaction.amount;
+      const roomBase = b.roomPrice * b.totalNights;
+      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : 'deposit';
+
+      return {
+        ...b,
+        paidAmount: newPaidAmount,
+        paymentStatus: newPaymentStatus,
+        transactions: newTransactions,
+      };
+    }));
+  };
+
+  // Action: Confirm Checkout (with optional payment collection)
+  const handleConfirmCheckout = (bookingId: string, paymentReceived?: { amount: number; method: PaymentMethod }) => {
     const b = bookings.find(item => item.id === bookingId);
-    if (!b) {
-      // Find by room's current guest
+    
+    setBookings(prev => prev.map(item => {
+      if (item.id !== bookingId) return item;
+
+      let updatedPaid = item.paidAmount;
+      let updatedTransactions = [...(item.transactions || [])];
+      let updatedStatus = item.paymentStatus;
+
+      if (paymentReceived) {
+        updatedPaid += paymentReceived.amount;
+        updatedTransactions.push({
+          id: 'tx-' + Date.now(),
+          amount: paymentReceived.amount,
+          method: paymentReceived.method,
+          note: 'ชำระยอดคงเหลือตอนเช็คเอาท์',
+          paidAt: new Date().toISOString(),
+        });
+        updatedStatus = 'paid';
+      }
+
+      return {
+        ...item,
+        status: 'checked_out',
+        paidAmount: updatedPaid,
+        paymentStatus: updatedStatus,
+        transactions: updatedTransactions,
+      };
+    }));
+
+    // Set Room Status to Cleaning
+    if (b) {
+      setRooms(prev => prev.map(r => 
+        r.id === b.roomId ? { ...r, status: 'cleaning', currentGuest: undefined } : r
+      ));
+    } else {
       setRooms(prev => prev.map(r => 
         r.currentGuest?.bookingId === bookingId ? { ...r, status: 'cleaning', currentGuest: undefined } : r
       ));
-      return;
     }
-
-    setBookings(prev => prev.map(item => 
-      item.id === bookingId ? { ...item, status: 'checked_out' } : item
-    ));
-
-    // Set Room Status to Cleaning
-    setRooms(prev => prev.map(r => 
-      r.id === b.roomId ? { ...r, status: 'cleaning', currentGuest: undefined } : r
-    ));
-  };
-
-  // Action: Move Booking to Trash (Soft Delete)
-  const handleCancelBooking = (bookingId: string) => {
-    const b = bookings.find(item => item.id === bookingId);
-    if (!b) return;
-
-    setBookings(prev => prev.map(item => 
-      item.id === bookingId ? { 
-        ...item, 
-        status: 'cancelled', 
-        deletedAt: new Date().toISOString() 
-      } : item
-    ));
-
-    // Free the room if currently checked in
-    if (b.status === 'checked_in') {
-      setRooms(prev => prev.map(r => 
-        r.id === b.roomId ? { ...r, status: 'available', currentGuest: undefined } : r
-      ));
-    }
-  };
-
-  // Action: Restore Booking from Trash
-  const handleRestoreBooking = (bookingId: string) => {
-    setBookings(prev => prev.map(item => 
-      item.id === bookingId ? { 
-        ...item, 
-        status: 'confirmed', 
-        deletedAt: undefined 
-      } : item
-    ));
-  };
-
-  // Action: Permanently Delete Booking
-  const handlePermanentDeleteBooking = (bookingId: string) => {
-    setBookings(prev => prev.filter(item => item.id !== bookingId));
   };
 
   // Action: Add New Booking
   const handleAddBooking = (newBooking: Booking) => {
     setBookings(prev => [newBooking, ...prev]);
 
-    // If booking starts today (2026-08-31), set to confirmed or occupied
-    if (newBooking.checkInDate === '2026-08-31') {
+    // Initial transaction if paid or deposited
+    if (newBooking.paidAmount > 0) {
+      newBooking.transactions = [
+        {
+          id: 'tx-init-' + Date.now(),
+          amount: newBooking.paidAmount,
+          method: 'transfer',
+          note: newBooking.paymentStatus === 'paid' ? 'ชำระค่าห้องพักเต็มจำนวน' : 'ชำระเงินมัดจำค่าห้อง',
+          paidAt: new Date().toISOString()
+        }
+      ];
+    }
+
+    // If checkInDate is today, set room status to occupied
+    const today = '2026-08-31';
+    if (newBooking.checkInDate === today) {
       setRooms(prev => prev.map(r => 
         r.id === newBooking.roomId ? {
           ...r,
@@ -179,20 +202,62 @@ const MainDashboard = ({ user }: { user: User }) => {
     }
   };
 
-  // Action: Update In-Stay Add-On Services (Extra beds, Mookata, Breakfast, Minibar)
-  const handleUpdateBookingAddOns = (bookingId: string, updatedAddOns: AddOnItem[]) => {
+  // Action: Update Add-Ons for Booking (In-Stay Ordering)
+  const handleUpdateBookingAddOns = (bookingId: string, newAddOns: AddOnItem[]) => {
     setBookings(prev => prev.map(b => {
       if (b.id !== bookingId) return b;
-      const addOnsTotal = updatedAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const baseRoomTotal = (b.roomPrice || 1200) * b.totalNights;
-      const grandTotal = baseRoomTotal + addOnsTotal;
+      const roomBase = b.roomPrice * b.totalNights;
+      const addOnsSum = newAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const newTotal = roomBase + addOnsSum;
+      const newPaymentStatus = b.paidAmount >= newTotal ? 'paid' : (b.paidAmount > 0 ? 'deposit' : 'pending');
 
       return {
         ...b,
-        addOns: updatedAddOns,
-        totalAmount: grandTotal,
+        addOns: newAddOns,
+        totalAmount: newTotal,
+        paymentStatus: newPaymentStatus,
       };
     }));
+  };
+
+  // Action: Cancel Booking (Move to Trash)
+  const handleCancelBooking = (bookingId: string) => {
+    const b = bookings.find(item => item.id === bookingId);
+    if (!b) return;
+
+    setBookings(prev => prev.map(item => 
+      item.id === bookingId ? { ...item, status: 'cancelled', deletedAt: new Date().toISOString() } : item
+    ));
+
+    // If room is occupied by this booking, free it up
+    setRooms(prev => prev.map(r => 
+      r.currentGuest?.bookingId === bookingId ? { ...r, status: 'available', currentGuest: undefined } : r
+    ));
+  };
+
+  // Action: Restore Booking from Trash
+  const handleRestoreBooking = (bookingId: string) => {
+    setBookings(prev => prev.map(item => 
+      item.id === bookingId ? { ...item, status: 'confirmed', deletedAt: undefined } : item
+    ));
+  };
+
+  // Action: Permanently Delete Booking from Trash
+  const handlePermanentDeleteBooking = (bookingId: string) => {
+    setBookings(prev => prev.filter(item => item.id !== bookingId));
+  };
+
+  // Handlers for modal opening
+  const handleOpenNormalBooking = () => {
+    setPrefillRoomId(undefined);
+    setPrefillDate(undefined);
+    setIsNewBookingOpen(true);
+  };
+
+  const handleOpenBookingForRoom = (roomId: string) => {
+    setPrefillRoomId(roomId);
+    setPrefillDate(undefined);
+    setIsNewBookingOpen(true);
   };
 
   const handleOpenTimelineBooking = (roomId: string, date: string) => {
@@ -201,23 +266,11 @@ const MainDashboard = ({ user }: { user: User }) => {
     setIsNewBookingOpen(true);
   };
 
-  const handleOpenBookingForRoom = (roomId: string) => {
-    setPrefillRoomId(roomId);
-    setPrefillDate('2026-08-31');
-    setIsNewBookingOpen(true);
-  };
-
-  const handleOpenNormalBooking = () => {
-    setPrefillRoomId(undefined);
-    setPrefillDate(undefined);
-    setIsNewBookingOpen(true);
-  };
-
   const availableRoomsCount = rooms.filter(r => r.status === 'available').length;
 
   return (
-    <div className="flex min-h-screen bg-[#f8fafc] font-sans text-slate-900">
-      {/* Desktop Sidebar Navigation */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-['Prompt']">
+      {/* Desktop Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -244,11 +297,17 @@ const MainDashboard = ({ user }: { user: User }) => {
               bookings={bookings}
               onUpdateRoomStatus={handleUpdateRoomStatus}
               onCheckInGuest={handleCheckInGuest}
-              onCheckOutGuest={handleCheckOutGuest}
+              onCheckOutGuest={(bId) => {
+                const b = bookings.find(item => item.id === bId);
+                if (b) setSelectedBookingForCheckout(b);
+                else handleConfirmCheckout(bId);
+              }}
               onOpenNewBookingForRoom={handleOpenBookingForRoom}
               onOpenNewBooking={handleOpenNormalBooking}
               onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
               onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
+              onOpenAddPayment={(booking) => setSelectedBookingForPayment(booking)}
+              onOpenCheckoutModal={(booking) => setSelectedBookingForCheckout(booking)}
             />
           )}
 
@@ -257,6 +316,8 @@ const MainDashboard = ({ user }: { user: User }) => {
               rooms={rooms}
               bookings={bookings}
               onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
+              onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
+              onOpenAddPayment={(booking) => setSelectedBookingForPayment(booking)}
             />
           )}
 
@@ -266,12 +327,18 @@ const MainDashboard = ({ user }: { user: User }) => {
               searchTerm={searchTerm}
               onOpenNewBooking={handleOpenNormalBooking}
               onCheckInGuest={handleCheckInGuest}
-              onCheckOutGuest={handleCheckOutGuest}
+              onCheckOutGuest={(bId) => {
+                const b = bookings.find(item => item.id === bId);
+                if (b) setSelectedBookingForCheckout(b);
+                else handleConfirmCheckout(bId);
+              }}
               onCancelBooking={handleCancelBooking}
               onRestoreBooking={handleRestoreBooking}
               onPermanentDeleteBooking={handlePermanentDeleteBooking}
               onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
               onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
+              onOpenAddPayment={(booking) => setSelectedBookingForPayment(booking)}
+              onOpenCheckoutModal={(booking) => setSelectedBookingForCheckout(booking)}
             />
           )}
 
@@ -308,11 +375,27 @@ const MainDashboard = ({ user }: { user: User }) => {
         onUpdateBookingAddOns={handleUpdateBookingAddOns}
       />
 
-      {/* Printable & Downloadable Customer Receipt / Booking Slip Modal */}
+      {/* Printable & Downloadable Customer Receipt Slip Modal */}
       <ReceiptModal
         isOpen={!!selectedBookingForReceipt}
         onClose={() => setSelectedBookingForReceipt(null)}
         booking={selectedBookingForReceipt}
+      />
+
+      {/* Record Payment Modal */}
+      <PaymentModal
+        isOpen={!!selectedBookingForPayment}
+        onClose={() => setSelectedBookingForPayment(null)}
+        booking={selectedBookingForPayment}
+        onRecordPayment={handleRecordPayment}
+      />
+
+      {/* Smart Checkout Confirmation Guard Modal */}
+      <CheckoutModal
+        isOpen={!!selectedBookingForCheckout}
+        onClose={() => setSelectedBookingForCheckout(null)}
+        booking={selectedBookingForCheckout}
+        onConfirmCheckout={handleConfirmCheckout}
       />
     </div>
   );
@@ -333,11 +416,11 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center text-slate-800">
-        <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-        <p className="mt-4 text-xs font-black tracking-widest text-slate-500 uppercase">
-          กำลังโหลด Swan HILL PMS...
-        </p>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-['Prompt']">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-400 text-sm font-medium">กำลังโหลดข้อมูลระบบ Swan HILL...</p>
+        </div>
       </div>
     );
   }
@@ -347,19 +430,15 @@ export function App() {
       <Routes>
         <Route
           path="/login"
-          element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />}
+          element={!user ? <AuthPage /> : <Navigate to="/dashboard" replace />}
         />
         <Route
           path="/dashboard"
           element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
         />
         <Route
-          path="/"
-          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
-        />
-        <Route
           path="*"
-          element={<Navigate to="/" replace />}
+          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
         />
       </Routes>
     </BrowserRouter>

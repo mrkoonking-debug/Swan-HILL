@@ -24,6 +24,7 @@ export interface Room {
 
 export type BookingStatus = 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled';
 export type PaymentStatus = 'paid' | 'deposit' | 'pending';
+export type PaymentMethod = 'transfer' | 'cash' | 'qr';
 
 export type AddOnCategory = 'bed' | 'mookata_small' | 'mookata_large' | 'breakfast' | 'drink' | 'custom';
 
@@ -34,6 +35,15 @@ export interface AddOnItem {
   price: number;
   quantity: number;
   createdAt: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  note?: string;
+  paidAt: string; // ISO datetime string
+  recordedBy?: string;
 }
 
 export interface Booking {
@@ -52,6 +62,7 @@ export interface Booking {
   totalGuests: number;
   roomPrice: number; // Base room price
   addOns?: AddOnItem[]; // Extra bed, Mookata, Breakfast, Minibar
+  transactions?: PaymentTransaction[]; // History of payments received with timestamps
   totalAmount: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;

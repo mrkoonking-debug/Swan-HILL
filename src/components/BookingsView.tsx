@@ -14,7 +14,8 @@ import {
   MessageCircle,
   FileSpreadsheet,
   UtensilsCrossed,
-  Receipt
+  Receipt,
+  CreditCard
 } from 'lucide-react';
 import type { Booking, BookingStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -31,6 +32,8 @@ interface BookingsViewProps {
   onPermanentDeleteBooking?: (bookingId: string) => void; // Delete permanently
   onOpenAddOrder?: (booking: Booking) => void; // Add-ons modal
   onOpenReceipt?: (booking: Booking) => void; // Receipt slip modal
+  onOpenAddPayment?: (booking: Booking) => void; // Record payment modal
+  onOpenCheckoutModal?: (booking: Booking) => void; // Checkout confirmation modal
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({
@@ -44,6 +47,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onPermanentDeleteBooking,
   onOpenAddOrder,
   onOpenReceipt,
+  onOpenAddPayment,
+  onOpenCheckoutModal,
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -414,6 +419,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         </button>
                       )}
 
+                      {/* Record Payment Button if balance > 0 */}
+                      {remainingBalance > 0 && onOpenAddPayment && (
+                        <button
+                          onClick={() => onOpenAddPayment(b)}
+                          className="px-2.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-95"
+                          title="รับชำระเงินส่วนที่ค้าง"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>รับเงิน ฿{remainingBalance.toLocaleString()}</span>
+                        </button>
+                      )}
+
                       {b.status === 'confirmed' && (
                         <button
                           onClick={() => onCheckInGuest(b.id)}
@@ -426,7 +443,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                       {b.status === 'checked_in' && (
                         <button
-                          onClick={() => onCheckOutGuest(b.id)}
+                          onClick={() => {
+                            if (onOpenCheckoutModal) onOpenCheckoutModal(b);
+                            else onCheckOutGuest(b.id);
+                          }}
                           className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
