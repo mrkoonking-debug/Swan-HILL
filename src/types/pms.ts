@@ -6,7 +6,7 @@ export interface Room {
   roomNumber: string; // S1, S2, S3, S4, S5, S6
   name: string;
   type: string; // บ้านพักหลังใหญ่, บ้านพักหลังกลาง, บ้านพักหลังเล็ก
-  sizeCategory: 'large' | 'medium' | 'small';
+  sizeCategory?: 'large' | 'medium' | 'small';
   pricePerNight: number;
   status: RoomStatus;
   capacity: number;
@@ -62,20 +62,21 @@ export interface Booking {
 }
 
 export type HousekeepingPriority = 'low' | 'medium' | 'high';
-export type HousekeepingStatus = 'pending' | 'in_progress' | 'completed' | 'inspected';
+export type HousekeepingStatus = 'pending' | 'in_progress' | 'completed' | 'inspected' | 'dirty' | 'cleaned';
 
 export interface HousekeepingTask {
   id: string;
-  roomId: string;
+  roomId?: string;
   roomNumber: string;
   roomType: string;
-  type: 'checkout_clean' | 'stayover_clean' | 'deep_clean' | 'touch_up';
+  type?: 'checkout_clean' | 'stayover_clean' | 'deep_clean' | 'touch_up';
   priority: HousekeepingPriority;
   status: HousekeepingStatus;
   assignedTo?: string;
   notes?: string;
-  createdAt: string;
-  dueTime: string;
+  createdAt?: string;
+  updatedAt?: string;
+  dueTime?: string;
   completedAt?: string;
 }
 
