@@ -11,7 +11,11 @@ import {
   Clock, 
   Coins, 
   Home,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Map,
+  LayoutGrid,
+  Trees,
+  Car
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -37,6 +41,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAddOrder,
 }) => {
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
+  const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
 
   const totalRooms = rooms.length;
   const availableRooms = rooms.filter(r => r.status === 'available').length;
@@ -48,6 +53,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const largeRooms = rooms.filter(r => r.sizeCategory === 'large' || r.roomNumber === 'S3' || r.roomNumber === 'S4');
   const mediumRooms = rooms.filter(r => r.sizeCategory === 'medium' || r.roomNumber === 'S1' || r.roomNumber === 'S2');
   const smallRooms = rooms.filter(r => r.sizeCategory === 'small' || r.roomNumber === 'S5' || r.roomNumber === 'S6');
+
+  // Map room lookup by number
+  const roomMap: Record<string, Room | undefined> = {};
+  rooms.forEach(r => { roomMap[r.roomNumber] = r; });
 
   const renderRoomCard = (room: Room) => {
     const isAvailable = room.status === 'available';
@@ -227,7 +236,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-4 pb-28 md:pb-8">
-      {/* 3 Summary Metric Cards */}
+      {/* Top 3 Summary Metric Cards */}
       <div className="grid grid-cols-3 gap-2.5 md:gap-3.5">
         {/* 1. Available */}
         <div className="bg-white/95 backdrop-blur-xl border border-emerald-200/80 p-3 md:p-4 rounded-2xl flex flex-col justify-between shadow-[0_4px_16px_rgba(16,185,129,0.06)]">
@@ -265,47 +274,160 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* SECTION 1: บ้านพักหลังใหญ่ (S3, S4 - ฿1,500) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
-            <Home className="w-4 h-4 text-emerald-700" />
-            <span>บ้านพักหลังใหญ่ (1,500 บาท/คืน) - ห้อง S3, S4</span>
-          </h2>
-          <span className="text-[11px] text-emerald-700 font-bold">฿1,500</span>
+      {/* View Mode Switcher: Resort Map (L-Shape) vs Grid View */}
+      <div className="bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200/80 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2 pl-2">
+          <Map className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs font-black text-slate-800">
+            {viewMode === 'map' ? 'ผังรีสอร์ทพื้นที่จริงรูปตัว L (Resort Map)' : 'มุมมองรายการการ์ดบ้านพัก (Grid View)'}
+          </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
-          {largeRooms.map(renderRoomCard)}
+
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button
+            onClick={() => setViewMode('map')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'map' 
+                ? 'bg-emerald-600 text-white shadow-xs font-black' 
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span>ผังจริง (รูปตัว L)</span>
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'grid' 
+                ? 'bg-emerald-600 text-white shadow-xs font-black' 
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>แยกตามขนาด</span>
+          </button>
         </div>
       </div>
 
-      {/* SECTION 2: บ้านพักหลังกลาง (S1, S2 - ฿1,200) */}
-      <div className="space-y-2 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
-            <Home className="w-4 h-4 text-blue-700" />
-            <span>บ้านพักหลังกลาง (1,200 บาท/คืน) - ห้อง S1, S2</span>
-          </h2>
-          <span className="text-[11px] text-blue-700 font-bold">฿1,200</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
-          {mediumRooms.map(renderRoomCard)}
-        </div>
-      </div>
+      {/* VIEW 1: L-SHAPED INTERACTIVE RESORT MAP (Based on User's Drawing & Photo) */}
+      {viewMode === 'map' && (
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 p-4 md:p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-4">
+          {/* Map Legend & Compass */}
+          <div className="flex items-center justify-between text-xs text-slate-600 pb-2 border-b border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 font-bold text-slate-800">
+                <Trees className="w-4 h-4 text-emerald-600" /> Swan HILL Resort Map
+              </span>
+              <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                แตะที่บ้านพักแต่ละหลังเพื่อดูรายละเอียด หรือเปิดจอง/เช็คเอาท์
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> ว่าง</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> มีคนพัก</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> รอแม่บ้าน</span>
+            </div>
+          </div>
 
-      {/* SECTION 3: บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน - บ้านคู่ติดกัน S5 & S6) */}
-      <div className="space-y-2 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
-            <Home className="w-4 h-4 text-amber-700" />
-            <span>บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน) - ห้อง S5 (ฝั่งซ้าย) & ห้อง S6 (ฝั่งขวา)</span>
-          </h2>
-          <span className="text-[11px] text-amber-700 font-bold">฿1,000</span>
+          {/* L-Shape Layout Container */}
+          <div className="relative bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 md:p-6 min-h-[520px] flex flex-col justify-between overflow-hidden">
+            {/* Gravel Driveway in Center */}
+            <div className="absolute inset-x-4 inset-y-4 border-2 border-dashed border-slate-300/60 rounded-xl pointer-events-none flex items-center justify-center">
+              <div className="text-center text-slate-300 font-extrabold text-xs tracking-widest uppercase flex items-center gap-2">
+                <Car className="w-4 h-4" />
+                <span>ลานจอดรถ & ทางเดินส่วนกลางรีสอร์ท (Swan HILL Driveway)</span>
+              </div>
+            </div>
+
+            {/* TOP ROW: Twin Duplex Villas S6 (Left) & S5 (Right) at top-left corner */}
+            <div className="relative z-10 w-full sm:w-2/3 lg:w-1/2">
+              <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-2.5 shadow-xs mb-3">
+                <p className="text-[11px] font-black text-amber-900 flex items-center gap-1.5 mb-1.5">
+                  <Home className="w-3.5 h-3.5 text-amber-700" />
+                  <span>อาคารบ้านแฝดด้านในสุด (1,000 บาท/คืน) &bull; ห้อง S6 และ S5</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {roomMap['S6'] && renderRoomCard(roomMap['S6'])}
+                  {roomMap['S5'] && renderRoomCard(roomMap['S5'])}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT VERTICAL ROW: S4 (Top) -> S3 -> S2 -> S1 (Front Entrance) */}
+            <div className="relative z-10 w-full sm:w-2/3 lg:w-1/2 ml-auto space-y-2.5 pt-2">
+              <div className="text-right pr-1">
+                <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full uppercase">
+                  แนวบ้านพักฝั่งขวา (S4 &rarr; S3 &rarr; S2 &rarr; S1)
+                </span>
+              </div>
+
+              {/* S4 (Large ฿1,500) */}
+              {roomMap['S4'] && renderRoomCard(roomMap['S4'])}
+
+              {/* S3 (Large ฿1,500) */}
+              {roomMap['S3'] && renderRoomCard(roomMap['S3'])}
+
+              {/* S2 (Medium ฿1,200) */}
+              {roomMap['S2'] && renderRoomCard(roomMap['S2'])}
+
+              {/* S1 (Medium ฿1,200) - Front Entrance */}
+              {roomMap['S1'] && renderRoomCard(roomMap['S1'])}
+
+              {/* Front Entrance Arrow Banner */}
+              <div className="p-2 bg-slate-900 text-white rounded-xl text-center font-black text-[11px] flex items-center justify-center gap-1.5 shadow-xs">
+                <span>🚪 ทางเข้ารีสอร์ทด้านหน้า (ติดห้อง S1)</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
-          {smallRooms.map(renderRoomCard)}
+      )}
+
+      {/* VIEW 2: CATEGORIZED GRID VIEW */}
+      {viewMode === 'grid' && (
+        <div className="space-y-4">
+          {/* SECTION 1: บ้านพักหลังใหญ่ (S3, S4 - ฿1,500) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-emerald-700" />
+                <span>บ้านพักหลังใหญ่ (1,500 บาท/คืน) - ห้อง S3, S4</span>
+              </h2>
+              <span className="text-[11px] text-emerald-700 font-bold">฿1,500</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
+              {largeRooms.map(renderRoomCard)}
+            </div>
+          </div>
+
+          {/* SECTION 2: บ้านพักหลังกลาง (S1, S2 - ฿1,200) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-blue-700" />
+                <span>บ้านพักหลังกลาง (1,200 บาท/คืน) - ห้อง S1, S2</span>
+              </h2>
+              <span className="text-[11px] text-blue-700 font-bold">฿1,200</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
+              {mediumRooms.map(renderRoomCard)}
+            </div>
+          </div>
+
+          {/* SECTION 3: บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน - บ้านคู่ติดกัน S5 & S6) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-amber-700" />
+                <span>บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน) - ห้อง S5 (ฝั่งขวา) & ห้อง S6 (ฝั่งซ้าย)</span>
+              </h2>
+              <span className="text-[11px] text-amber-700 font-bold">฿1,000</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3">
+              {smallRooms.map(renderRoomCard)}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Room Detail Modal */}
       {selectedRoomModal && (

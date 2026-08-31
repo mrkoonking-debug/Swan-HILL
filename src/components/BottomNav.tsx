@@ -13,25 +13,27 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   setActiveTab,
   onOpenNewBooking,
 }) => {
-  const leftTabs = [
-    { id: 'dashboard' as ActiveTab, label: 'หน้าหลัก', icon: Home },
-    { id: 'timeline' as ActiveTab, label: 'ปฏิทิน', icon: CalendarDays },
+  // Tabs configuration with numerical index for sliding pill calculation
+  const allTabs: { id: ActiveTab; label: string; icon: React.FC<any>; slot: 'left' | 'right' }[] = [
+    { id: 'dashboard', label: 'หน้าหลัก', icon: Home, slot: 'left' },
+    { id: 'timeline', label: 'ปฏิทิน', icon: CalendarDays, slot: 'left' },
+    { id: 'bookings', label: 'รายการจอง', icon: ListOrdered, slot: 'right' },
+    { id: 'finance', label: 'ยอดเงิน', icon: DollarSign, slot: 'right' },
   ];
 
-  const rightTabs = [
-    { id: 'bookings' as ActiveTab, label: 'รายการจอง', icon: ListOrdered },
-    { id: 'finance' as ActiveTab, label: 'ยอดเงิน', icon: DollarSign },
-  ];
+  const leftTabs = allTabs.filter(t => t.slot === 'left');
+  const rightTabs = allTabs.filter(t => t.slot === 'right');
 
   return (
     <div className="md:hidden fixed bottom-4 inset-x-0 z-40 px-3 pointer-events-none flex justify-center">
-      {/* Luxury White Frosted Liquid Glass Capsule */}
-      <nav 
-        className="pointer-events-auto w-full max-w-[360px] bg-white/85 backdrop-blur-2xl border border-white/70 shadow-[0_12px_40px_rgba(0,0,0,0.12),0_2px_12px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-full px-2.5 py-1.5 flex items-center justify-between transition-all"
-        aria-label="Mobile Bottom Navigation"
-      >
-        {/* Left 2 Tabs */}
-        <div className="flex items-center justify-around flex-1 gap-1">
+      {/* Dark Luxury Liquid Glass Floating Capsule matching Reference */}
+      <div className="pointer-events-auto w-full max-w-[365px] bg-slate-950/95 backdrop-blur-2xl border border-slate-800/80 shadow-[0_12px_45px_rgba(0,0,0,0.6),0_0_20px_rgba(14,165,233,0.12)] rounded-full px-2 py-1.5 flex items-center justify-between relative select-none">
+        
+        {/* Subtle Liquid Glow Accent in Background */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/10 via-transparent to-amber-500/10 pointer-events-none" />
+
+        {/* Left 2 Tabs (Dashboard, Timeline) */}
+        <div className="flex items-center justify-around flex-1 relative z-10">
           {leftTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -40,26 +42,29 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                   isActive
-                    ? 'bg-slate-900 text-white rounded-2xl px-3 py-1.5 shadow-md shadow-slate-900/20 scale-102'
-                    : 'text-slate-500 hover:text-slate-800 px-2 py-1'
+                    ? 'bg-slate-800/90 text-white shadow-inner border border-slate-700/80 scale-105'
+                    : 'text-slate-400 hover:text-slate-200 active:scale-95'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
+                <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${isActive ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
                   {tab.label}
                 </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-cyan-400 mt-0.5 shadow-[0_0_6px_#22d3ee] animate-pulse" />
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Center Glowing Floating Plus Button (Inspired by Reference) */}
-        <div className="relative -top-4 px-1.5 shrink-0">
+        {/* Center Glowing Cyan Action Button */}
+        <div className="relative -top-4 px-2 shrink-0 z-20">
           <button
             onClick={onOpenNewBooking}
-            className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_8px_24px_rgba(14,165,233,0.45)] border-4 border-white active:scale-90 transition-transform"
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_6px_22px_rgba(14,165,233,0.55)] border-4 border-slate-950 active:scale-90 transition-transform duration-200"
             title="เพิ่มการจองใหม่"
             aria-label="สร้างการจองใหม่"
           >
@@ -67,8 +72,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </button>
         </div>
 
-        {/* Right 2 Tabs */}
-        <div className="flex items-center justify-around flex-1 gap-1">
+        {/* Right 2 Tabs (Bookings, Finance) */}
+        <div className="flex items-center justify-around flex-1 relative z-10">
           {rightTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -77,21 +82,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                   isActive
-                    ? 'bg-slate-900 text-white rounded-2xl px-3 py-1.5 shadow-md shadow-slate-900/20 scale-102'
-                    : 'text-slate-500 hover:text-slate-800 px-2 py-1'
+                    ? 'bg-slate-800/90 text-white shadow-inner border border-slate-700/80 scale-105'
+                    : 'text-slate-400 hover:text-slate-200 active:scale-95'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
+                <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${isActive ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
                   {tab.label}
                 </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-cyan-400 mt-0.5 shadow-[0_0_6px_#22d3ee] animate-pulse" />
+                )}
               </button>
             );
           })}
         </div>
-      </nav>
+      </div>
     </div>
   );
 };
