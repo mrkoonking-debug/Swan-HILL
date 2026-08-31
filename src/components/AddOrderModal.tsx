@@ -8,6 +8,7 @@ import {
   BreakfastIcon, 
   CustomDishIcon 
 } from './MenuIcons';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface AddOrderModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
   booking,
   onUpdateBookingAddOns,
 }) => {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen || !booking) return null;
 
   const currentAddOns: AddOnItem[] = booking.addOns || [];
@@ -134,8 +137,14 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
   const remainingAtCheckout = Math.max(0, grandTotal - booking.paidAmount);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-sm overscroll-contain animate-in fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[92vh] flex flex-col overscroll-contain"
+      >
         {/* Modal Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div>
@@ -155,7 +164,7 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
         </div>
 
         {/* Modal Content - Scrollbar Completely Hidden */}
-        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 text-slate-800">
+        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 text-slate-800 overscroll-contain">
           {/* Menu Items Selection Grid */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">

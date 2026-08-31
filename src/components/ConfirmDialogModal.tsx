@@ -9,6 +9,7 @@ import {
   Wrench,
   DoorOpen
 } from 'lucide-react';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 export type ConfirmType = 'clean' | 'warning' | 'danger' | 'reset' | 'maintenance' | 'checkout';
 
@@ -35,6 +36,8 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
   cancelText = 'ยกเลิก',
   type = 'clean',
 }) => {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   const getIcon = () => {
@@ -97,9 +100,12 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 font-['Prompt']">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in duration-200 font-['Prompt']"
+    >
       <div 
-        className="bg-white text-slate-900 w-full max-w-sm sm:max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 text-center relative animate-in zoom-in-95 duration-200"
+        className="bg-white text-slate-900 w-full max-w-sm sm:max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 text-center relative animate-in zoom-in-95 duration-200 overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

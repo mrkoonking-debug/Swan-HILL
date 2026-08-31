@@ -550,12 +550,14 @@ const MainDashboard = ({ user }: { user: User }) => {
         </main>
       </div>
 
-      {/* Mobile Floating Bottom Navigation */}
-      <BottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenNewBooking={handleOpenNormalBooking}
-      />
+      {/* Mobile Floating Bottom Navigation (Hidden when modals are open) */}
+      {!isNewBookingOpen && !selectedBookingForAddOrder && !selectedBookingForReceipt && !selectedBookingForPayment && !selectedBookingForCheckout && !isMobileDrawerOpen && (
+        <BottomNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenNewBooking={handleOpenNormalBooking}
+        />
+      )}
 
       {/* New Booking Modal */}
       <NewBookingModal

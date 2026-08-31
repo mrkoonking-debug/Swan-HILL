@@ -19,6 +19,7 @@ import {
 import type { Booking, PaymentMethod, PaymentTransaction } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
 import { ConfirmDialogModal } from './ConfirmDialogModal';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -37,6 +38,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onUpdatePaymentTransaction,
   onDeletePaymentTransaction,
 }) => {
+  useLockBodyScroll(isOpen);
+
   const [formMode, setFormMode] = useState<'payment' | 'discount'>('payment');
   const [method, setMethod] = useState<PaymentMethod>('transfer');
   const [deleteConfirmTx, setDeleteConfirmTx] = useState<PaymentTransaction | null>(null);
@@ -133,8 +136,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-      <div className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col font-['Prompt']">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[90vh] flex flex-col font-['Prompt'] overscroll-contain"
+      >
         
         {/* Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
@@ -158,7 +167,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1">
+        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 overscroll-contain">
           
           {/* Financial Overview 3 Cards */}
           <div className="grid grid-cols-3 gap-2 text-center">

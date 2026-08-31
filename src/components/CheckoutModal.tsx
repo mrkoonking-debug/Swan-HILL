@@ -9,6 +9,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import type { Booking, PaymentMethod } from '../types/pms';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   booking,
   onConfirmCheckout,
 }) => {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen || !booking) return null;
 
   const roomBaseTotal = booking.roomPrice * booking.totalNights;
@@ -31,8 +34,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const remainingBalance = Math.max(0, grandTotal - booking.paidAmount);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white text-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden space-y-4 p-5 sm:p-6">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overscroll-contain animate-in fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white text-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden space-y-4 p-5 sm:p-6 overscroll-contain"
+      >
         
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">

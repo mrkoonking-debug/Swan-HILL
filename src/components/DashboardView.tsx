@@ -23,6 +23,7 @@ import {
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
 import { ConfirmDialogModal, type ConfirmType } from './ConfirmDialogModal';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface DashboardViewProps {
   rooms: Room[];
@@ -73,6 +74,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     type: ConfirmType;
     onConfirm: () => void;
   } | null>(null);
+
+  useLockBodyScroll(!!selectedRoomModal || !!confirmDialog);
 
   const totalRooms = rooms.length;
   const availableRooms = rooms.filter(r => r.status === 'available').length;
@@ -831,8 +834,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Room Detail Modal (For Clicking on Grid View Cards) */}
       {selectedRoomModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
+        <div 
+          onClick={() => setSelectedRoomModal(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 overscroll-contain"
+          >
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="w-9 h-9 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-black text-sm">

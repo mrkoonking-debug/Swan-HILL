@@ -13,6 +13,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import type { Booking } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose,
   booking,
 }) => {
+  useLockBodyScroll(isOpen);
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -111,8 +113,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-700/80 w-full max-w-2xl max-h-[92dvh] sm:max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 overscroll-contain"
+      >
         
         {/* Top Control Bar */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 shrink-0">

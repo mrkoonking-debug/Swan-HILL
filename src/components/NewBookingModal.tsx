@@ -15,6 +15,7 @@ import {
 import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   prefillRoomId,
   prefillDate
 }) => {
+  useLockBodyScroll(isOpen);
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
@@ -226,8 +228,14 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in font-['Prompt']">
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-sm overscroll-contain animate-in fade-in font-['Prompt']"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[92vh] flex flex-col overscroll-contain"
+      >
         {/* Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -246,7 +254,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         </div>
 
         {/* Form Body - Scrollbar Completely Hidden via no-scrollbar */}
-        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto no-scrollbar space-y-4 text-slate-800 flex-1">
+        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto no-scrollbar space-y-4 text-slate-800 flex-1 overscroll-contain">
           {/* 1. Guest Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
