@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
+import { ConfirmDialogModal, type ConfirmType } from './ConfirmDialogModal';
 
 interface DashboardViewProps {
   rooms: Room[];
@@ -62,6 +63,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
   const [selectedMapRoomNumber, setSelectedMapRoomNumber] = useState<string>('S1');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    roomBadge?: string;
+    confirmText?: string;
+    cancelText?: string;
+    type: ConfirmType;
+    onConfirm: () => void;
+  } | null>(null);
 
   const totalRooms = rooms.length;
   const availableRooms = rooms.filter(r => r.status === 'available').length;
@@ -305,9 +316,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onUpdateRoomStatus(room.id, 'available');
+                setConfirmDialog({
+                  isOpen: true,
+                  type: 'clean',
+                  roomBadge: `ห้อง ${room.roomNumber}`,
+                  title: 'ยืนยันทำความสะอาดเสร็จสิ้น',
+                  description: `คุณต้องการเปลี่ยนสถานะห้อง ${room.roomNumber} เป็น "ห้องว่างพร้อมเปิดรับจอง" ทันทีใช่หรือไม่?`,
+                  confirmText: 'ยืนยันเปิดห้องว่าง',
+                  onConfirm: () => onUpdateRoomStatus(room.id, 'available'),
+                });
               }}
-              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-all"
+              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-all"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>ทำความสะอาดเสร็จแล้ว (เปิดว่าง)</span>
@@ -318,9 +337,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onUpdateRoomStatus(room.id, 'available');
+                setConfirmDialog({
+                  isOpen: true,
+                  type: 'clean',
+                  roomBadge: `ห้อง ${room.roomNumber}`,
+                  title: 'ยืนยันเปิดใช้งานห้องพัก',
+                  description: `คุณต้องการเปิดใช้งานห้อง ${room.roomNumber} ให้เป็นห้องว่างพร้อมขายใช่หรือไม่?`,
+                  confirmText: 'ยืนยันเปิดห้องพัก',
+                  onConfirm: () => onUpdateRoomStatus(room.id, 'available'),
+                });
               }}
-              className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs"
+              className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs"
             >
               <span>เปิดใช้งานห้องพัก</span>
             </button>
@@ -724,8 +751,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                   {selectedMapRoom.status === 'cleaning' && (
                     <button
-                      onClick={() => onUpdateRoomStatus(selectedMapRoom.id, 'available')}
-                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs"
+                      onClick={() => {
+                        setConfirmDialog({
+                          isOpen: true,
+                          type: 'clean',
+                          roomBadge: `ห้อง ${selectedMapRoom.roomNumber}`,
+                          title: 'ยืนยันทำความสะอาดเสร็จสิ้น',
+                          description: `คุณต้องการเปลี่ยนสถานะห้อง ${selectedMapRoom.roomNumber} เป็น "ห้องว่างพร้อมเปิดรับจอง" ทันทีใช่หรือไม่?`,
+                          confirmText: 'ยืนยันเปิดห้องว่าง',
+                          onConfirm: () => onUpdateRoomStatus(selectedMapRoom.id, 'available'),
+                        });
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-all"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>ทำความสะอาดเสร็จแล้ว (เปิดว่าง)</span>
@@ -920,6 +957,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Custom Sleek In-App Confirmation Popup */}
+      {confirmDialog && (
+        <ConfirmDialogModal
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog(null)}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          roomBadge={confirmDialog.roomBadge}
+          confirmText={confirmDialog.confirmText}
+          cancelText={confirmDialog.cancelText}
+          type={confirmDialog.type}
+        />
       )}
 
     </div>

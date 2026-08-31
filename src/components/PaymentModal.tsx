@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { Booking, PaymentMethod, PaymentTransaction } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
+import { ConfirmDialogModal } from './ConfirmDialogModal';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const [formMode, setFormMode] = useState<'payment' | 'discount'>('payment');
   const [method, setMethod] = useState<PaymentMethod>('transfer');
+  const [deleteConfirmTx, setDeleteConfirmTx] = useState<PaymentTransaction | null>(null);
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<number>(0);
   
@@ -298,11 +300,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                           {onDeletePaymentTransaction && (
                             <button
                               type="button"
-                              onClick={() => {
-                                if (window.confirm(`ยืนยันการลบรายการ ฿${tx.amount.toLocaleString()} บาท นี้หรือไม่?`)) {
-                                  onDeletePaymentTransaction(booking.id, tx.id);
-                                }
-                              }}
+                              onClick={() => setDeleteConfirmTx(tx)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                               title="ลบรายการนี้"
                             >
@@ -580,6 +578,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </div>
 
       </div>
+
+      {/* Delete Transaction Confirmation Modal */}
+      {deleteConfirmTx && (
+        <ConfirmDialogModal
+          isOpen={!!deleteConfirmTx}
+          onClose={() => setDeleteConfirmTx(null)}
+          onConfirm={() => {
+            if (booking && onDeletePaymentTransaction) {
+              onDeletePaymentTransaction(booking.id, deleteConfirmTx.id);
+            }
+          }}
+          title="ยืนยันการลบรายการชำระเงิน"
+          description={`คุณต้องการลบรายการรับเงิน ฿${deleteConfirmTx.amount.toLocaleString()} บาท (${deleteConfirmTx.note || 'รายการชำระเงิน'}) ออกจากระบบใช่หรือไม่?`}
+          confirmText="ยืนยันลบรายการ"
+          type="danger"
+        />
+      )}
+
     </div>
   );
 };

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { ResortSettings } from '../types/pms';
 import { initialSettings } from '../data/initialData';
+import { ConfirmDialogModal } from './ConfirmDialogModal';
 
 interface SettingsViewProps {
   settings: ResortSettings;
@@ -24,6 +25,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [formData, setFormData] = useState<ResortSettings>(settings);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const handleChange = (field: keyof ResortSettings, value: any) => {
     setFormData(prev => ({
@@ -47,13 +49,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleResetDefaults = () => {
-    if (window.confirm('คุณต้องการคืนค่าการตั้งค่าทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?')) {
-      setFormData(initialSettings);
-      onSaveSettings(initialSettings);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }
+  const handleConfirmReset = () => {
+    setFormData(initialSettings);
+    onSaveSettings(initialSettings);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   return (
@@ -74,7 +74,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleResetDefaults}
+            onClick={() => setIsResetConfirmOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -435,7 +435,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleResetDefaults}
+            onClick={() => setIsResetConfirmOpen(true)}
             className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
           >
             คืนค่าเริ่มต้น
@@ -458,6 +458,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      <ConfirmDialogModal
+        isOpen={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirm={handleConfirmReset}
+        title="ยืนยันคืนค่าเริ่มต้นทั้งหมด"
+        description="คุณต้องการคืนค่าการตั้งค่าระบบ ข้อมูลรีสอร์ท ราคาห้องพัก และเมนูอาหารทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่?"
+        confirmText="ยืนยันคืนค่าเริ่มต้น"
+        type="reset"
+      />
 
     </form>
   );

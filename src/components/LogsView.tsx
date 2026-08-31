@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { ActivityLog, ActivityLogCategory } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
+import { ConfirmDialogModal } from './ConfirmDialogModal';
 
 interface LogsViewProps {
   logs: ActivityLog[];
@@ -25,6 +26,7 @@ interface LogsViewProps {
 export const LogsView: React.FC<LogsViewProps> = ({ logs, onClearLogs }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
   // Filter Categories
   const categories: { id: string; label: string; icon: any }[] = [
@@ -122,11 +124,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ logs, onClearLogs }) => {
 
             {onClearLogs && (
               <button
-                onClick={() => {
-                  if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติการทำงานทั้งหมด?')) {
-                    onClearLogs();
-                  }
-                }}
+                onClick={() => setIsClearConfirmOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all border border-rose-200"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -294,6 +292,19 @@ export const LogsView: React.FC<LogsViewProps> = ({ logs, onClearLogs }) => {
           </div>
         )}
       </div>
+
+      {/* Clear Logs Confirmation Modal */}
+      <ConfirmDialogModal
+        isOpen={isClearConfirmOpen}
+        onClose={() => setIsClearConfirmOpen(false)}
+        onConfirm={() => {
+          if (onClearLogs) onClearLogs();
+        }}
+        title="ยืนยันล้างประวัติการทำงานทั้งหมด"
+        description="คุณต้องการล้างรายการประวัติการทำงานทั้งหมดในระบบใช่หรือไม่? ข้อมูลประวัติเก่าจะไม่สามารถกู้คืนได้"
+        confirmText="ยืนยันล้างประวัติ"
+        type="danger"
+      />
 
     </div>
   );
