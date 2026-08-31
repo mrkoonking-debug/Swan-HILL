@@ -10,7 +10,9 @@ import {
   X,
   Sparkles,
   UtensilsCrossed,
-  ShieldCheck
+  ShieldCheck,
+  History,
+  Settings
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -40,6 +42,8 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     { id: 'timeline', label: 'ปฏิทินห้องพัก', subtitle: 'ตารางปฏิทินรายเดือน 30-31 วัน', icon: CalendarDays },
     { id: 'bookings', label: 'รายการจอง', subtitle: 'ค้นหาและจัดการข้อมูลลูกค้า', icon: ListOrdered },
     { id: 'finance', label: 'สรุปยอดเงิน', subtitle: 'รายงานรายรับและการเงิน', icon: DollarSign },
+    { id: 'logs', label: 'ประวัติการทำงาน (Logs)', subtitle: 'ตรวจสอบว่าใครทำอะไร เมื่อไหร่', icon: History },
+    { id: 'settings', label: 'ตั้งค่าระบบรีสอร์ท', subtitle: 'ปรับราคา ข้อมูล และเมนูอาหาร', icon: Settings },
   ];
 
   return (

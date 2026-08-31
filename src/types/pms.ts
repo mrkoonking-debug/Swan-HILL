@@ -92,3 +92,44 @@ export interface HousekeepingTask {
 }
 
 export type TimeRangeFilter = 'daily' | 'monthly' | 'yearly';
+
+export type ActivityLogCategory = 'booking' | 'payment' | 'room' | 'order' | 'system' | 'auth';
+
+export interface ActivityLog {
+  id: string;
+  userEmail: string;
+  userName: string;
+  action: string;
+  details: string;
+  category: ActivityLogCategory;
+  timestamp: string; // ISO string
+  targetRoomNumber?: string;
+  targetBookingCode?: string;
+}
+
+export interface ResortSettings {
+  resortNameEn: string;
+  resortNameTh: string;
+  phone: string;
+  address: string;
+  lineId?: string;
+  facebook?: string;
+  checkInTime: string;
+  checkOutTime: string;
+  receiptFooterMessage: string;
+  
+  // Room Rates Config
+  rateMediumRoom: number; // S1, S2
+  rateLargeRoom: number; // S3, S4
+  rateSmallRoom: number; // S5, S6
+  extraBedPrice: number; // 300
+  extraBreakfastPrice: number; // 60
+  mookataSmallPrice: number; // 350
+  mookataLargePrice: number; // 500
+
+  // Bank & PromptPay
+  bankName: string;
+  bankAccountNo: string;
+  bankAccountName: string;
+  promptPayNo: string;
+}

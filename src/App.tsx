@@ -16,8 +16,10 @@ import { AddOrderModal } from './components/AddOrderModal';
 import { ReceiptModal } from './components/ReceiptModal';
 import { PaymentModal } from './components/PaymentModal';
 import { CheckoutModal } from './components/CheckoutModal';
-import { initialRooms, initialBookings } from './data/initialData';
-import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentMethod } from './types/pms';
+import { LogsView } from './components/LogsView';
+import { SettingsView } from './components/SettingsView';
+import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
+import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentMethod, ResortSettings, ActivityLog, ActivityLogCategory } from './types/pms';
 
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: User }) => {
@@ -31,6 +33,28 @@ const MainDashboard = ({ user }: { user: User }) => {
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Resort Settings State
+  const [settings, setSettings] = useState<ResortSettings>(() => {
+    const saved = localStorage.getItem('swanhill_settings_v1');
+    if (!saved) return initialSettings;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return initialSettings;
+    }
+  });
+
+  // Audit Logs State
+  const [logs, setLogs] = useState<ActivityLog[]>(() => {
+    const saved = localStorage.getItem('swanhill_logs_v1');
+    if (!saved) return initialLogs;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return initialLogs;
+    }
+  });
 
   // PMS Core Data States (v3 with S1-S6 real room breakdown & add-ons)
   const [rooms, setRooms] = useState<Room[]>(() => {
@@ -66,6 +90,14 @@ const MainDashboard = ({ user }: { user: User }) => {
 
   // Save to localStorage whenever data changes
   useEffect(() => {
+    localStorage.setItem('swanhill_settings_v1', JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem('swanhill_logs_v1', JSON.stringify(logs));
+  }, [logs]);
+
+  useEffect(() => {
     localStorage.setItem('swanhill_rooms_v3', JSON.stringify(rooms));
   }, [rooms]);
 
@@ -73,9 +105,38 @@ const MainDashboard = ({ user }: { user: User }) => {
     localStorage.setItem('swanhill_bookings_v3', JSON.stringify(bookings));
   }, [bookings]);
 
+  // Helper: Auto-Record Audit Log
+  const addLog = (
+    action: string, 
+    details: string, 
+    category: ActivityLogCategory, 
+    targetRoomNumber?: string, 
+    targetBookingCode?: string
+  ) => {
+    const newLog: ActivityLog = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      userEmail: user.email || 'admin@swanhill.com',
+      userName: user.displayName || user.email?.split('@')[0] || 'ผู้ดูแลระบบ Swan HILL',
+      action,
+      details,
+      category,
+      timestamp: new Date().toISOString(),
+      targetRoomNumber,
+      targetBookingCode,
+    };
+    setLogs(prev => [newLog, ...prev]);
+  };
+
   // Action: Update Room Status
   const handleUpdateRoomStatus = (roomId: string, newStatus: RoomStatus) => {
-    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, status: newStatus } : r));
+    const r = rooms.find(item => item.id === roomId);
+    setRooms(prev => prev.map(item => item.id === roomId ? { ...item, status: newStatus } : item));
+    addLog(
+      'เปลี่ยนสถานะห้องพัก',
+      `เปลี่ยนสถานะห้อง ${r?.roomNumber || roomId} เป็น ${newStatus === 'available' ? 'ว่างพร้อมขาย' : newStatus === 'cleaning' ? 'กำลังทำความสะอาด' : newStatus === 'maintenance' ? 'ปิดปรับปรุง' : 'มีคนพัก'}`,
+      'room',
+      r?.roomNumber
+    );
   };
 
   // Action: Check-in Guest
@@ -101,71 +162,88 @@ const MainDashboard = ({ user }: { user: User }) => {
         }
       } : r
     ));
+
+    addLog('เช็คอินลูกค้า', `เช็คอินห้อง ${b.roomNumber} (${b.guestName}) รหัส ${b.bookingCode}`, 'booking', b.roomNumber, b.bookingCode);
   };
 
   // Action: Record Payment Transaction
   const handleRecordPayment = (bookingId: string, transaction: PaymentTransaction) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id !== bookingId) return b;
+    const b = bookings.find(item => item.id === bookingId);
+    setBookings(prev => prev.map(item => {
+      if (item.id !== bookingId) return item;
       
-      const newTransactions = [...(b.transactions || []), transaction];
-      const newPaidAmount = b.paidAmount + transaction.amount;
-      const roomBase = b.roomPrice * b.totalNights;
-      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
-      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const newTransactions = [...(item.transactions || []), transaction];
+      const newPaidAmount = item.paidAmount + transaction.amount;
+      const roomBase = item.roomPrice * item.totalNights;
+      const addOnsSum = item.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = item.totalAmount || (roomBase + addOnsSum);
       const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : 'deposit';
 
       return {
-        ...b,
+        ...item,
         paidAmount: newPaidAmount,
         paymentStatus: newPaymentStatus,
         transactions: newTransactions,
       };
     }));
+
+    addLog(
+      'บันทึกรับชำระเงิน',
+      `รับเงิน ${transaction.method === 'transfer' ? 'โอนเงิน' : 'เงินสด'} ฿${transaction.amount.toLocaleString()} บาท ห้อง ${b?.roomNumber || ''} (${transaction.note || 'รับชำระ'})`,
+      'payment',
+      b?.roomNumber,
+      b?.bookingCode
+    );
   };
 
   // Action: Update Past Payment Transaction
   const handleUpdatePaymentTransaction = (bookingId: string, transactionId: string, updated: Partial<PaymentTransaction>) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id !== bookingId) return b;
+    const b = bookings.find(item => item.id === bookingId);
+    setBookings(prev => prev.map(item => {
+      if (item.id !== bookingId) return item;
       
-      const newTransactions = (b.transactions || []).map(tx => 
+      const newTransactions = (item.transactions || []).map(tx => 
         tx.id === transactionId ? { ...tx, ...updated } : tx
       );
       const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-      const roomBase = b.roomPrice * b.totalNights;
-      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
-      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const roomBase = item.roomPrice * item.totalNights;
+      const addOnsSum = item.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = item.totalAmount || (roomBase + addOnsSum);
       const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
 
       return {
-        ...b,
+        ...item,
         paidAmount: newPaidAmount,
         paymentStatus: newPaymentStatus,
         transactions: newTransactions,
       };
     }));
+
+    addLog('แก้ไขยอดรับเงิน', `แก้ไขข้อมูลการรับเงิน ห้อง ${b?.roomNumber || ''} (${b?.bookingCode || ''})`, 'payment', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Delete Payment Transaction
   const handleDeletePaymentTransaction = (bookingId: string, transactionId: string) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id !== bookingId) return b;
+    const b = bookings.find(item => item.id === bookingId);
+    setBookings(prev => prev.map(item => {
+      if (item.id !== bookingId) return item;
       
-      const newTransactions = (b.transactions || []).filter(tx => tx.id !== transactionId);
+      const newTransactions = (item.transactions || []).filter(tx => tx.id !== transactionId);
       const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-      const roomBase = b.roomPrice * b.totalNights;
-      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
-      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const roomBase = item.roomPrice * item.totalNights;
+      const addOnsSum = item.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = item.totalAmount || (roomBase + addOnsSum);
       const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
 
       return {
-        ...b,
+        ...item,
         paidAmount: newPaidAmount,
         paymentStatus: newPaymentStatus,
         transactions: newTransactions,
       };
     }));
+
+    addLog('ลบรายการรับเงิน', `ลบรายการรับเงินในห้อง ${b?.roomNumber || ''} (${b?.bookingCode || ''})`, 'payment', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Confirm Checkout (with optional payment collection)
@@ -210,6 +288,8 @@ const MainDashboard = ({ user }: { user: User }) => {
         r.currentGuest?.bookingId === bookingId ? { ...r, status: 'cleaning', currentGuest: undefined } : r
       ));
     }
+
+    addLog('เช็คเอาท์ลูกค้า', `เช็คเอาท์ห้อง ${b?.roomNumber || ''} (${b?.guestName || ''}) รหัส ${b?.bookingCode || ''}`, 'room', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Add New Booking
@@ -230,7 +310,7 @@ const MainDashboard = ({ user }: { user: User }) => {
     }
 
     // If checkInDate is today, set room status to occupied
-    const today = '2026-08-31';
+    const today = new Date().toISOString().slice(0, 10);
     if (newBooking.checkInDate === today) {
       setRooms(prev => prev.map(r => 
         r.id === newBooking.roomId ? {
@@ -246,51 +326,89 @@ const MainDashboard = ({ user }: { user: User }) => {
         } : r
       ));
     }
+
+    addLog(
+      'บันทึกการจองใหม่',
+      `จองห้อง ${newBooking.roomNumber} (${newBooking.guestName}) รหัส ${newBooking.bookingCode} รวม ฿${newBooking.totalAmount.toLocaleString()} บาท`,
+      'booking',
+      newBooking.roomNumber,
+      newBooking.bookingCode
+    );
   };
 
   // Action: Update Add-Ons for Booking (In-Stay Ordering)
   const handleUpdateBookingAddOns = (bookingId: string, newAddOns: AddOnItem[]) => {
-    setBookings(prev => prev.map(b => {
-      if (b.id !== bookingId) return b;
-      const roomBase = b.roomPrice * b.totalNights;
+    const b = bookings.find(item => item.id === bookingId);
+    setBookings(prev => prev.map(item => {
+      if (item.id !== bookingId) return item;
+      const roomBase = item.roomPrice * item.totalNights;
       const addOnsSum = newAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const newTotal = roomBase + addOnsSum;
-      const newPaymentStatus = b.paidAmount >= newTotal ? 'paid' : (b.paidAmount > 0 ? 'deposit' : 'pending');
+      const newPaymentStatus = item.paidAmount >= newTotal ? 'paid' : (item.paidAmount > 0 ? 'deposit' : 'pending');
 
       return {
-        ...b,
+        ...item,
         addOns: newAddOns,
         totalAmount: newTotal,
         paymentStatus: newPaymentStatus,
       };
     }));
+
+    addLog('เพิ่มออเดอร์ในห้องพัก', `อัปเดตรายการอาหาร/บริการเสริม ห้อง ${b?.roomNumber || ''} (${newAddOns.length} รายการ)`, 'order', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Cancel Booking (Move to Trash)
   const handleCancelBooking = (bookingId: string) => {
     const b = bookings.find(item => item.id === bookingId);
-    if (!b) return;
-
     setBookings(prev => prev.map(item => 
       item.id === bookingId ? { ...item, status: 'cancelled', deletedAt: new Date().toISOString() } : item
     ));
 
     // If room is occupied by this booking, free it up
-    setRooms(prev => prev.map(r => 
-      r.currentGuest?.bookingId === bookingId ? { ...r, status: 'available', currentGuest: undefined } : r
-    ));
+    if (b) {
+      setRooms(prev => prev.map(r => 
+        r.currentGuest?.bookingId === bookingId ? { ...r, status: 'available', currentGuest: undefined } : r
+      ));
+    }
+
+    addLog('ยกเลิกการจอง', `ย้ายการจองห้อง ${b?.roomNumber || ''} (${b?.guestName || ''}) รหัส ${b?.bookingCode || ''} ไปถังขยะ`, 'booking', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Restore Booking from Trash
   const handleRestoreBooking = (bookingId: string) => {
+    const b = bookings.find(item => item.id === bookingId);
     setBookings(prev => prev.map(item => 
       item.id === bookingId ? { ...item, status: 'confirmed', deletedAt: undefined } : item
     ));
+
+    addLog('กู้คืนการจอง', `กู้คืนการจองห้อง ${b?.roomNumber || ''} (${b?.guestName || ''}) รหัส ${b?.bookingCode || ''}`, 'booking', b?.roomNumber, b?.bookingCode);
   };
 
   // Action: Permanently Delete Booking from Trash
   const handlePermanentDeleteBooking = (bookingId: string) => {
+    const b = bookings.find(item => item.id === bookingId);
     setBookings(prev => prev.filter(item => item.id !== bookingId));
+
+    addLog('ลบการจองถาวร', `ลบข้อมูลการจองห้อง ${b?.roomNumber || ''} (${b?.guestName || ''}) รหัส ${b?.bookingCode || ''} ถาวร`, 'booking', b?.roomNumber, b?.bookingCode);
+  };
+
+  // Action: Save System Settings & Dynamically Update Room Rates
+  const handleSaveSettings = (newSettings: ResortSettings) => {
+    setSettings(newSettings);
+    // Update live room prices dynamically based on settings
+    setRooms(prev => prev.map(r => {
+      if (r.roomNumber === 'S1' || r.roomNumber === 'S2') {
+        return { ...r, pricePerNight: newSettings.rateMediumRoom };
+      }
+      if (r.roomNumber === 'S3' || r.roomNumber === 'S4') {
+        return { ...r, pricePerNight: newSettings.rateLargeRoom };
+      }
+      if (r.roomNumber === 'S5' || r.roomNumber === 'S6') {
+        return { ...r, pricePerNight: newSettings.rateSmallRoom };
+      }
+      return r;
+    }));
+    addLog('บันทึกการตั้งค่าระบบ', 'อัปเดตข้อมูลทั่วไป ราคาห้องพัก และบัญชีธนาคาร', 'system');
   };
 
   // Handlers for modal opening
@@ -402,6 +520,20 @@ const MainDashboard = ({ user }: { user: User }) => {
           {activeTab === 'finance' && (
             <FinanceView
               bookings={bookings}
+            />
+          )}
+
+          {activeTab === 'logs' && (
+            <LogsView
+              logs={logs}
+              onClearLogs={() => setLogs([])}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SettingsView
+              settings={settings}
+              onSaveSettings={handleSaveSettings}
             />
           )}
         </main>

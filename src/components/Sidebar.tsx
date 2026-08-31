@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Home,
   CalendarDays,
@@ -6,12 +5,14 @@ import {
   DollarSign, 
   LogOut, 
   Plus,
-  User
+  User,
+  History,
+  Settings
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 
-export type ActiveTab = 'dashboard' | 'timeline' | 'bookings' | 'finance';
+export type ActiveTab = 'dashboard' | 'timeline' | 'bookings' | 'finance' | 'logs' | 'settings';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -31,6 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'timeline', label: 'ปฏิทินห้องพัก', icon: CalendarDays },
     { id: 'bookings', label: 'รายการจอง', icon: ListOrdered },
     { id: 'finance', label: 'สรุปยอดเงิน', icon: DollarSign },
+    { id: 'logs', label: 'ประวัติการทำงาน', icon: History },
+    { id: 'settings', label: 'ตั้งค่าระบบ', icon: Settings },
   ];
 
   return (

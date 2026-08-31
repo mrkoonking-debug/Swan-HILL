@@ -1,4 +1,4 @@
-import type { Room, Booking } from '../types/pms';
+import type { Room, Booking, ResortSettings, ActivityLog } from '../types/pms';
 
 export const initialRooms: Room[] = [
   // 1. บ้านพักหลังใหญ่ (1,500 บาท/คืน)
@@ -186,4 +186,78 @@ export const initialBookings: Booking[] = [
     specialRequests: 'ผู้ใหญ่ 4 ท่าน เด็ก 1 คน',
     createdAt: '2026-08-30T08:30:00Z'
   }
+];
+
+export const initialSettings: ResortSettings = {
+  resortNameEn: 'SWAN HILL RESORT',
+  resortNameTh: 'สวอนฮิลล์ รีสอร์ท',
+  phone: '081-234-5678',
+  address: 'ตำบลหนองรี อำเภอเมือง จังหวัดชลบุรี',
+  lineId: '@swanhill',
+  facebook: 'Swan HILL Resort',
+  checkInTime: '14:00',
+  checkOutTime: '12:00',
+  receiptFooterMessage: 'ขอบพระคุณที่ไว้วางใจเลือกพักกับ Swan HILL Resort ขอให้มีความสุขและความสะดวกสบายตลอดการเข้าพัก',
+  
+  // Room Rates Config
+  rateMediumRoom: 1200, // S1, S2
+  rateLargeRoom: 1500, // S3, S4
+  rateSmallRoom: 1000, // S5, S6
+  extraBedPrice: 300,
+  extraBreakfastPrice: 60,
+  mookataSmallPrice: 350,
+  mookataLargePrice: 500,
+
+  // Bank Account
+  bankName: 'กสิกรไทย (KBANK)',
+  bankAccountNo: '123-4-56789-0',
+  bankAccountName: 'สวอนฮิลล์ รีสอร์ท',
+  promptPayNo: '081-234-5678',
+};
+
+export const initialLogs: ActivityLog[] = [
+  {
+    id: 'log-1',
+    userEmail: 'admin@swanhill.com',
+    userName: 'ผู้ดูแลระบบ Swan HILL',
+    action: 'บันทึกการจองห้องพักใหม่',
+    details: 'จองห้อง S3 (คุณสุรชัย วงศ์สว่าง) รหัส BK-20260830-01 วันที่ 30 ส.ค. - 02 ก.ย.',
+    category: 'booking',
+    targetRoomNumber: 'S3',
+    targetBookingCode: 'BK-20260830-01',
+    timestamp: '2026-08-30T10:00:00Z',
+  },
+  {
+    id: 'log-2',
+    userEmail: 'admin@swanhill.com',
+    userName: 'ผู้ดูแลระบบ Swan HILL',
+    action: 'บันทึกรับเงินมัดจำ',
+    details: 'รับโอนเงินมัดจำ ฿4,500 บาท สำหรับห้อง S3 (BK-20260830-01)',
+    category: 'payment',
+    targetRoomNumber: 'S3',
+    targetBookingCode: 'BK-20260830-01',
+    timestamp: '2026-08-30T10:05:00Z',
+  },
+  {
+    id: 'log-3',
+    userEmail: 'staff@swanhill.com',
+    userName: 'พนักงานต้อนรับ',
+    action: 'เช็คอินลูกค้าเข้าพัก',
+    details: 'เช็คอินห้อง S1 (คุณกิตติศักดิ์ พรเจริญ) รหัส BK-20260831-02',
+    category: 'room',
+    targetRoomNumber: 'S1',
+    targetBookingCode: 'BK-20260831-02',
+    timestamp: '2026-08-31T14:10:00Z',
+  },
+  {
+    id: 'log-4',
+    userEmail: 'staff@swanhill.com',
+    userName: 'พนักงานต้อนรับ',
+    action: 'เพิ่มออเดอร์หมูกระทะ',
+    details: 'สั่งหมูกระทะชุดเล็ก 1 ชุด (฿350) ให้ห้อง S1',
+    category: 'order',
+    targetRoomNumber: 'S1',
+    targetBookingCode: 'BK-20260831-02',
+    timestamp: '2026-08-31T15:00:00Z',
+  },
 ];
