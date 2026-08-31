@@ -25,8 +25,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const rightTabs = allTabs.filter(t => t.slot === 'right');
 
   return (
-    <div className="md:hidden fixed bottom-4 inset-x-0 z-40 px-3 pointer-events-none flex justify-center">
-      {/* Dark Luxury Liquid Glass Floating Capsule matching Reference */}
+    <div className="md:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-0 z-40 px-3 pointer-events-none flex justify-center">
+      {/* Dark Luxury Liquid Glass Floating Capsule */}
       <div className="pointer-events-auto w-full max-w-[365px] bg-slate-950/95 backdrop-blur-2xl border border-slate-800/80 shadow-[0_12px_45px_rgba(0,0,0,0.6),0_0_20px_rgba(14,165,233,0.12)] rounded-full px-2 py-1.5 flex items-center justify-between relative select-none">
         
         {/* Subtle Liquid Glow Accent in Background */}
