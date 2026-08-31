@@ -122,6 +122,50 @@ const MainDashboard = ({ user }: { user: User }) => {
     }));
   };
 
+  // Action: Update Past Payment Transaction
+  const handleUpdatePaymentTransaction = (bookingId: string, transactionId: string, updated: Partial<PaymentTransaction>) => {
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      
+      const newTransactions = (b.transactions || []).map(tx => 
+        tx.id === transactionId ? { ...tx, ...updated } : tx
+      );
+      const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+      const roomBase = b.roomPrice * b.totalNights;
+      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
+
+      return {
+        ...b,
+        paidAmount: newPaidAmount,
+        paymentStatus: newPaymentStatus,
+        transactions: newTransactions,
+      };
+    }));
+  };
+
+  // Action: Delete Payment Transaction
+  const handleDeletePaymentTransaction = (bookingId: string, transactionId: string) => {
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      
+      const newTransactions = (b.transactions || []).filter(tx => tx.id !== transactionId);
+      const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+      const roomBase = b.roomPrice * b.totalNights;
+      const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
+      const grandTotal = b.totalAmount || (roomBase + addOnsSum);
+      const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
+
+      return {
+        ...b,
+        paidAmount: newPaidAmount,
+        paymentStatus: newPaymentStatus,
+        transactions: newTransactions,
+      };
+    }));
+  };
+
   // Action: Confirm Checkout (with optional payment collection)
   const handleConfirmCheckout = (bookingId: string, paymentReceived?: { amount: number; method: PaymentMethod }) => {
     const b = bookings.find(item => item.id === bookingId);
@@ -388,6 +432,8 @@ const MainDashboard = ({ user }: { user: User }) => {
         onClose={() => setSelectedBookingForPayment(null)}
         booking={selectedBookingForPayment}
         onRecordPayment={handleRecordPayment}
+        onUpdatePaymentTransaction={handleUpdatePaymentTransaction}
+        onDeletePaymentTransaction={handleDeletePaymentTransaction}
       />
 
       {/* Smart Checkout Confirmation Guard Modal */}
