@@ -493,6 +493,7 @@ const MainDashboard = ({ user }: { user: User }) => {
               onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
               onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
               onOpenAddPayment={(booking) => setSelectedBookingForPayment(booking)}
+              onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
             />
           )}
 

@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
-  Plus,
+  Calendar, 
+  Plus, 
+  CreditCard, 
+  Receipt,
+  Users,
   LayoutGrid,
   ListFilter,
-  CreditCard,
-  Receipt
+  UtensilsCrossed,
+  X,
+  Phone,
+  ChevronRight as ArrowRightIcon
 } from 'lucide-react';
 import type { Room, Booking } from '../types/pms';
+import { formatThaiDate } from '../utils/dateUtils';
 import { HouseLogo } from './HouseLogo';
-import { THAI_MONTHS_FULL, formatThaiDate } from '../utils/dateUtils';
 
 interface TimelineCalendarViewProps {
   rooms: Room[];
@@ -19,6 +22,7 @@ interface TimelineCalendarViewProps {
   onOpenNewBookingWithPrefill?: (roomId: string, date: string) => void;
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
+  onOpenAddOrder?: (booking: Booking) => void;
 }
 
 export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
@@ -27,135 +31,85 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   onOpenNewBookingWithPrefill,
   onOpenReceipt,
   onOpenAddPayment,
+  onOpenAddOrder,
 }) => {
-  // Calendar month state (default to August 2026 / 2569)
-  const [currentYear, setCurrentYear] = useState<number>(2026);
-  const [currentMonth, setCurrentMonth] = useState<number>(7); // 0-indexed (7 = August)
-  const [viewMode, setViewMode] = useState<'month' | 'timeline'>('month');
+  const [selectedDateModal, setSelectedDateModal] = useState<string | null>(null);
   const [selectedBookingModal, setSelectedBookingModal] = useState<Booking | null>(null);
+  const [viewMode, setViewMode] = useState<'month' | 'timeline'>('month');
 
-  // Month navigation
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
-  };
+  // Strictly order rooms: S1, S2 -> S3, S4 -> S5, S6
+  const orderedRooms = [...rooms].sort((a, b) => {
+    const order = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
+    return order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber);
+  });
 
-  const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  };
+  // Calendar for September 2026 (30 days, starts on Tuesday)
+  const currentMonthYear = 'กันยายน 2569';
+  const startDayOfWeek = 2; // Tuesday (0=Sun, 1=Mon, 2=Tue)
+  const totalDays = 30;
 
-  // Buddhist Year
-  const yearBE = currentYear + 543;
-  const monthName = THAI_MONTHS_FULL[currentMonth];
+  // Build grid cells with offset
+  const calendarCells = [];
+  for (let i = 0; i < startDayOfWeek; i++) {
+    calendarCells.push(null);
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = `2026-09-${String(d).padStart(2, '0')}`;
+    calendarCells.push({
+      day: d,
+      dateStr,
+    });
+  }
 
-  // Calculate calendar grid days
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun, 1 = Mon ...
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-  // Active bookings filter (non-cancelled, non-trashed)
+  // Active bookings filter
   const activeBookings = bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
 
-  // Helper to find bookings for a specific day string (YYYY-MM-DD)
+  // Helper: Get bookings active on a specific date
   const getBookingsForDate = (dateStr: string) => {
     return activeBookings.filter(b => dateStr >= b.checkInDate && dateStr < b.checkOutDate);
   };
 
-  // Helper for Payment Status Badge
-  const getPaymentBadge = (booking: Booking) => {
-    const roomBaseTotal = booking.roomPrice * booking.totalNights;
-    const addOnsTotal = booking.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
-    const grandTotal = booking.totalAmount || (roomBaseTotal + addOnsTotal);
-    const remaining = Math.max(0, grandTotal - booking.paidAmount);
-
-    if (remaining === 0 || booking.paymentStatus === 'paid') {
-      return (
-        <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-300">
-          จ่ายครบ
-        </span>
-      );
-    }
-    if (booking.paidAmount > 0 || booking.paymentStatus === 'deposit') {
-      return (
-        <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
-          มัดจำ (ค้าง ฿{remaining.toLocaleString()})
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-black text-rose-800 bg-rose-100 px-1.5 py-0.2 rounded border border-rose-300">
-        ยังไม่จ่าย
-      </span>
-    );
+  // Helper: Find booking on a date for a specific room
+  const getBookingForRoomAndDate = (roomId: string, dateStr: string) => {
+    return activeBookings.find(b => (b.roomId === roomId || b.roomNumber === roomId) && dateStr >= b.checkInDate && dateStr < b.checkOutDate);
   };
 
-  // Generate days array for Month View
-  const calendarCells = [];
-  // Leading empty cells
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    calendarCells.push(null);
-  }
-  // Days of the month
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    calendarCells.push({ day: d, dateStr });
-  }
-
-  // 14-day strip for Timeline View
-  const timelineDays = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(currentYear, currentMonth, 1 + i * 2);
-    return d.toISOString().slice(0, 10);
+  // 15 days range for timeline matrix view
+  const timelineDays = Array.from({ length: 15 }, (_, i) => {
+    const d = i + 1;
+    return `2026-09-${String(d).padStart(2, '0')}`;
   });
 
   return (
-    <div className="space-y-4 pb-28 md:pb-8">
-      {/* Top Header: Month Selector & View Switcher */}
-      <div className="bg-white/95 backdrop-blur-md p-3 md:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        
-        {/* Month Navigation (< สิงหาคม 2569 >) */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrevMonth}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all"
-            title="เดือนก่อนหน้า"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+    <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
+      
+      {/* Top Header & View Switcher */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-emerald-600" />
+            <span>ปฏิทินห้องพัก Swan HILL Resort</span>
+          </h1>
+          <p className="text-xs text-slate-500 font-medium">
+            {currentMonthYear} &bull; แตะที่วันเพื่อดูสรุปและสถานะห้องพัก 6 หลัง
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-xl border border-slate-200">
-            <CalendarIcon className="w-4 h-4 text-emerald-600" />
-            <span className="text-sm md:text-base font-black text-slate-900">
-              {monthName} {yearBE}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Legend */}
+          <div className="hidden lg:flex items-center gap-2.5 text-[11px] font-bold px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+            <span className="flex items-center gap-1.5 text-emerald-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ว่างพร้อมจอง
+            </span>
+            <span className="flex items-center gap-1.5 text-amber-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> จ่ายมัดจำ
+            </span>
+            <span className="flex items-center gap-1.5 text-blue-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> จ่ายครบแล้ว
             </span>
           </div>
 
-          <button
-            onClick={handleNextMonth}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 active:scale-95 transition-all"
-            title="เดือนถัดไป"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Legend & View Mode Switcher */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Legend */}
-          <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold px-2.5 py-1 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> จ่ายครบแล้ว</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> จ่ายมัดจำ</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500"></span> ยังไม่ชำระ</span>
-          </div>
-
-          {/* Toggle Button */}
+          {/* Toggle View Mode */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setViewMode('month')}
@@ -166,7 +120,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>ปฏิทินทั้งเดือน</span>
+              <span>ปฏิทินรายเดือน</span>
             </button>
             <button
               onClick={() => setViewMode('timeline')}
@@ -183,10 +137,10 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* VIEW 1: FULL MONTH INTERACTIVE CALENDAR GRID */}
+      {/* VIEW 1: CLEAN & COMPACT FULL MONTH CALENDAR GRID */}
       {viewMode === 'month' && (
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 p-3 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-          {/* Day of Week Headers (อา. จ. อ. พ. พฤ. ศ. ส.) */}
+          {/* Day of Week Headers */}
           <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center">
             {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
               <div 
@@ -201,14 +155,14 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             ))}
           </div>
 
-          {/* Days Cells Grid */}
+          {/* Days Cells Grid (Clean & Compact) */}
           <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {calendarCells.map((cell, idx) => {
               if (!cell) {
                 return (
                   <div 
                     key={`empty-${idx}`} 
-                    className="min-h-[90px] sm:min-h-[110px] bg-slate-50/40 rounded-2xl border border-dashed border-slate-200/60"
+                    className="h-16 sm:h-20 bg-slate-50/40 rounded-2xl border border-dashed border-slate-200/60"
                   />
                 );
               }
@@ -221,66 +175,57 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               return (
                 <div
                   key={cell.dateStr}
-                  onClick={() => {
-                    if (onOpenNewBookingWithPrefill) {
-                      onOpenNewBookingWithPrefill(rooms[0]?.id || 'room-s1', cell.dateStr);
-                    }
-                  }}
-                  className={`min-h-[90px] sm:min-h-[115px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-400 select-none ${
+                  onClick={() => setSelectedDateModal(cell.dateStr)}
+                  className={`h-16 sm:h-20 p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-500 select-none group ${
                     isFull 
-                      ? 'bg-rose-50/30 border-rose-200' 
-                      : (bookedRoomsCount > 0 ? 'bg-slate-50/80 border-slate-200' : 'bg-white border-slate-200/90')
+                      ? 'bg-rose-50/40 border-rose-200 hover:bg-rose-50' 
+                      : (bookedRoomsCount > 0 ? 'bg-slate-50/90 border-slate-200 hover:bg-white' : 'bg-white border-slate-200/90 hover:bg-emerald-50/30')
                   }`}
                 >
-                  {/* Top Bar: Day Number & Available Counter */}
+                  {/* Top Bar: Day Number & Status Indicator */}
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
                       {cell.day}
                     </span>
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                    <span className={`text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md ${
                       isFull 
-                        ? 'bg-rose-100 text-rose-800 font-black' 
+                        ? 'bg-rose-100 text-rose-800' 
                         : (bookedRoomsCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')
                     }`}>
-                      {isFull ? 'เต็ม' : `ว่าง ${availableRoomsCount}/${rooms.length}`}
+                      {isFull ? 'เต็ม 6/6' : `ว่าง ${availableRoomsCount}/${rooms.length}`}
                     </span>
                   </div>
 
-                  {/* Bookings Stack in this Day */}
-                  <div className="space-y-1 my-1 flex-1 overflow-y-auto no-scrollbar">
-                    {dayBookings.slice(0, 3).map((b) => (
-                      <div
-                        key={b.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedBookingModal(b);
-                        }}
-                        className="p-1 rounded-lg bg-white border border-slate-200 text-[10px] shadow-2xs hover:border-emerald-500 transition-colors"
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-black text-slate-900 truncate">
-                            [{b.roomNumber}] {b.guestName}
+                  {/* Compact Color-coded Room Pills (Clean & Simple, No Huge Cards) */}
+                  <div className="flex items-center gap-1 flex-wrap overflow-hidden">
+                    {bookedRoomsCount === 0 ? (
+                      <span className="text-[9px] font-bold text-slate-400 opacity-60 hidden sm:inline">
+                        ว่างทุกหลัง
+                      </span>
+                    ) : (
+                      dayBookings.slice(0, 4).map((b) => {
+                        const isPaid = b.paidAmount >= b.totalAmount;
+                        return (
+                          <span
+                            key={b.id}
+                            title={`${b.roomNumber}: ${b.guestName} (${isPaid ? 'จ่ายครบ' : 'มัดจำ'})`}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                              isPaid 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-amber-500 text-white'
+                            }`}
+                          >
+                            {b.roomNumber}
                           </span>
-                        </div>
-                        <div className="mt-0.5">
-                          {getPaymentBadge(b)}
-                        </div>
-                      </div>
-                    ))}
-
-                    {dayBookings.length > 3 && (
-                      <span className="text-[9px] font-bold text-slate-400 block text-center">
-                        +{dayBookings.length - 3} หลัง
+                        );
+                      })
+                    )}
+                    {bookedRoomsCount > 4 && (
+                      <span className="text-[9px] font-black text-slate-500">
+                        +{bookedRoomsCount - 4}
                       </span>
                     )}
                   </div>
-
-                  {/* Empty Add Slot */}
-                  {bookedRoomsCount === 0 && (
-                    <div className="text-[9px] text-slate-400 font-bold flex items-center justify-center gap-0.5 opacity-60">
-                      <Plus className="w-2.5 h-2.5" /> จอง
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -298,30 +243,34 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 {timelineDays.map((dStr) => {
                   const date = new Date(dStr);
                   return (
-                    <th key={dStr} className="py-2 px-1 text-center text-xs font-bold text-slate-700 min-w-[50px]">
-                      <span className="block font-black text-slate-900">{date.getDate()}</span>
-                      <span className="text-[10px] text-slate-400">{THAI_MONTHS_FULL[date.getMonth()].slice(0, 3)}</span>
+                    <th key={dStr} className="py-2 px-1 text-center text-xs font-bold text-slate-600">
+                      <span className="block text-[10px] text-slate-400">
+                        {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][date.getDay()]}
+                      </span>
+                      <span className="font-black text-slate-800">{date.getDate()}</span>
                     </th>
                   );
                 })}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rooms.map((room) => (
-                <tr key={room.id} className="hover:bg-slate-50/50">
+              {orderedRooms.map((room) => (
+                <tr key={room.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
                       <HouseLogo roomNumber={room.roomNumber} size="sm" />
                       <div>
-                        <span className="text-xs font-black text-slate-900 block leading-tight">{room.roomNumber}</span>
-                        <span className="text-[10px] text-slate-500 font-semibold">{room.type}</span>
+                        <span className="font-black text-xs text-slate-900 block">
+                          ห้อง {room.roomNumber}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium block">
+                          ฿{room.pricePerNight.toLocaleString()}/คืน
+                        </span>
                       </div>
                     </div>
                   </td>
                   {timelineDays.map((dStr) => {
-                    const booking = activeBookings.find(
-                      b => b.roomId === room.id && dStr >= b.checkInDate && dStr < b.checkOutDate
-                    );
+                    const booking = getBookingForRoomAndDate(room.id, dStr);
 
                     return (
                       <td key={dStr} className="py-2 px-1 text-center">
@@ -352,82 +301,304 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
         </div>
       )}
 
-      {/* Booking Quick Detail Modal (from calendar click) */}
-      {selectedBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white text-slate-900 w-full max-w-md rounded-3xl p-5 border border-slate-200 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <HouseLogo roomNumber={selectedBookingModal.roomNumber} size="sm" />
+      {/* LEVEL 2 MODAL: DAILY DAY OVERVIEW (เมื่อกดที่วันใดวันหนึ่งในปฏิทิน) */}
+      {selectedDateModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                  <Calendar className="w-4 h-4" />
+                </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">
+                  <h3 className="text-base font-black">
+                    สรุปบ้านพักวันที่ {formatThaiDate(selectedDateModal)}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium">
+                    ว่าง {Math.max(0, rooms.length - getBookingsForDate(selectedDateModal).length)} หลัง &bull; จองแล้ว {getBookingsForDate(selectedDateModal).length} หลัง
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDateModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List of All 6 Rooms on this Date */}
+            <div className="p-4 overflow-y-auto no-scrollbar space-y-2.5 flex-1">
+              {orderedRooms.map((room) => {
+                const booking = getBookingForRoomAndDate(room.id, selectedDateModal);
+
+                if (!booking) {
+                  return (
+                    <div 
+                      key={room.id}
+                      className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center justify-center font-black text-xs shrink-0">
+                          {room.roomNumber}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-xs text-slate-900 block truncate">
+                            ห้อง {room.roomNumber} - {room.name}
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-bold">
+                            🟢 ว่างพร้อมจอง (฿{room.pricePerNight.toLocaleString()}/คืน)
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (onOpenNewBookingWithPrefill) {
+                            onOpenNewBookingWithPrefill(room.id, selectedDateModal);
+                          }
+                          setSelectedDateModal(null);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>กดจอง</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // If Booked / Occupied
+                const isPaid = booking.paidAmount >= booking.totalAmount;
+                const depositPct = booking.totalAmount > 0 ? Math.round((booking.paidAmount / booking.totalAmount) * 100) : 0;
+                const remaining = Math.max(0, booking.totalAmount - booking.paidAmount);
+
+                return (
+                  <div
+                    key={room.id}
+                    onClick={() => {
+                      setSelectedBookingModal(booking);
+                      setSelectedDateModal(null);
+                    }}
+                    className="p-3 bg-white hover:border-emerald-500 rounded-2xl border-2 border-slate-200 shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0">
+                        {room.roomNumber}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-xs text-slate-900 truncate">
+                            {booking.guestName}
+                          </span>
+                          <span className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
+                            isPaid ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'
+                          }`}>
+                            {isPaid ? 'ชำระครบ' : `มัดจำ ${depositPct}%`}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                          {booking.guestPhone} &bull; ยอดรวม ฿{booking.totalAmount.toLocaleString()} {remaining > 0 ? `(ค้าง ฿${remaining.toLocaleString()})` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-slate-400 group-hover:text-emerald-600 shrink-0">
+                      <span className="text-[11px] font-bold hidden sm:inline">ดูรายละเอียด</span>
+                      <ArrowRightIcon className="w-4 h-4" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+              <button
+                onClick={() => setSelectedDateModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* LEVEL 3 MODAL: FULL BOOKING, PAYMENT & MOOKATA INSPECTOR (เมื่อกดเลือกบ้านพักนั้น) */}
+      {selectedBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm">
+                  {selectedBookingModal.roomNumber}
+                </span>
+                <div>
+                  <h3 className="text-base font-black">
                     ห้อง {selectedBookingModal.roomNumber} - {selectedBookingModal.guestName}
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">{selectedBookingModal.bookingCode}</p>
+                  <p className="text-xs text-slate-400 font-medium">
+                    {selectedBookingModal.bookingCode} &bull; {selectedBookingModal.roomType}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedBookingModal(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-900"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs text-slate-700">
-              <div className="flex justify-between">
-                <span>วันเข้าพัก - เช็คเอาท์:</span>
-                <span className="font-bold text-slate-900">
-                  {formatThaiDate(selectedBookingModal.checkInDate)} ถึง {formatThaiDate(selectedBookingModal.checkOutDate)} ({selectedBookingModal.totalNights} คืน)
+            {/* Content Details */}
+            <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1">
+              
+              {/* Guest Details */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-600 flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-blue-600" /> ชื่อผู้เข้าพัก:
+                  </span>
+                  <span className="font-black text-slate-900">{selectedBookingModal.guestName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-600 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-emerald-600" /> เบอร์โทรศัพท์:
+                  </span>
+                  <a href={`tel:${selectedBookingModal.guestPhone}`} className="font-bold text-blue-600 hover:underline">
+                    {selectedBookingModal.guestPhone}
+                  </a>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-600 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" /> ระยะเวลาพัก:
+                  </span>
+                  <span className="font-bold text-slate-800">
+                    {formatThaiDate(selectedBookingModal.checkInDate)} ถึง {formatThaiDate(selectedBookingModal.checkOutDate)} ({selectedBookingModal.totalNights} คืน)
+                  </span>
+                </div>
+              </div>
+
+              {/* Financial Breakdown (เรื่องการจ่ายเงิน & มัดจำ) */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2.5">
+                <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  สรุปรายละเอียดการเงิน & ยอดมัดจำ
                 </span>
+
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 bg-white rounded-xl border border-blue-100">
+                    <span className="text-[9px] text-slate-500 font-bold block">ยอดรวมทั้งสิ้น</span>
+                    <span className="text-xs font-black text-slate-900">
+                      ฿{selectedBookingModal.totalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-emerald-100/90 rounded-xl border border-emerald-200">
+                    <span className="text-[9px] text-emerald-800 font-bold block">
+                      {selectedBookingModal.paidAmount >= selectedBookingModal.totalAmount ? 'ชำระครบ' : `มัดจำ ${Math.round((selectedBookingModal.paidAmount / selectedBookingModal.totalAmount) * 100)}%`}
+                    </span>
+                    <span className="text-xs font-black text-emerald-950">
+                      ฿{selectedBookingModal.paidAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className={`p-2 rounded-xl border ${selectedBookingModal.totalAmount - selectedBookingModal.paidAmount > 0 ? 'bg-amber-100 border-amber-300' : 'bg-slate-100 border-slate-200'}`}>
+                    <span className="text-[9px] text-amber-900 font-bold block">คงเหลือค้างจ่าย</span>
+                    <span className="text-xs font-black text-amber-950">
+                      ฿{Math.max(0, selectedBookingModal.totalAmount - selectedBookingModal.paidAmount).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>ยอดเงินรวมทั้งสิ้น:</span>
-                <span className="font-black text-emerald-800 text-sm">฿{selectedBookingModal.totalAmount.toLocaleString()} บาท</span>
+
+              {/* Mookata & Add-ons Section (เรื่องหมูกระทะ / บริการเสริม) */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                    <UtensilsCrossed className="w-4 h-4 text-amber-700" />
+                    รายการอาหาร & หมูกระทะ & บริการเสริม
+                  </span>
+                  {onOpenAddOrder && (
+                    <button
+                      onClick={() => {
+                        onOpenAddOrder(selectedBookingModal);
+                        setSelectedBookingModal(null);
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-950 text-[10px] font-black flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> เพิ่มออเดอร์
+                    </button>
+                  )}
+                </div>
+
+                {(!selectedBookingModal.addOns || selectedBookingModal.addOns.length === 0) ? (
+                  <p className="text-[11px] text-amber-800 font-medium py-1">
+                    ยังไม่มีรายการสั่งหมูกระทะหรือบริการเสริมในห้องนี้
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {selectedBookingModal.addOns.map((item) => (
+                      <div key={item.id} className="p-1.5 bg-white rounded-xl border border-amber-100 text-xs flex items-center justify-between">
+                        <span className="font-bold text-slate-800">{item.name} x {item.quantity}</span>
+                        <span className="font-black text-amber-900">฿{(item.price * item.quantity).toLocaleString()} บาท</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span>ชำระแล้ว:</span>
-                <span className="font-bold text-emerald-700">฿{selectedBookingModal.paidAmount.toLocaleString()} บาท</span>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-1">
+                <div className="grid grid-cols-2 gap-2">
+                  {onOpenAddPayment && (
+                    <button
+                      onClick={() => {
+                        onOpenAddPayment(selectedBookingModal);
+                        setSelectedBookingModal(null);
+                      }}
+                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>การชำระเงิน</span>
+                    </button>
+                  )}
+
+                  {onOpenReceipt && (
+                    <button
+                      onClick={() => {
+                        onOpenReceipt(selectedBookingModal);
+                        setSelectedBookingModal(null);
+                      }}
+                      className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <Receipt className="w-4 h-4 text-emerald-400" />
+                      <span>พิมพ์ใบเสร็จรับเงิน</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>ยอดคงเหลือ:</span>
-                <span className="font-bold text-amber-800">
-                  ฿{Math.max(0, selectedBookingModal.totalAmount - selectedBookingModal.paidAmount).toLocaleString()} บาท
-                </span>
-              </div>
+
             </div>
 
-            {/* Actions */}
-            <div className="pt-2 space-y-2">
-              {onOpenAddPayment && Math.max(0, selectedBookingModal.totalAmount - selectedBookingModal.paidAmount) > 0 && (
-                <button
-                  onClick={() => {
-                    onOpenAddPayment(selectedBookingModal);
-                    setSelectedBookingModal(null);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>การชำระเงิน</span>
-                </button>
-              )}
-
-              {onOpenReceipt && (
-                <button
-                  onClick={() => {
-                    onOpenReceipt(selectedBookingModal);
-                    setSelectedBookingModal(null);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <Receipt className="w-4 h-4 text-emerald-400" />
-                  <span>ดูใบเสร็จ / บันทึกภาพสลิป</span>
-                </button>
-              )}
+            {/* Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+              <button
+                onClick={() => setSelectedBookingModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs"
+              >
+                ปิดหน้าต่าง
+              </button>
             </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 };
