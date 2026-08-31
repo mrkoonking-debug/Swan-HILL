@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Palmtree, LogOut, RotateCw } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw } from 'lucide-react';
 import { auth } from '../lib/firebase';
+import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
 
 interface HeaderProps {
@@ -8,6 +9,7 @@ interface HeaderProps {
   availableRoomsCount: number;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  onLogoClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   availableRoomsCount,
   searchTerm,
   setSearchTerm,
+  onLogoClick,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -70,17 +73,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-      {/* Mobile Top App Bar */}
+      {/* Mobile Top App Bar with Official Swan Hill Logo */}
       <div className="md:hidden px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/20">
-            <Palmtree className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-sm text-white leading-tight">Swan HILL</h1>
-            <p className="text-[10px] text-emerald-400 font-medium">ระบบจัดการรีสอร์ท</p>
-          </div>
-        </div>
+        <BrandLogo 
+          theme="dark" 
+          onClick={onLogoClick} 
+        />
 
         {/* Right Action Buttons (Mobile) */}
         <div className="flex items-center gap-1.5">

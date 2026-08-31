@@ -6,10 +6,10 @@ import {
   DollarSign, 
   LogOut, 
   Plus,
-  Palmtree,
   User
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
+import { BrandLogo } from './BrandLogo';
 
 export type ActiveTab = 'dashboard' | 'timeline' | 'bookings' | 'finance';
 
@@ -35,17 +35,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="hidden md:flex w-60 bg-slate-900 text-white flex-col h-screen sticky top-0 border-r border-slate-800 select-none shrink-0">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/20">
-          <Palmtree className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="font-extrabold text-base text-white tracking-wide">
-            Swan HILL
-          </h1>
-          <p className="text-[11px] text-emerald-400 font-semibold">ระบบจัดการรีสอร์ท</p>
-        </div>
+      {/* Official Brand Header (Clickable to Home) */}
+      <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+        <BrandLogo 
+          theme="dark" 
+          onClick={() => setActiveTab('dashboard')} 
+        />
       </div>
 
       {/* Action Button */}

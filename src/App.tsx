@@ -203,6 +203,7 @@ const MainDashboard = ({ user }: { user: User }) => {
           availableRoomsCount={availableRoomsCount}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          onLogoClick={() => setActiveTab('dashboard')}
         />
 
         {/* View Routing */}
