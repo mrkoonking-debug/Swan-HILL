@@ -22,8 +22,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <div className="md:hidden fixed bottom-3 inset-x-0 z-40 px-4 pointer-events-none flex justify-center">
-      {/* Japanese Zen Charcoal Floating Capsule with Forest Moss Center Button */}
-      <div className="pointer-events-auto w-full max-w-md bg-[#1c1917]/95 backdrop-blur-xl border border-[#38332e] shadow-2xl rounded-3xl px-3 py-1.5 flex items-center justify-between text-white">
+      {/* Apple Dark Glass Floating Capsule with Glowing Center Plus Button */}
+      <div className="pointer-events-auto w-full max-w-md bg-slate-900/95 backdrop-blur-2xl border border-slate-800 shadow-2xl rounded-3xl px-3 py-1.5 flex items-center justify-between text-white">
         {/* Left 2 Tabs */}
         <div className="flex items-center gap-1 flex-1 justify-around">
           {tabs.slice(0, 2).map((tab) => {
@@ -34,12 +34,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as ActiveTab)}
                 className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all ${
-                  isActive ? 'text-[#a7d4ba] font-black' : 'text-[#a8a29e] hover:text-white'
+                  isActive ? 'text-emerald-400 font-black' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
                 <span className="text-[10px] mt-0.5">{tab.label}</span>
-                {isActive && <span className="w-1 h-1 rounded-full bg-[#a7d4ba] mt-0.5"></span>}
+                {isActive && <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>}
               </button>
             );
           })}
@@ -49,7 +49,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className="relative -top-5 px-1">
           <button
             onClick={onOpenNewBooking}
-            className="w-13 h-13 rounded-full bg-[#2d5a43] hover:bg-[#234835] text-white flex items-center justify-center shadow-lg shadow-[#2d5a43]/40 border-4 border-[#1c1917] active:scale-95 transition-transform"
+            className="w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/40 border-4 border-slate-900 active:scale-95 transition-transform"
             title="เพิ่มการจองใหม่"
           >
             <Plus className="w-6 h-6 stroke-[3]" />
@@ -66,12 +66,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as ActiveTab)}
                 className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all ${
-                  isActive ? 'text-[#a7d4ba] font-black' : 'text-[#a8a29e] hover:text-white'
+                  isActive ? 'text-emerald-400 font-black' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
                 <span className="text-[10px] mt-0.5">{tab.label}</span>
-                {isActive && <span className="w-1 h-1 rounded-full bg-[#a7d4ba] mt-0.5"></span>}
+                {isActive && <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>}
               </button>
             );
           })}

@@ -186,7 +186,7 @@ const MainDashboard = ({ user }: { user: User }) => {
   const availableRoomsCount = rooms.filter(r => r.status === 'available').length;
 
   return (
-    <div className="flex min-h-screen bg-[#f7f5f0] font-sans text-[#2b2724]">
+    <div className="flex min-h-screen bg-[#f8fafc] font-sans text-slate-900">
       {/* Desktop Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
