@@ -443,7 +443,7 @@ const MainDashboard = ({ user }: { user: User }) => {
   const availableRoomsCount = rooms.filter(r => r.status === 'available').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-['Prompt']">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-['Prompt'] w-full max-w-full overflow-x-hidden">
       {/* Desktop Persistent Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -463,7 +463,7 @@ const MainDashboard = ({ user }: { user: User }) => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         {/* Top Header */}
         <Header
           activeTab={activeTab}
@@ -475,7 +475,7 @@ const MainDashboard = ({ user }: { user: User }) => {
         />
 
         {/* View Routing */}
-        <main className="flex-1 p-3.5 sm:p-5 md:p-6 overflow-y-auto max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-5 md:p-6 pb-28 md:pb-8 max-w-7xl w-full mx-auto overflow-x-hidden">
           {activeTab === 'dashboard' && (
             <DashboardView
               rooms={rooms}
