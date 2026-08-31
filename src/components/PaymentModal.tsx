@@ -89,6 +89,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [editAmount, setEditAmount] = useState<number>(0);
   const [editMethod, setEditMethod] = useState<PaymentMethod>('transfer');
   const [editNote, setEditNote] = useState<string>('');
+  const [editDate, setEditDate] = useState<string>('');
+  const [editTime, setEditTime] = useState<string>('');
 
   const roomBaseTotal = booking ? booking.roomPrice * booking.totalNights : 0;
   const addOnsTotal = booking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
@@ -196,15 +198,23 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setEditAmount(tx.amount);
     setEditMethod(tx.method);
     setEditNote(tx.note || '');
+    const d = new Date(tx.paidAt);
+    setEditDate(d.toISOString().split('T')[0]);
+    setEditTime(d.toTimeString().slice(0, 5));
   };
 
   // Save edited transaction
   const handleSaveEdit = (txId: string) => {
     if (onUpdatePaymentTransaction && editAmount > 0) {
+      const updatedISO = editDate && editTime 
+        ? new Date(`${editDate}T${editTime}:00`).toISOString()
+        : new Date().toISOString();
+
       onUpdatePaymentTransaction(booking.id, txId, {
         amount: Number(editAmount),
         method: editMethod,
         note: editNote.trim(),
+        paidAt: updatedISO,
       });
       setEditingTxId(null);
     }
@@ -917,11 +927,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       return (
                         <div key={tx.id} className="p-3.5 bg-white rounded-2xl border-2 border-emerald-500 shadow-sm space-y-2.5">
                           <div className="flex items-center justify-between text-xs font-black text-emerald-900">
-                            <span>แก้ไขยอดรอบที่ {idx + 1}</span>
+                            <span>แก้ไขยอดงวดที่ {idx + 1}</span>
                             <span className="text-[10px] text-slate-400">{formatThaiDate(tx.paidAt)}</span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] font-bold text-slate-600 block mb-1">จำนวนเงิน (บาท)</label>
                               <input
@@ -942,6 +952,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                                 <option value="cash">เงินสด</option>
                                 <option value="credit_card">บัตรเครดิต</option>
                               </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-600 block mb-1">วันที่ชำระ</label>
+                              <input
+                                type="date"
+                                value={editDate}
+                                onChange={(e) => setEditDate(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-600 block mb-1">เวลา</label>
+                              <input
+                                type="time"
+                                value={editTime}
+                                onChange={(e) => setEditTime(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg outline-none focus:border-emerald-500"
+                              />
                             </div>
                           </div>
 
