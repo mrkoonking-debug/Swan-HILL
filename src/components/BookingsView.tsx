@@ -40,17 +40,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Separate active bookings and trashed bookings
   const trashedBookings = bookings.filter(b => !!b.deletedAt || b.status === 'cancelled');
   const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== 'cancelled');
 
-  // Counts for top metric pills (like PUKDEE reference)
   const countCheckedIn = activeBookings.filter(b => b.status === 'checked_in').length;
   const countConfirmed = activeBookings.filter(b => b.status === 'confirmed').length;
   const countPaid = activeBookings.filter(b => b.paymentStatus === 'paid').length;
   const countTrash = trashedBookings.length;
 
-  // Filtered list
   const displayedBookings = (statusFilter === 'trash' ? trashedBookings : activeBookings).filter((b) => {
     const matchesSearch = 
       b.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,29 +64,29 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     switch (status) {
       case 'checked_in':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#edf2f7] text-[#2c4364] border border-[#cbd8e6]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2c4364]"></span>
             กำลังพักอยู่
           </span>
         );
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#eaf3ed] text-[#23583a] border border-[#c2decb]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2d5a43]"></span>
             รอลูกค้ามาเช็คอิน
           </span>
         );
       case 'checked_out':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-            <Check className="w-3 h-3 text-slate-500" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#f4eee6] text-[#635a50]">
+            <Check className="w-3 h-3 text-[#786e64]" />
             เช็คเอาท์ออกแล้ว
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-            <Trash2 className="w-3 h-3 text-red-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fdf0ed] text-[#9c2b1b] border border-[#f5c6be]">
+            <Trash2 className="w-3 h-3 text-[#9c2b1b]" />
             อยู่ในถังขยะ
           </span>
         );
@@ -106,19 +103,19 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
   return (
     <div className="space-y-4 pb-28 md:pb-8">
-      {/* TOP METRIC STATUS COUNTERS (Inspired by PUKDEE PMS but Cleaner & Luxurious) */}
+      {/* TOP METRIC STATUS COUNTERS - Japanese Earth Tones */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
         {/* 1. All Bookings */}
         <div 
           onClick={() => setStatusFilter('all')}
           className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
             statusFilter === 'all' 
-              ? 'bg-slate-900 text-white border-slate-800 shadow-md' 
-              : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
+              ? 'bg-[#1c1917] text-white border-[#1c1917] shadow-md' 
+              : 'bg-white text-[#2b2724] border-[#e8e2d8] hover:border-[#d4c8b8]'
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${statusFilter === 'all' ? 'bg-[#292524] text-white' : 'bg-[#f4eee6] text-[#544b42]'}`}>
               <FileSpreadsheet className="w-4 h-4" />
             </div>
             <div>
@@ -133,12 +130,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           onClick={() => setStatusFilter('checked_in')}
           className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
             statusFilter === 'checked_in' 
-              ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-              : 'bg-white text-slate-800 border-slate-200 hover:border-blue-200'
+              ? 'bg-[#2c4364] text-white border-[#2c4364] shadow-md' 
+              : 'bg-white text-[#2b2724] border-[#e8e2d8] hover:border-[#cbd8e6]'
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${statusFilter === 'checked_in' ? 'bg-[#3b557d] text-white' : 'bg-[#edf2f7] text-[#2c4364]'}`}>
               <User className="w-4 h-4" />
             </div>
             <div>
@@ -153,12 +150,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           onClick={() => setStatusFilter('confirmed')}
           className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
             statusFilter === 'confirmed' 
-              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
-              : 'bg-white text-slate-800 border-slate-200 hover:border-emerald-200'
+              ? 'bg-[#2d5a43] text-white border-[#2d5a43] shadow-md' 
+              : 'bg-white text-[#2b2724] border-[#e8e2d8] hover:border-[#c2decb]'
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${statusFilter === 'confirmed' ? 'bg-[#3d6e55] text-white' : 'bg-[#eaf3ed] text-[#2d5a43]'}`}>
               <Clock className="w-4 h-4" />
             </div>
             <div>
@@ -170,15 +167,15 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
         {/* 4. Paid in Full */}
         <div 
-          className="p-3 rounded-2xl border bg-white text-slate-800 border-slate-200 flex items-center justify-between"
+          className="p-3 rounded-2xl border bg-white text-[#2b2724] border-[#e8e2d8] flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#eaf4f0] text-[#2d5a43] flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-slate-500">ชำระครบ</p>
-              <p className="text-lg font-black text-slate-900 leading-tight">{countPaid}</p>
+              <p className="text-[11px] font-medium text-[#70675e]">ชำระครบ</p>
+              <p className="text-lg font-black text-[#2b2724] leading-tight">{countPaid}</p>
             </div>
           </div>
         </div>
@@ -188,12 +185,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           onClick={() => setStatusFilter('trash')}
           className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between col-span-2 sm:col-span-1 ${
             statusFilter === 'trash' 
-              ? 'bg-red-600 text-white border-red-600 shadow-md' 
-              : 'bg-white text-slate-800 border-slate-200 hover:border-red-200'
+              ? 'bg-[#9c2b1b] text-white border-[#9c2b1b] shadow-md' 
+              : 'bg-white text-[#2b2724] border-[#e8e2d8] hover:border-[#f5c6be]'
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${statusFilter === 'trash' ? 'bg-[#b83827] text-white' : 'bg-[#fdf0ed] text-[#9c2b1b]'}`}>
               <Trash2 className="w-4 h-4" />
             </div>
             <div>
@@ -205,7 +202,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       </div>
 
       {/* Action and Filter Tab Bar */}
-      <div className="bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white p-3 md:p-3.5 rounded-2xl border border-[#e8e2d8] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'all', label: `ทั้งหมด (${activeBookings.length})` },
@@ -219,8 +216,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 statusFilter === tab.id
-                  ? (tab.id === 'trash' ? 'bg-red-600 text-white shadow-sm' : 'bg-emerald-600 text-white shadow-sm')
-                  : (tab.id === 'trash' ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+                  ? (tab.id === 'trash' ? 'bg-[#9c2b1b] text-white shadow-xs' : 'bg-[#2d5a43] text-white shadow-xs')
+                  : (tab.id === 'trash' ? 'bg-[#fdf0ed] text-[#9c2b1b] hover:bg-[#fae2dc]' : 'bg-[#f4eee6] text-[#544b42] hover:bg-[#eae2d8]')
               }`}
             >
               {tab.label}
@@ -230,7 +227,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
         <button
           onClick={onOpenNewBooking}
-          className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm py-2.5 px-4 rounded-xl shadow-sm transition-all shrink-0 active:scale-95"
+          className="flex items-center justify-center gap-1.5 bg-[#2d5a43] hover:bg-[#224432] text-white font-bold text-xs md:text-sm py-2.5 px-4 rounded-xl shadow-xs transition-all shrink-0 active:scale-98"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>+ สร้างรายการจองใหม่</span>
@@ -239,78 +236,77 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
       {/* Trash Notice Banner */}
       {statusFilter === 'trash' && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+        <div className="bg-[#fef8ed] border border-[#f4dbb3] text-[#8a5314] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-[#8a5314] shrink-0" />
           <span>รายการในถังขยะจะถูกลบถาวรโดยอัตโนมัติเมื่อครบ 15 วัน หรือกด "ลบทันที" เพื่อลบทิ้งถาวรได้เลยครับ</span>
         </div>
       )}
 
-      {/* PUKDEE-STYLE LUXURY BOOKING CARDS */}
+      {/* JAPANESE MINIMALIST LUXURY BOOKING CARDS */}
       <div className="space-y-3">
         {displayedBookings.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 shadow-sm">
-            <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="font-bold text-sm text-slate-800">
+          <div className="bg-white rounded-2xl border border-[#e8e2d8] p-8 text-center text-[#70675e] shadow-xs">
+            <Calendar className="w-10 h-10 text-[#c8bfb4] mx-auto mb-2" />
+            <p className="font-bold text-sm text-[#2b2724]">
               {statusFilter === 'trash' ? 'ไม่มีรายการในถังขยะ' : 'ไม่พบรายการจอง'}
             </p>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-[#8c8278] mt-0.5">
               {statusFilter === 'trash' ? 'รายการจองที่ถูกยกเลิกจะมาอยู่ที่นี่' : 'กดปุ่มสร้างรายการจองใหม่เพื่อบันทึกลูกค้า'}
             </p>
           </div>
         ) : (
           displayedBookings.map((b) => {
-            // Customer initials avatar
             const initials = b.guestName.replace(/คุณ/g, '').trim().slice(0, 2);
 
             return (
               <div
                 key={b.id}
-                className={`bg-white rounded-2xl border p-4 md:p-5 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+                className={`bg-white rounded-2xl border p-4 md:p-5 transition-all shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
                   b.status === 'cancelled' || !!b.deletedAt 
-                    ? 'border-red-200 bg-red-50/20' 
-                    : 'border-slate-200/90 hover:border-emerald-300'
+                    ? 'border-[#f5c6be] bg-[#fdf8f7]' 
+                    : 'border-[#e8e2d8] hover:border-[#2d5a43]/50'
                 }`}
               >
                 {/* Section 1: Customer Profile & Booking Code */}
                 <div className="flex items-start gap-3 min-w-[240px]">
                   {/* Avatar Circle */}
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0 border border-slate-700">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#292524] to-[#44403c] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 border border-[#292524]">
                     {initials || <User className="w-5 h-5" />}
                   </div>
 
                   <div>
                     {/* Booking Code & Timestamp */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-black text-[11px]">
+                      <span className="px-2 py-0.5 rounded-lg bg-[#f4eee6] text-[#453d36] font-black text-[11px]">
                         {b.bookingCode}
                       </span>
-                      <span className="text-[10px] text-slate-600 font-medium">
+                      <span className="text-[10px] text-[#70675e] font-medium">
                         {b.createdAt ? new Date(b.createdAt).toLocaleDateString('th-TH') : 'วันนี้'}
                       </span>
                     </div>
 
                     {/* Guest Name */}
-                    <h3 className="text-sm md:text-base font-black text-slate-900 mt-0.5">
+                    <h3 className="text-sm md:text-base font-black text-[#2b2724] mt-0.5">
                       {b.guestName}
                     </h3>
 
                     {/* Phone & Channel */}
-                    <div className="flex items-center gap-2 text-xs text-slate-600 mt-1 flex-wrap font-medium">
+                    <div className="flex items-center gap-2 text-xs text-[#544b42] mt-1 flex-wrap font-medium">
                       <a 
                         href={`tel:${b.guestPhone.replace(/[^0-9+]/g, '')}`} 
-                        className="flex items-center gap-1 font-bold text-emerald-700 underline"
+                        className="flex items-center gap-1 font-bold text-[#2d5a43] underline"
                       >
-                        <Phone className="w-3 h-3 text-emerald-600" />
+                        <Phone className="w-3 h-3 text-[#2d5a43]" />
                         {b.guestPhone}
                       </a>
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <MessageCircle className="w-2.5 h-2.5 text-emerald-600" />
+                      <span className="text-[10px] font-bold text-[#635a50] bg-[#f4eee6] px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <MessageCircle className="w-2.5 h-2.5 text-[#2d5a43]" />
                         {b.channel}
                       </span>
                     </div>
 
                     {statusFilter === 'trash' && (
-                      <p className="text-[10px] text-red-600 font-bold mt-1">
+                      <p className="text-[10px] text-[#9c2b1b] font-bold mt-1">
                         ลบถาวรอัตโนมัติในอีก {getDaysRemainingInTrash(b.deletedAt)} วัน
                       </p>
                     )}
@@ -318,40 +314,40 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </div>
 
                 {/* Section 2: Room Logo Badge & Stay Route Timeline */}
-                <div className="flex items-center gap-3.5 bg-slate-50/80 p-3 rounded-2xl border border-slate-100 flex-1 min-w-[280px]">
-                  {/* Custom Vector House Logo */}
+                <div className="flex items-center gap-3.5 bg-[#faf7f2] p-3 rounded-2xl border border-[#ede6db] flex-1 min-w-[280px]">
+                  {/* Custom Vector House Logo (Cream-Brown, No text) */}
                   <HouseLogo roomNumber={b.roomNumber} size="md" />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-xs font-bold text-slate-800 truncate">{b.roomType}</span>
+                      <span className="text-xs font-bold text-[#2b2724] truncate">{b.roomType}</span>
                       {getStatusBadge(b.status)}
                     </div>
 
                     {/* Stay Route: CheckIn -> Nights -> CheckOut */}
-                    <div className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                    <div className="flex items-center gap-2 text-xs text-[#544b42] font-medium">
                       <div className="text-left">
-                        <span className="text-[10px] text-slate-600 block uppercase font-bold">เข้าพัก</span>
-                        <span className="font-bold text-slate-900 text-xs">{b.checkInDate}</span>
+                        <span className="text-[10px] text-[#8c8278] block uppercase font-bold">เข้าพัก</span>
+                        <span className="font-bold text-[#2b2724] text-xs">{b.checkInDate}</span>
                       </div>
 
                       <div className="flex-1 flex flex-col items-center px-1">
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full mb-0.5">
+                        <span className="text-[10px] font-black text-[#2d5a43] bg-[#eaf3ed] px-2 py-0.5 rounded-full mb-0.5 border border-[#c2decb]">
                           {b.totalNights} คืน
                         </span>
-                        <div className="w-full h-[2px] bg-slate-300 relative flex items-center justify-end">
-                          <ArrowRight className="w-3 h-3 text-slate-400 -mr-1" />
+                        <div className="w-full h-[2px] bg-[#dcd4c8] relative flex items-center justify-end">
+                          <ArrowRight className="w-3 h-3 text-[#8c8278] -mr-1" />
                         </div>
                       </div>
 
                       <div className="text-right">
-                        <span className="text-[10px] text-slate-600 block uppercase font-bold">ออก</span>
-                        <span className="font-bold text-slate-900 text-xs">{b.checkOutDate}</span>
+                        <span className="text-[10px] text-[#8c8278] block uppercase font-bold">ออก</span>
+                        <span className="font-bold text-[#2b2724] text-xs">{b.checkOutDate}</span>
                       </div>
                     </div>
 
                     {b.specialRequests && (
-                      <p className="text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded-md mt-1.5 font-semibold border border-amber-200 truncate">
+                      <p className="text-[10px] text-[#784720] bg-[#fef6e9] px-2 py-0.5 rounded-md mt-1.5 font-semibold border border-[#f4dbb3] truncate">
                         หมายเหตุ: {b.specialRequests}
                       </p>
                     )}
@@ -359,14 +355,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </div>
 
                 {/* Section 3: Price Breakdown & Action Buttons */}
-                <div className="flex sm:flex-col lg:flex-row items-center justify-between lg:justify-end gap-3 min-w-[200px] pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                <div className="flex sm:flex-col lg:flex-row items-center justify-between lg:justify-end gap-3 min-w-[200px] pt-2 lg:pt-0 border-t lg:border-t-0 border-[#f0e9df]">
                   {/* Price */}
                   <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-slate-600 font-bold block uppercase">ยอดรวม</span>
-                    <span className="text-base md:text-lg font-black text-emerald-800">
+                    <span className="text-[10px] text-[#8c8278] font-bold block uppercase">ยอดรวม</span>
+                    <span className="text-base md:text-lg font-black text-[#2d5a43]">
                       ฿{b.totalAmount.toLocaleString()}
                     </span>
-                    <span className="text-[10px] block font-bold text-emerald-600">
+                    <span className="text-[10px] block font-bold text-[#23583a]">
                       {b.paymentStatus === 'paid' ? 'ชำระเต็มแล้ว' : (b.paymentStatus === 'deposit' ? `มัดจำ ฿${b.paidAmount.toLocaleString()}` : 'รอชำระ')}
                     </span>
                   </div>
@@ -377,7 +373,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {b.status === 'confirmed' && (
                         <button
                           onClick={() => onCheckInGuest(b.id)}
-                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                          className="px-3.5 py-2 rounded-xl bg-[#2d5a43] hover:bg-[#224432] active:scale-98 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>เช็คอิน</span>
@@ -387,7 +383,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {b.status === 'checked_in' && (
                         <button
                           onClick={() => onCheckOutGuest(b.id)}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                          className="px-3.5 py-2 rounded-xl bg-[#2e4057] hover:bg-[#1e2c3d] active:scale-98 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                           <span>เช็คเอาท์</span>
@@ -397,7 +393,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {/* Move to Trash */}
                       <button
                         onClick={() => onCancelBooking(b.id)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-2 rounded-xl text-[#8c8278] hover:text-[#9c2b1b] hover:bg-[#fdf0ed] transition-colors"
                         title="ย้ายไปถังขยะ"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -407,7 +403,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => onRestoreBooking && onRestoreBooking(b.id)}
-                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-95"
+                        className="px-3 py-2 rounded-xl bg-[#2d5a43] hover:bg-[#224432] text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-98"
                         title="กู้คืนรายการจองนี้"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -415,7 +411,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       </button>
                       <button
                         onClick={() => onPermanentDeleteBooking && onPermanentDeleteBooking(b.id)}
-                        className="px-2.5 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs flex items-center gap-1 transition-all active:scale-95"
+                        className="px-2.5 py-2 rounded-xl bg-[#fdf0ed] hover:bg-[#fae2dc] text-[#9c2b1b] font-bold text-xs flex items-center gap-1 transition-all active:scale-98"
                         title="ลบถาวรทันที"
                       >
                         <span>ลบทันที</span>
