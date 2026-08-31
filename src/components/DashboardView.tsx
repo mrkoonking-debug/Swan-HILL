@@ -293,12 +293,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* SECTION 3: บ้านพักหลังเล็ก (S5, S6 - ฿1,000) */}
+      {/* SECTION 3: บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน - บ้านคู่ติดกัน S5 & S6) */}
       <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-xs md:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
             <Home className="w-4 h-4 text-amber-700" />
-            <span>บ้านพักหลังเล็ก (1,000 บาท/คืน) - ห้อง S5, S6</span>
+            <span>บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน) - ห้อง S5 (ฝั่งซ้าย) & ห้อง S6 (ฝั่งขวา)</span>
           </h2>
           <span className="text-[11px] text-amber-700 font-bold">฿1,000</span>
         </div>

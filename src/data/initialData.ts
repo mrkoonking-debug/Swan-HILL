@@ -63,12 +63,12 @@ export const initialRooms: Room[] = [
     amenities: ['เครื่องปรับอากาศ', 'สมาร์ททีวี', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'ระเบียงส่วนตัว'],
   },
 
-  // 3. บ้านพักหลังเล็ก (1,000 บาท/คืน)
+  // 3. บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน - บ้านคู่ติดกัน S5 & S6)
   {
     id: 'room-s5',
     roomNumber: 'S5',
-    name: 'สวอน วิลล่า S5 (หลังเล็ก)',
-    type: 'บ้านพักหลังเล็ก',
+    name: 'สวอน วิลล่า S5 (บ้านแฝดซ้าย)',
+    type: 'บ้านพักแฝดหลังเล็ก',
     sizeCategory: 'small',
     pricePerNight: 1000,
     status: 'cleaning',
@@ -78,8 +78,8 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s6',
     roomNumber: 'S6',
-    name: 'สวอน วิลล่า S6 (หลังเล็ก)',
-    type: 'บ้านพักหลังเล็ก',
+    name: 'สวอน วิลล่า S6 (บ้านแฝดขวา)',
+    type: 'บ้านพักแฝดหลังเล็ก',
     sizeCategory: 'small',
     pricePerNight: 1000,
     status: 'available',
@@ -107,8 +107,8 @@ export const initialBookings: Booking[] = [
       { id: 'ad-1', name: 'ที่นอนเสริม 1 ชุด', category: 'bed', price: 300, quantity: 1, createdAt: '2026-08-30T14:00:00Z' },
       { id: 'ad-2', name: 'หมูกระทะชุดใหญ่', category: 'mookata_large', price: 500, quantity: 1, createdAt: '2026-08-30T18:00:00Z' }
     ],
-    totalAmount: 5300, // 1500*3 + 300 + 500
-    paidAmount: 4500, // deposit paid, 800 pending at checkout
+    totalAmount: 5300,
+    paidAmount: 4500,
     paymentStatus: 'deposit',
     status: 'checked_in',
     specialRequests: 'ขอเตาหมูกระทะตอน 18:00 น.',
@@ -131,7 +131,7 @@ export const initialBookings: Booking[] = [
     addOns: [
       { id: 'ad-3', name: 'หมูกระทะชุดเล็ก', category: 'mookata_small', price: 350, quantity: 1, createdAt: '2026-08-31T15:00:00Z' }
     ],
-    totalAmount: 1550, // 1200 + 350
+    totalAmount: 1550,
     paidAmount: 1550,
     paymentStatus: 'paid',
     status: 'checked_in',
@@ -146,7 +146,7 @@ export const initialBookings: Booking[] = [
     channel: 'LINE Official',
     roomId: 'room-s5',
     roomNumber: 'S5',
-    roomType: 'บ้านพักหลังเล็ก',
+    roomType: 'บ้านพักแฝดหลังเล็ก',
     checkInDate: '2026-09-01',
     checkOutDate: '2026-09-03',
     totalNights: 2,
@@ -155,7 +155,7 @@ export const initialBookings: Booking[] = [
     addOns: [
       { id: 'ad-4', name: 'อาหารเช้า 2 ท่าน', category: 'breakfast', price: 60, quantity: 2, createdAt: '2026-08-29T10:00:00Z' }
     ],
-    totalAmount: 2120, // 1000*2 + 120
+    totalAmount: 2120,
     paidAmount: 2120,
     paymentStatus: 'paid',
     status: 'confirmed',
@@ -179,7 +179,7 @@ export const initialBookings: Booking[] = [
     addOns: [
       { id: 'ad-5', name: 'ที่นอนเสริม 1 ชุด', category: 'bed', price: 300, quantity: 1, createdAt: '2026-08-30T10:00:00Z' }
     ],
-    totalAmount: 3300, // 1500*2 + 300
+    totalAmount: 3300,
     paidAmount: 1500,
     paymentStatus: 'deposit',
     status: 'confirmed',
