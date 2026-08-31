@@ -154,8 +154,8 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-4 overflow-y-auto space-y-4 flex-1 text-slate-800">
+        {/* Modal Content - Scrollbar Completely Hidden */}
+        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 text-slate-800">
           {/* Menu Items Selection Grid */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">

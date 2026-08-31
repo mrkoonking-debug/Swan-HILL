@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, FileText, Plus, Minus } from 'lucide-react';
+import { X, Check, FileText, Plus, Minus, CreditCard } from 'lucide-react';
 import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { 
   ExtraBedIcon, 
@@ -7,6 +7,8 @@ import {
   MookataLargeIcon, 
   BreakfastIcon 
 } from './MenuIcons';
+import { CustomDropdown, type DropdownOption } from './CustomDropdown';
+import { HouseLogo } from './HouseLogo';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -66,6 +68,40 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const roomBaseTotal = roomPricePerNight * totalNights;
   const addOnsTotal = (extraBeds * 300) + (mookataSmall * 350) + (mookataLarge * 500) + (breakfast * 60);
   const grandTotal = roomBaseTotal + addOnsTotal;
+
+  // Room Dropdown Options
+  const roomOptions: DropdownOption[] = rooms.map(r => ({
+    value: r.id,
+    label: `[${r.roomNumber}] ${r.name}`,
+    sublabel: r.type,
+    badge: `฿${r.pricePerNight.toLocaleString()}/คืน`,
+    icon: <HouseLogo roomNumber={r.roomNumber} size="sm" />
+  }));
+
+  // Payment Dropdown Options
+  const paymentOptions: DropdownOption[] = [
+    {
+      value: 'paid',
+      label: 'ชำระครบแล้ว',
+      sublabel: `฿${grandTotal.toLocaleString()} บาท`,
+      badge: 'ชำระครบ',
+      icon: <CreditCard className="w-4 h-4 text-emerald-600" />
+    },
+    {
+      value: 'deposit',
+      label: 'จ่ายมัดจำเฉพาะค่าห้อง',
+      sublabel: `฿${roomBaseTotal.toLocaleString()} บาท (เหลือเก็บตอนเช็คเอาท์ ฿${addOnsTotal.toLocaleString()})`,
+      badge: 'มัดจำ',
+      icon: <CreditCard className="w-4 h-4 text-amber-600" />
+    },
+    {
+      value: 'pending',
+      label: 'ยังไม่จ่าย (รอเก็บเงิน)',
+      sublabel: `รอเก็บยอด ฿${grandTotal.toLocaleString()} บาท`,
+      badge: 'ยังไม่ชำระ',
+      icon: <CreditCard className="w-4 h-4 text-slate-400" />
+    }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,8 +205,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto space-y-4 text-slate-800 flex-1">
+        {/* Form Body - Scrollbar Completely Hidden via no-scrollbar */}
+        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto no-scrollbar space-y-4 text-slate-800 flex-1">
           {/* 1. Guest Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -183,7 +219,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 placeholder="เช่น คุณสมชาย"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white"
+                className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
               />
             </div>
             <div>
@@ -196,27 +232,19 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 placeholder="เช่น 0812345678"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white"
+                className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
               />
             </div>
           </div>
 
-          {/* 2. Choose Room (S1-S6) */}
+          {/* 2. Choose Room (Custom Apple Liquid Glass Dropdown) */}
           <div>
-            <label className="block text-xs font-bold text-slate-900 mb-1">
-              เลือกบ้านพัก / ขนาดห้อง <span className="text-red-500">*</span>
-            </label>
-            <select
+            <CustomDropdown
+              label="เลือกบ้านพัก / ขนาดห้อง *"
+              options={roomOptions}
               value={selectedRoomId}
-              onChange={(e) => setSelectedRoomId(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs md:text-sm border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-bold bg-white text-emerald-800"
-            >
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  [{r.roomNumber}] {r.name} - ฿{r.pricePerNight.toLocaleString()}/คืน
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedRoomId(val)}
+            />
           </div>
 
           {/* 3. Dates */}
@@ -230,7 +258,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 required
                 value={checkInDate}
                 onChange={(e) => setCheckInDate(e.target.value)}
-                className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50 shadow-xs"
               />
             </div>
             <div>
@@ -242,13 +270,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 required
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
-                className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50 shadow-xs"
               />
             </div>
           </div>
 
           {/* 4. บริการเสริมตอนจอง (Add-on Services with Custom SVG Icons) */}
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2.5 shadow-xs">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                 บริการเสริม & อาหาร (เลือกเพิ่มได้)
@@ -257,8 +285,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Extra Bed (+300) */}
-            <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200/80">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-800 flex items-center justify-center">
                   <ExtraBedIcon size={18} />
                 </div>
@@ -271,7 +299,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setExtraBeds(Math.max(0, extraBeds - 1))}
-                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -279,7 +307,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setExtraBeds(extraBeds + 1)}
-                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -287,8 +315,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Mookata Small (+350) */}
-            <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200/80">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-800 flex items-center justify-center">
                   <MookataSmallIcon size={18} />
                 </div>
@@ -301,7 +329,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setMookataSmall(Math.max(0, mookataSmall - 1))}
-                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -309,7 +337,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setMookataSmall(mookataSmall + 1)}
-                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -317,8 +345,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Mookata Large (+500) */}
-            <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200/80">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-red-50 text-red-800 flex items-center justify-center">
                   <MookataLargeIcon size={18} />
                 </div>
@@ -331,7 +359,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setMookataLarge(Math.max(0, mookataLarge - 1))}
-                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -339,7 +367,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setMookataLarge(mookataLarge + 1)}
-                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -347,8 +375,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Breakfast (+60) */}
-            <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200/80">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center">
                   <BreakfastIcon size={18} />
                 </div>
@@ -361,7 +389,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setBreakfast(Math.max(0, breakfast - 1))}
-                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -369,7 +397,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setBreakfast(breakfast + 1)}
-                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold"
+                  className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center font-bold active:scale-90 transition-transform"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -378,7 +406,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           </div>
 
           {/* 5. Total Calculation Summary Box */}
-          <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200 space-y-1 text-xs">
+          <div className="p-3.5 bg-emerald-50/90 rounded-2xl border border-emerald-200 space-y-1 text-xs shadow-xs">
             <div className="flex justify-between text-slate-700">
               <span>ค่าห้อง ({selectedRoom?.roomNumber} &bull; {totalNights} คืน):</span>
               <span className="font-bold">฿{roomBaseTotal.toLocaleString()}</span>
@@ -395,21 +423,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
           </div>
 
-          {/* 6. Payment Status & Notes */}
+          {/* 6. Payment Status (Custom Apple Liquid Glass Dropdown) & Notes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                การชำระเงิน
-              </label>
-              <select
+              <CustomDropdown
+                label="การชำระเงิน *"
+                options={paymentOptions}
                 value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-bold bg-white"
-              >
-                <option value="paid">ชำระครบแล้ว (฿{grandTotal.toLocaleString()})</option>
-                <option value="deposit">จ่ายมัดจำเฉพาะค่าห้อง (฿{roomBaseTotal.toLocaleString()})</option>
-                <option value="pending">ยังไม่จ่าย (รอเก็บเงิน)</option>
-              </select>
+                onChange={(val) => setPaymentStatus(val as PaymentStatus)}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -420,7 +442,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 placeholder="เช่น ขอเตาปิ้งย่างตอนเย็น"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50"
+                className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white shadow-xs"
               />
             </div>
           </div>
