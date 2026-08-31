@@ -331,12 +331,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* View Mode Switcher: Resort Map (L-Shape) vs Grid View */}
+      {/* View Mode Switcher: แผนผัง vs แยกขนาด */}
       <div className="bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200/80 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-2 pl-2">
           <Map className="w-4 h-4 text-emerald-600" />
           <span className="text-xs font-black text-slate-800">
-            {viewMode === 'map' ? 'ผังรีสอร์ทพื้นที่จริงรูปตัว L' : 'มุมมองรายการการ์ดบ้านพักแยกตามขนาด'}
+            {viewMode === 'map' ? 'แผนผังรีสอร์ท' : 'รายการบ้านพัก'}
           </span>
         </div>
 
@@ -350,7 +350,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <Map className="w-3.5 h-3.5" />
-            <span>ผังจริง (รูปตัว L)</span>
+            <span>แผนผัง</span>
           </button>
           <button
             onClick={() => setViewMode('grid')}
@@ -361,7 +361,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            <span>แยกตามขนาด</span>
+            <span>แยกขนาด</span>
           </button>
         </div>
       </div>
@@ -373,7 +373,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between text-xs text-slate-600 pb-2 border-b border-slate-100 flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 font-bold text-slate-800">
-                <Trees className="w-4 h-4 text-emerald-600" /> Swan HILL Resort Map
+                <Trees className="w-4 h-4 text-emerald-600" /> ผังบริเวณรีสอร์ท
               </span>
               <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
                 แตะที่บ้านพักแต่ละหลังเพื่อดูรายละเอียด รับชำระเงิน หรือเช็คเอาท์
@@ -390,9 +390,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="relative bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 md:p-6 min-h-[520px] flex flex-col justify-between overflow-hidden">
             {/* Gravel Driveway in Center */}
             <div className="absolute inset-x-4 inset-y-4 border-2 border-dashed border-slate-300/60 rounded-xl pointer-events-none flex items-center justify-center">
-              <div className="text-center text-slate-300 font-extrabold text-xs tracking-widest uppercase flex items-center gap-2">
+              <div className="text-center text-slate-400 font-extrabold text-xs tracking-wide uppercase flex items-center gap-2">
                 <Car className="w-4 h-4" />
-                <span>ลานจอดรถ & ทางเดินส่วนกลางรีสอร์ท (Swan HILL Driveway)</span>
+                <span>ลานจอดรถ & ทางเดินส่วนกลางรีสอร์ท</span>
               </div>
             </div>
 
