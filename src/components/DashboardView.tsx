@@ -37,14 +37,14 @@ interface DashboardViewProps {
   onOpenCheckoutModal?: (booking: Booking) => void;
 }
 
-// 3D Masterplan Coordinate Pin Locations
+// 3D Masterplan Coordinate Pin Locations (Accurate to real Swan HILL layout)
 const PIN_COORDINATES: Record<string, { top: string; left: string }> = {
-  S6: { top: '19%', left: '21%' },
-  S5: { top: '19%', left: '32%' },
-  S4: { top: '24%', left: '49%' },
-  S3: { top: '31%', left: '60%' },
-  S2: { top: '40%', left: '71%' },
-  S1: { top: '54%', left: '85%' },
+  S6: { top: '38%', left: '20%' },
+  S5: { top: '36%', left: '24.5%' },
+  S4: { top: '29%', left: '44%' },
+  S3: { top: '34%', left: '55%' },
+  S2: { top: '41%', left: '68%' },
+  S1: { top: '48%', left: '81%' },
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
