@@ -13,70 +13,85 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   setActiveTab,
   onOpenNewBooking,
 }) => {
-  const tabs = [
-    { id: 'dashboard', label: 'หน้าหลัก', icon: Home },
-    { id: 'timeline', label: 'ปฏิทิน', icon: CalendarDays },
-    { id: 'bookings', label: 'รายการจอง', icon: ListOrdered },
-    { id: 'finance', label: 'ยอดเงิน', icon: DollarSign },
+  const leftTabs = [
+    { id: 'dashboard' as ActiveTab, label: 'หน้าหลัก', icon: Home },
+    { id: 'timeline' as ActiveTab, label: 'ปฏิทิน', icon: CalendarDays },
+  ];
+
+  const rightTabs = [
+    { id: 'bookings' as ActiveTab, label: 'รายการจอง', icon: ListOrdered },
+    { id: 'finance' as ActiveTab, label: 'ยอดเงิน', icon: DollarSign },
   ];
 
   return (
-    <div className="md:hidden fixed bottom-3 inset-x-0 z-40 px-4 pointer-events-none flex justify-center">
-      {/* Apple Dark Glass Floating Capsule with Glowing Center Plus Button */}
-      <div className="pointer-events-auto w-full max-w-md bg-slate-900/95 backdrop-blur-2xl border border-slate-800 shadow-2xl rounded-3xl px-3 py-1.5 flex items-center justify-between text-white">
+    <div className="md:hidden fixed bottom-4 inset-x-0 z-40 px-3 pointer-events-none flex justify-center">
+      {/* Luxury White Frosted Liquid Glass Capsule */}
+      <nav 
+        className="pointer-events-auto w-full max-w-[360px] bg-white/85 backdrop-blur-2xl border border-white/70 shadow-[0_12px_40px_rgba(0,0,0,0.12),0_2px_12px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-full px-2.5 py-1.5 flex items-center justify-between transition-all"
+        aria-label="Mobile Bottom Navigation"
+      >
         {/* Left 2 Tabs */}
-        <div className="flex items-center gap-1 flex-1 justify-around">
-          {tabs.slice(0, 2).map((tab) => {
+        <div className="flex items-center justify-around flex-1 gap-1">
+          {leftTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as ActiveTab)}
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all ${
-                  isActive ? 'text-emerald-400 font-black' : 'text-slate-400 hover:text-white'
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
+                  isActive
+                    ? 'bg-slate-900 text-white rounded-2xl px-3 py-1.5 shadow-md shadow-slate-900/20 scale-102'
+                    : 'text-slate-500 hover:text-slate-800 px-2 py-1'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className="text-[10px] mt-0.5">{tab.label}</span>
-                {isActive && <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>}
+                <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
+                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                  {tab.label}
+                </span>
               </button>
             );
           })}
         </div>
 
-        {/* Elevated Center Glowing + Button */}
-        <div className="relative -top-5 px-1">
+        {/* Center Glowing Floating Plus Button (Inspired by Reference) */}
+        <div className="relative -top-4 px-1.5 shrink-0">
           <button
             onClick={onOpenNewBooking}
-            className="w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/40 border-4 border-slate-900 active:scale-95 transition-transform"
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_8px_24px_rgba(14,165,233,0.45)] border-4 border-white active:scale-90 transition-transform"
             title="เพิ่มการจองใหม่"
+            aria-label="สร้างการจองใหม่"
           >
             <Plus className="w-6 h-6 stroke-[3]" />
           </button>
         </div>
 
         {/* Right 2 Tabs */}
-        <div className="flex items-center gap-1 flex-1 justify-around">
-          {tabs.slice(2, 4).map((tab) => {
+        <div className="flex items-center justify-around flex-1 gap-1">
+          {rightTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as ActiveTab)}
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all ${
-                  isActive ? 'text-emerald-400 font-black' : 'text-slate-400 hover:text-white'
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex flex-col items-center justify-center transition-all duration-200 ${
+                  isActive
+                    ? 'bg-slate-900 text-white rounded-2xl px-3 py-1.5 shadow-md shadow-slate-900/20 scale-102'
+                    : 'text-slate-500 hover:text-slate-800 px-2 py-1'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className="text-[10px] mt-0.5">{tab.label}</span>
-                {isActive && <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>}
+                <Icon className={`w-4 h-4 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
+                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                  {tab.label}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
+      </nav>
     </div>
   );
 };
