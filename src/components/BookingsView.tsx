@@ -284,27 +284,27 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 <div className="flex items-start gap-3 min-w-[230px]">
                   {/* Left Status Badge (กำลังพัก / รอเช็คอิน / เช็คเอาท์ / ยกเลิก) */}
                   {b.status === 'checked_in' && (
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-blue-500">
-                      <Users className="w-4 h-4 mb-0.5" />
-                      <span className="text-[10px] font-black tracking-tight leading-none">กำลังพัก</span>
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-blue-500">
+                      <Users className="w-4 h-4 mb-0.5 text-blue-100" />
+                      <span className="text-[11px] font-medium leading-none tracking-normal">กำลังพัก</span>
                     </div>
                   )}
                   {b.status === 'confirmed' && (
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-emerald-500">
-                      <Clock className="w-4 h-4 mb-0.5" />
-                      <span className="text-[10px] font-black tracking-tight leading-none">รอเช็คอิน</span>
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-emerald-500">
+                      <Clock className="w-4 h-4 mb-0.5 text-emerald-100" />
+                      <span className="text-[11px] font-medium leading-none tracking-normal">รอเช็คอิน</span>
                     </div>
                   )}
                   {b.status === 'checked_out' && (
-                    <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-200 flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-slate-700">
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-800 text-slate-200 flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-slate-700">
                       <CheckCircle2 className="w-4 h-4 mb-0.5 text-slate-400" />
-                      <span className="text-[10px] font-black tracking-tight leading-none">เช็คเอาท์</span>
+                      <span className="text-[11px] font-medium leading-none tracking-normal">เช็คเอาท์</span>
                     </div>
                   )}
                   {(b.status === 'cancelled' || !!b.deletedAt) && (
-                    <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-red-500">
-                      <Trash2 className="w-4 h-4 mb-0.5" />
-                      <span className="text-[10px] font-black tracking-tight leading-none">ยกเลิก</span>
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-red-500">
+                      <Trash2 className="w-4 h-4 mb-0.5 text-red-100" />
+                      <span className="text-[11px] font-medium leading-none tracking-normal">ยกเลิก</span>
                     </div>
                   )}
 
