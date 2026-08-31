@@ -4,6 +4,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import AuthPage from './AuthPage';
 import { Sidebar, type ActiveTab } from './components/Sidebar';
+import { MobileDrawer } from './components/MobileDrawer';
 import { BottomNav } from './components/BottomNav';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
@@ -21,6 +22,7 @@ import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentM
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: User }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [selectedBookingForAddOrder, setSelectedBookingForAddOrder] = useState<Booking | null>(null);
   const [selectedBookingForReceipt, setSelectedBookingForReceipt] = useState<Booking | null>(null);
@@ -314,8 +316,18 @@ const MainDashboard = ({ user }: { user: User }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex font-['Prompt']">
-      {/* Desktop Left Sidebar */}
+      {/* Desktop Persistent Sidebar */}
       <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenNewBooking={handleOpenNormalBooking}
+        userEmail={user.email || user.phoneNumber || 'แอดมิน Swan HILL'}
+      />
+
+      {/* Mobile Slide-in Drawer Sidebar */}
+      <MobileDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenNewBooking={handleOpenNormalBooking}
@@ -331,6 +343,7 @@ const MainDashboard = ({ user }: { user: User }) => {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           onLogoClick={() => setActiveTab('dashboard')}
+          onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
         />
 
         {/* View Routing */}

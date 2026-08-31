@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, Menu } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -10,6 +10,7 @@ interface HeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   onLogoClick?: () => void;
+  onOpenMobileDrawer?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   searchTerm,
   setSearchTerm,
   onLogoClick,
+  onOpenMobileDrawer,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -74,12 +76,24 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-      {/* Mobile Top App Bar with Official Swan Hill Logo */}
-      <div className="md:hidden px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between">
-        <BrandLogo 
-          theme="dark" 
-          onClick={onLogoClick} 
-        />
+      {/* Mobile Top App Bar with Menu Button and Official Swan Hill Logo */}
+      <div className="md:hidden px-3.5 py-2.5 bg-slate-900 text-white flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {onOpenMobileDrawer && (
+            <button
+              onClick={onOpenMobileDrawer}
+              className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-emerald-400 flex items-center justify-center border border-slate-700 transition-all shrink-0 shadow-xs"
+              title="เปิดเมนูนำทาง (Sidebar Drawer)"
+              aria-label="เปิดเมนูนำทาง"
+            >
+              <Menu className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          )}
+          <BrandLogo 
+            theme="dark" 
+            onClick={onLogoClick} 
+          />
+        </div>
 
         {/* Right Action Buttons (Mobile) */}
         <div className="flex items-center gap-1.5">
