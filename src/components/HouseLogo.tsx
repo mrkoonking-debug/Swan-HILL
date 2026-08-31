@@ -8,7 +8,6 @@ interface HouseLogoProps {
 export const HouseLogo: React.FC<HouseLogoProps> = ({ roomNumber, size = 'md' }) => {
   const isLarge = roomNumber === 'S3' || roomNumber === 'S4';
   const isMedium = roomNumber === 'S1' || roomNumber === 'S2';
-  const isSmall = roomNumber === 'S5' || roomNumber === 'S6';
 
   const dimensionClasses = {
     sm: 'w-10 h-10',

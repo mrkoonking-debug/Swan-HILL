@@ -6,7 +6,6 @@ import {
   MookataSmallIcon, 
   MookataLargeIcon, 
   BreakfastIcon, 
-  DrinkIcon, 
   CustomDishIcon 
 } from './MenuIcons';
 

@@ -1,4 +1,5 @@
 export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
+export type RoomType = string;
 
 export interface Room {
   id: string;
@@ -9,6 +10,8 @@ export interface Room {
   pricePerNight: number;
   status: RoomStatus;
   capacity: number;
+  floor?: number;
+  imageUrl?: string;
   amenities: string[];
   currentGuest?: {
     name: string;
@@ -59,4 +62,21 @@ export interface Booking {
 }
 
 export type HousekeepingPriority = 'low' | 'medium' | 'high';
+export type HousekeepingStatus = 'pending' | 'in_progress' | 'completed' | 'inspected';
+
+export interface HousekeepingTask {
+  id: string;
+  roomId: string;
+  roomNumber: string;
+  roomType: string;
+  type: 'checkout_clean' | 'stayover_clean' | 'deep_clean' | 'touch_up';
+  priority: HousekeepingPriority;
+  status: HousekeepingStatus;
+  assignedTo?: string;
+  notes?: string;
+  createdAt: string;
+  dueTime: string;
+  completedAt?: string;
+}
+
 export type TimeRangeFilter = 'daily' | 'monthly' | 'yearly';
