@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, FileText, Plus, Minus, CreditCard } from 'lucide-react';
-import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { 
-  ExtraBedIcon, 
-  MookataSmallIcon, 
-  MookataLargeIcon, 
-  BreakfastIcon 
-} from './MenuIcons';
+  X, 
+  Check, 
+  Calendar, 
+  CreditCard, 
+  FileText,
+  Plus,
+  Minus,
+  UtensilsCrossed,
+  Bed,
+  Sparkles,
+  Coins
+} from 'lucide-react';
+import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
-import { ThaiDatePicker } from './ThaiDatePicker';
-import { sanitizePhoneInput } from '../utils/phoneUtils';
-import { generateBookingCode } from '../utils/dateUtils';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -22,20 +25,28 @@ interface NewBookingModalProps {
   prefillDate?: string;
 }
 
+// Generate auto booking code like BK-20260902-04
+const generateBookingCode = (checkInDateStr: string) => {
+  const cleanDate = checkInDateStr.replace(/-/g, '');
+  const randomSuffix = Math.floor(10 + Math.random() * 90);
+  return `BK-${cleanDate}-${randomSuffix}`;
+};
+
 export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   isOpen,
   onClose,
   rooms,
   onAddBooking,
   prefillRoomId,
-  prefillDate,
+  prefillDate
 }) => {
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
-  const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || 'room-s1');
+  const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
   const [checkInDate, setCheckInDate] = useState('2026-09-01');
   const [checkOutDate, setCheckOutDate] = useState('2026-09-02');
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('deposit');
+  const [depositAmount, setDepositAmount] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
   // Add-ons state during booking
@@ -45,20 +56,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [breakfast, setBreakfast] = useState(0);
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId) || rooms[0];
-
-  useEffect(() => {
-    if (prefillRoomId) {
-      setSelectedRoomId(prefillRoomId);
-    }
-    if (prefillDate) {
-      setCheckInDate(prefillDate);
-      const nextDay = new Date(prefillDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      setCheckOutDate(nextDay.toISOString().slice(0, 10));
-    }
-  }, [prefillRoomId, prefillDate, isOpen, rooms]);
-
-  if (!isOpen) return null;
 
   // Calculate nights
   const dIn = new Date(checkInDate);
@@ -72,6 +69,32 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const addOnsTotal = (extraBeds * 300) + (mookataSmall * 350) + (mookataLarge * 500) + (breakfast * 60);
   const grandTotal = roomBaseTotal + addOnsTotal;
 
+  useEffect(() => {
+    if (prefillRoomId) {
+      setSelectedRoomId(prefillRoomId);
+    }
+    if (prefillDate) {
+      setCheckInDate(prefillDate);
+      const nextDay = new Date(prefillDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      setCheckOutDate(nextDay.toISOString().slice(0, 10));
+    }
+  }, [prefillRoomId, prefillDate, isOpen, rooms]);
+
+  // Update default deposit when grandTotal changes
+  useEffect(() => {
+    if (grandTotal > 0 && depositAmount === 0) {
+      setDepositAmount(Math.round(grandTotal * 0.5));
+    }
+  }, [grandTotal]);
+
+  if (!isOpen) return null;
+
+  // Deposit percentage calculations
+  const effectivePaid = paymentStatus === 'paid' ? grandTotal : (paymentStatus === 'deposit' ? depositAmount : 0);
+  const depositPercent = grandTotal > 0 ? Math.round((effectivePaid / grandTotal) * 100) : 0;
+  const remainingAtCheckin = Math.max(0, grandTotal - effectivePaid);
+
   // Room Dropdown Options
   const roomOptions: DropdownOption[] = rooms.map(r => ({
     value: r.id,
@@ -84,27 +107,36 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   // Payment Dropdown Options
   const paymentOptions: DropdownOption[] = [
     {
+      value: 'deposit',
+      label: 'จ่ายเงินมัดจำ (30% / 50% / ระบุเอง)',
+      sublabel: `มัดจำ ฿${depositAmount.toLocaleString()} (เหลือชำระวันพัก ฿${remainingAtCheckin.toLocaleString()})`,
+      badge: `${depositPercent}%`,
+      icon: <Coins className="w-4 h-4 text-amber-600" />
+    },
+    {
       value: 'paid',
-      label: 'ชำระครบแล้ว',
-      sublabel: `฿${grandTotal.toLocaleString()} บาท`,
-      badge: 'ชำระครบ',
+      label: 'ชำระครบเต็มจำนวน 100%',
+      sublabel: `฿${grandTotal.toLocaleString()} บาท (ไม่มีค้างชำระ)`,
+      badge: '100%',
       icon: <CreditCard className="w-4 h-4 text-emerald-600" />
     },
     {
-      value: 'deposit',
-      label: 'จ่ายมัดจำเฉพาะค่าห้อง',
-      sublabel: `฿${roomBaseTotal.toLocaleString()} บาท (เหลือเก็บตอนเช็คเอาท์ ฿${addOnsTotal.toLocaleString()})`,
-      badge: 'มัดจำ',
-      icon: <CreditCard className="w-4 h-4 text-amber-600" />
-    },
-    {
       value: 'pending',
-      label: 'ยังไม่จ่าย (รอเก็บเงิน)',
+      label: 'ยังไม่จ่าย (รอเก็บเงินทั้งหมด)',
       sublabel: `รอเก็บยอด ฿${grandTotal.toLocaleString()} บาท`,
-      badge: 'ยังไม่ชำระ',
+      badge: 'ยังไม่จ่าย',
       icon: <CreditCard className="w-4 h-4 text-slate-400" />
     }
   ];
+
+  const sanitizePhoneInput = (val: string) => {
+    return val.replace(/[^0-9,\s-]/g, '');
+  };
+
+  const handleSetDepositPercent = (percent: number) => {
+    const calculated = Math.round(grandTotal * (percent / 100));
+    setDepositAmount(calculated);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +184,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       });
     }
 
+    const calculatedPaidAmount = paymentStatus === 'paid' 
+      ? grandTotal 
+      : (paymentStatus === 'deposit' ? (depositAmount > 0 ? depositAmount : Math.round(grandTotal * 0.5)) : 0);
+
     const newBooking: Booking = {
       id: 'b-' + Date.now(),
       bookingCode: generateBookingCode(checkInDate),
@@ -168,8 +204,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       roomPrice: roomPricePerNight,
       addOns: addOnsList,
       totalAmount: grandTotal,
-      paidAmount: paymentStatus === 'paid' ? grandTotal : (paymentStatus === 'deposit' ? roomBaseTotal : 0),
-      paymentStatus,
+      paidAmount: calculatedPaidAmount,
+      paymentStatus: calculatedPaidAmount >= grandTotal ? 'paid' : (calculatedPaidAmount > 0 ? 'deposit' : 'pending'),
       status: 'confirmed',
       specialRequests: notes || undefined,
       createdAt: new Date().toISOString()
@@ -186,10 +222,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setMookataSmall(0);
     setMookataLarge(0);
     setBreakfast(0);
+    setDepositAmount(0);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in font-['Prompt']">
       <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
@@ -253,38 +290,57 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             />
           </div>
 
-          {/* 3. Dates (วัน - เดือน - ปี พ.ศ.) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <ThaiDatePicker
-              label="วันเข้าพัก"
-              value={checkInDate}
-              onChange={(val) => setCheckInDate(val)}
-            />
-            <ThaiDatePicker
-              label={`วันเช็คเอาท์ (${totalNights} คืน)`}
-              value={checkOutDate}
-              onChange={(val) => setCheckOutDate(val)}
-            />
+          {/* 3. Check-in & Check-out Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-900 mb-1">
+                วันเช็คอิน <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  required
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white transition-all shadow-xs"
+                />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-900 mb-1">
+                วันเช็คเอาท์ <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  required
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white transition-all shadow-xs"
+                />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
           </div>
 
-          {/* 4. บริการเสริมตอนจอง (Add-on Services with Custom SVG Icons) */}
-          <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2.5 shadow-xs">
+          {/* 4. Add-on Services & Food (Steppers) */}
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                บริการเสริม & อาหาร (เลือกเพิ่มได้)
-              </label>
-              <span className="text-[10px] text-slate-500 font-medium">ยังไม่รวมในค่าห้อง</span>
+              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <UtensilsCrossed className="w-3.5 h-3.5 text-amber-600" />
+                บริการเสริม & อาหารสั่งล่วงหน้า
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">กด + เพื่อเพิ่มจำนวน</span>
             </div>
 
             {/* Extra Bed (+300) */}
-            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-800 flex items-center justify-center">
-                  <ExtraBedIcon size={18} />
-                </div>
+            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Bed className="w-4 h-4 text-emerald-600" />
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block leading-tight">ที่นอนเสริม</span>
-                  <span className="text-[10px] font-bold text-amber-700">+฿300/ท่าน</span>
+                  <span className="text-xs font-bold block">ที่นอนเสริม</span>
+                  <span className="text-[10px] text-slate-500">฿300 / ท่าน</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -307,14 +363,12 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Mookata Small (+350) */}
-            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-800 flex items-center justify-center">
-                  <MookataSmallIcon size={18} />
-                </div>
+            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2">
+                <UtensilsCrossed className="w-4 h-4 text-amber-600" />
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block leading-tight">หมูกระทะชุดเล็ก</span>
-                  <span className="text-[10px] font-bold text-orange-700">+฿350/ชุด</span>
+                  <span className="text-xs font-bold block">หมูกระทะ (ชุดเล็ก)</span>
+                  <span className="text-[10px] text-slate-500">฿350 / ชุด</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -337,14 +391,12 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Mookata Large (+500) */}
-            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-800 flex items-center justify-center">
-                  <MookataLargeIcon size={18} />
-                </div>
+            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-600" />
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block leading-tight">หมูกระทะชุดใหญ่</span>
-                  <span className="text-[10px] font-bold text-red-700">+฿500/ชุด</span>
+                  <span className="text-xs font-bold block">หมูกระทะ (ชุดใหญ่)</span>
+                  <span className="text-[10px] text-slate-500">฿500 / ชุด</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -367,14 +419,12 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
 
             {/* Breakfast (+60) */}
-            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center">
-                  <BreakfastIcon size={18} />
-                </div>
+            <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2">
+                <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block leading-tight">อาหารเช้า</span>
-                  <span className="text-[10px] font-bold text-teal-700">+฿60/ท่าน</span>
+                  <span className="text-xs font-bold block">อาหารเช้าเพิ่มเติม</span>
+                  <span className="text-[10px] text-slate-500">฿60 / ท่าน</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
@@ -415,28 +465,118 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
           </div>
 
-          {/* 6. Payment Status (Custom Apple Liquid Glass Dropdown) & Notes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <CustomDropdown
-                label="การชำระเงิน *"
-                options={paymentOptions}
-                value={paymentStatus}
-                onChange={(val) => setPaymentStatus(val as PaymentStatus)}
-              />
+          {/* 6. Payment Status & Flexible Deposit Adjustments */}
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <CustomDropdown
+                  label="สถานะการชำระเงิน *"
+                  options={paymentOptions}
+                  value={paymentStatus}
+                  onChange={(val) => setPaymentStatus(val as PaymentStatus)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  หมายเหตุเพิ่มเติม
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น ขอเตาปิ้งย่างตอนเย็น"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white shadow-xs font-medium"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                หมายเหตุเพิ่มเติม
-              </label>
-              <input
-                type="text"
-                placeholder="เช่น ขอเตาปิ้งย่างตอนเย็น"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white shadow-xs"
-              />
-            </div>
+
+            {/* Flexible Deposit Percent & Amount Selector (when deposit is selected) */}
+            {paymentStatus === 'deposit' && (
+              <div className="p-3 bg-amber-50/90 rounded-2xl border border-amber-200 space-y-2.5 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-amber-700" />
+                    กำหนดยอดเงินมัดจำล่วงหน้า:
+                  </span>
+                  <span className="text-[11px] font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                    มัดจำ {depositPercent}% (฿{depositAmount.toLocaleString()})
+                  </span>
+                </div>
+
+                {/* Quick Percent Buttons: 50%, 30%, 20%, Room 1 Night */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleSetDepositPercent(50)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      depositPercent === 50
+                        ? 'bg-amber-600 text-white font-black shadow-xs'
+                        : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100'
+                    }`}
+                  >
+                    50% ปกติ (฿{Math.round(grandTotal * 0.5).toLocaleString()})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetDepositPercent(30)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      depositPercent === 30
+                        ? 'bg-amber-600 text-white font-black shadow-xs'
+                        : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100'
+                    }`}
+                  >
+                    30% เริ่มต้น (฿{Math.round(grandTotal * 0.3).toLocaleString()})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSetDepositPercent(20)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      depositPercent === 20
+                        ? 'bg-amber-600 text-white font-black shadow-xs'
+                        : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100'
+                    }`}
+                  >
+                    20% ขั้นต่ำ (฿{Math.round(grandTotal * 0.2).toLocaleString()})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDepositAmount(roomPricePerNight)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      depositAmount === roomPricePerNight
+                        ? 'bg-amber-600 text-white font-black shadow-xs'
+                        : 'bg-white text-slate-700 border border-amber-200 hover:bg-amber-100'
+                    }`}
+                  >
+                    ค่าห้อง 1 คืน (฿{roomPricePerNight.toLocaleString()})
+                  </button>
+                </div>
+
+                {/* Custom Deposit Amount Input */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="text-[10px] font-bold text-amber-950 block mb-0.5">ระบุยอดมัดจำเอง (บาท):</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">฿</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={grandTotal}
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(Number(e.target.value))}
+                        className="w-full pl-6 pr-2.5 py-1.5 text-xs font-black text-slate-900 border border-amber-300 rounded-lg outline-none focus:border-amber-600 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-amber-200 flex flex-col justify-center text-right">
+                    <span className="text-[9px] text-slate-500 font-bold">คงเหลือเก็บวันเข้าพัก</span>
+                    <span className="text-xs font-black text-amber-950">฿{remainingAtCheckin.toLocaleString()} บาท</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bottom Actions */}
@@ -453,7 +593,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               className="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-sm shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all"
             >
               <Check className="w-4 h-4 stroke-[3]" />
-              <span>บันทึกการจอง</span>
+              <span>บันทึกการจอง (รับ ฿{effectivePaid.toLocaleString()})</span>
             </button>
           </div>
         </form>
