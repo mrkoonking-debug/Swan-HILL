@@ -12,6 +12,7 @@ import { BookingsView } from './components/BookingsView';
 import { FinanceView } from './components/FinanceView';
 import { NewBookingModal } from './components/NewBookingModal';
 import { AddOrderModal } from './components/AddOrderModal';
+import { ReceiptModal } from './components/ReceiptModal';
 import { initialRooms, initialBookings } from './data/initialData';
 import type { Room, Booking, RoomStatus, AddOnItem } from './types/pms';
 
@@ -20,6 +21,7 @@ const MainDashboard = ({ user }: { user: User }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [selectedBookingForAddOrder, setSelectedBookingForAddOrder] = useState<Booking | null>(null);
+  const [selectedBookingForReceipt, setSelectedBookingForReceipt] = useState<Booking | null>(null);
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -246,6 +248,7 @@ const MainDashboard = ({ user }: { user: User }) => {
               onOpenNewBookingForRoom={handleOpenBookingForRoom}
               onOpenNewBooking={handleOpenNormalBooking}
               onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
+              onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
             />
           )}
 
@@ -268,6 +271,7 @@ const MainDashboard = ({ user }: { user: User }) => {
               onRestoreBooking={handleRestoreBooking}
               onPermanentDeleteBooking={handlePermanentDeleteBooking}
               onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
+              onOpenReceipt={(booking) => setSelectedBookingForReceipt(booking)}
             />
           )}
 
@@ -302,6 +306,13 @@ const MainDashboard = ({ user }: { user: User }) => {
         onClose={() => setSelectedBookingForAddOrder(null)}
         booking={selectedBookingForAddOrder}
         onUpdateBookingAddOns={handleUpdateBookingAddOns}
+      />
+
+      {/* Printable & Downloadable Customer Receipt / Booking Slip Modal */}
+      <ReceiptModal
+        isOpen={!!selectedBookingForReceipt}
+        onClose={() => setSelectedBookingForReceipt(null)}
+        booking={selectedBookingForReceipt}
       />
     </div>
   );

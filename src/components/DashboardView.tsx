@@ -15,7 +15,8 @@ import {
   Map,
   LayoutGrid,
   Trees,
-  Car
+  Car,
+  Receipt
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -30,6 +31,7 @@ interface DashboardViewProps {
   onOpenNewBookingForRoom?: (roomId: string) => void;
   onOpenNewBooking: () => void;
   onOpenAddOrder?: (booking: Booking) => void;
+  onOpenReceipt?: (booking: Booking) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -40,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewBookingForRoom,
   onOpenNewBooking,
   onOpenAddOrder,
+  onOpenReceipt,
 }) => {
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
@@ -522,6 +525,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       <UtensilsCrossed className="w-4 h-4" />
                       <span>สั่งหมูกระทะ / บริการเสริม</span>
+                    </button>
+                  )}
+
+                  {selectedRoomModal.currentGuest?.bookingId && onOpenReceipt && (
+                    <button
+                      onClick={() => {
+                        const b = bookings.find(item => item.id === selectedRoomModal.currentGuest?.bookingId);
+                        if (b) onOpenReceipt(b);
+                        setSelectedRoomModal(null);
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-98 border border-slate-700"
+                    >
+                      <Receipt className="w-4 h-4 text-emerald-400" />
+                      <span>พิมพ์ใบเสร็จ / บันทึกภาพสลิป</span>
                     </button>
                   )}
 

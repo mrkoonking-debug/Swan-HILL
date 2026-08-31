@@ -13,7 +13,8 @@ import {
   User,
   MessageCircle,
   FileSpreadsheet,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Receipt
 } from 'lucide-react';
 import type { Booking, BookingStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -29,6 +30,7 @@ interface BookingsViewProps {
   onRestoreBooking?: (bookingId: string) => void; // Restore from trash
   onPermanentDeleteBooking?: (bookingId: string) => void; // Delete permanently
   onOpenAddOrder?: (booking: Booking) => void; // Add-ons modal
+  onOpenReceipt?: (booking: Booking) => void; // Receipt slip modal
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({
@@ -41,6 +43,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onRestoreBooking,
   onPermanentDeleteBooking,
   onOpenAddOrder,
+  onOpenReceipt,
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -428,6 +431,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                           <span>เช็คเอาท์</span>
+                        </button>
+                      )}
+
+                      {/* Receipt & Slip Button */}
+                      {onOpenReceipt && (
+                        <button
+                          onClick={() => onOpenReceipt(b)}
+                          className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 border border-slate-200"
+                          title="พิมพ์ใบเสร็จ / ใบยืนยันการจอง"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>ใบเสร็จ</span>
                         </button>
                       )}
 
