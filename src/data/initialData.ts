@@ -1,16 +1,17 @@
-import type { Room, Booking, HousekeepingTask } from '../types/pms';
+import type { Room, Booking } from '../types/pms';
 
 export const initialRooms: Room[] = [
-  // 4 หลังเดี่ยว (Standalone Villas)
+  // 1. บ้านพักหลังใหญ่ (1,500 บาท/คืน)
   {
-    id: 'r-v1',
-    roomNumber: 'บ้าน 1',
-    name: 'สวอน วิลล่า 1 (หลังเดี่ยว)',
-    type: 'วิลล่าเดี่ยวส่วนตัว',
-    pricePerNight: 3500,
-    capacity: 2,
-    amenities: ['สระว่ายน้ำส่วนตัว', 'เตียงคิงไซส์', 'อ่างอาบน้ำ', 'วิวทะเลสาบ', 'Wi-Fi'],
+    id: 'room-s3',
+    roomNumber: 'S3',
+    name: 'สวอน วิลล่า S3 (หลังใหญ่)',
+    type: 'บ้านพักหลังใหญ่',
+    sizeCategory: 'large',
+    pricePerNight: 1500,
     status: 'occupied',
+    capacity: 4,
+    amenities: ['เครื่องปรับอากาศ', 'สมาร์ททีวี', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'ระเบียงชมวิว', 'ที่จอดรถส่วนตัว'],
     currentGuest: {
       name: 'คุณสุรชัย วงศ์สว่าง',
       phone: '081-987-6543',
@@ -20,24 +21,28 @@ export const initialRooms: Room[] = [
     }
   },
   {
-    id: 'r-v2',
-    roomNumber: 'บ้าน 2',
-    name: 'สวอน วิลล่า 2 (หลังเดี่ยว)',
-    type: 'วิลล่าเดี่ยวส่วนตัว',
-    pricePerNight: 3500,
-    capacity: 2,
-    amenities: ['สระว่ายน้ำส่วนตัว', 'เตียงคิงไซส์', 'อ่างอาบน้ำ', 'วิวทะเลสาบ', 'Wi-Fi'],
-    status: 'available'
+    id: 'room-s4',
+    roomNumber: 'S4',
+    name: 'สวอน วิลล่า S4 (หลังใหญ่)',
+    type: 'บ้านพักหลังใหญ่',
+    sizeCategory: 'large',
+    pricePerNight: 1500,
+    status: 'available',
+    capacity: 4,
+    amenities: ['เครื่องปรับอากาศ', 'สมาร์ททีวี', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'ระเบียงชมวิว', 'ที่จอดรถส่วนตัว'],
   },
+
+  // 2. บ้านพักหลังกลาง (1,200 บาท/คืน)
   {
-    id: 'r-v3',
-    roomNumber: 'บ้าน 3',
-    name: 'สวอน วิลล่า 3 (หลังเดี่ยว)',
-    type: 'วิลล่าเดี่ยวส่วนตัว',
-    pricePerNight: 3500,
-    capacity: 2,
-    amenities: ['สระว่ายน้ำส่วนตัว', 'เตียงคิงไซส์', 'อ่างอาบน้ำ', 'วิวทะเลสาบ', 'Wi-Fi'],
+    id: 'room-s1',
+    roomNumber: 'S1',
+    name: 'สวอน วิลล่า S1 (หลังกลาง)',
+    type: 'บ้านพักหลังกลาง',
+    sizeCategory: 'medium',
+    pricePerNight: 1200,
     status: 'occupied',
+    capacity: 2,
+    amenities: ['เครื่องปรับอากาศ', 'สมาร์ททีวี', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'ระเบียงส่วนตัว'],
     currentGuest: {
       name: 'คุณกิตติศักดิ์ พรเจริญ',
       phone: '089-456-7890',
@@ -47,37 +52,40 @@ export const initialRooms: Room[] = [
     }
   },
   {
-    id: 'r-v4',
-    roomNumber: 'บ้าน 4',
-    name: 'สวอน วิลล่า 4 (หลังเดี่ยว)',
-    type: 'วิลล่าเดี่ยวส่วนตัว',
-    pricePerNight: 3500,
+    id: 'room-s2',
+    roomNumber: 'S2',
+    name: 'สวอน วิลล่า S2 (หลังกลาง)',
+    type: 'บ้านพักหลังกลาง',
+    sizeCategory: 'medium',
+    pricePerNight: 1200,
+    status: 'available',
     capacity: 2,
-    amenities: ['สระว่ายน้ำส่วนตัว', 'เตียงคิงไซส์', 'อ่างอาบน้ำ', 'วิวทะเลสาบ', 'Wi-Fi'],
-    status: 'cleaning'
+    amenities: ['เครื่องปรับอากาศ', 'สมาร์ททีวี', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'ระเบียงส่วนตัว'],
   },
 
-  // 1 หลังคู่ (2 ห้องแยก รับลูกค้าได้ 2 เจ้า)
+  // 3. บ้านพักหลังเล็ก (1,000 บาท/คืน)
   {
-    id: 'r-v5a',
-    roomNumber: 'บ้าน 5 (ห้อง A)',
-    name: 'สวอน ทวินวิลล่า 5 (ห้อง A)',
-    type: 'บ้านแฝด 2 ห้อง (ห้อง A)',
-    pricePerNight: 2800,
+    id: 'room-s5',
+    roomNumber: 'S5',
+    name: 'สวอน วิลล่า S5 (หลังเล็ก)',
+    type: 'บ้านพักหลังเล็ก',
+    sizeCategory: 'small',
+    pricePerNight: 1000,
+    status: 'cleaning',
     capacity: 2,
-    amenities: ['เตียงคิงไซส์', 'ห้องน้ำในตัว', 'ระเบียงชมวิว', 'แอร์', 'Wi-Fi'],
-    status: 'available'
+    amenities: ['เครื่องปรับอากาศ', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'วิวธรรมชาติ'],
   },
   {
-    id: 'r-v5b',
-    roomNumber: 'บ้าน 5 (ห้อง B)',
-    name: 'สวอน ทวินวิลล่า 5 (ห้อง B)',
-    type: 'บ้านแฝด 2 ห้อง (ห้อง B)',
-    pricePerNight: 2800,
+    id: 'room-s6',
+    roomNumber: 'S6',
+    name: 'สวอน วิลล่า S6 (หลังเล็ก)',
+    type: 'บ้านพักหลังเล็ก',
+    sizeCategory: 'small',
+    pricePerNight: 1000,
+    status: 'available',
     capacity: 2,
-    amenities: ['เตียงคิงไซส์', 'ห้องน้ำในตัว', 'ระเบียงชมวิว', 'แอร์', 'Wi-Fi'],
-    status: 'available'
-  }
+    amenities: ['เครื่องปรับอากาศ', 'เครื่องทำน้ำอุ่น', 'ตู้เย็น', 'วิวธรรมชาติ'],
+  },
 ];
 
 export const initialBookings: Booking[] = [
@@ -87,18 +95,23 @@ export const initialBookings: Booking[] = [
     guestName: 'คุณสุรชัย วงศ์สว่าง',
     guestPhone: '081-987-6543',
     channel: 'LINE Official',
-    roomId: 'r-v1',
-    roomNumber: 'บ้าน 1',
-    roomType: 'วิลล่าเดี่ยวส่วนตัว',
+    roomId: 'room-s3',
+    roomNumber: 'S3',
+    roomType: 'บ้านพักหลังใหญ่',
     checkInDate: '2026-08-30',
     checkOutDate: '2026-09-02',
     totalNights: 3,
-    totalGuests: 2,
-    totalAmount: 10500,
-    paidAmount: 10500,
-    paymentStatus: 'paid',
+    totalGuests: 4,
+    roomPrice: 1500,
+    addOns: [
+      { id: 'ad-1', name: 'ที่นอนเสริม 1 ชุด', category: 'bed', price: 300, quantity: 1, createdAt: '2026-08-30T14:00:00Z' },
+      { id: 'ad-2', name: 'หมูกระทะชุดใหญ่', category: 'mookata_large', price: 500, quantity: 1, createdAt: '2026-08-30T18:00:00Z' }
+    ],
+    totalAmount: 5300, // 1500*3 + 300 + 500
+    paidAmount: 4500, // deposit paid, 800 pending at checkout
+    paymentStatus: 'deposit',
     status: 'checked_in',
-    specialRequests: 'จองทาง LINE ขอน้ำแข็งเพิ่มช่วงค่ำ',
+    specialRequests: 'ขอเตาหมูกระทะตอน 18:00 น.',
     createdAt: '2026-08-25T10:00:00Z'
   },
   {
@@ -106,52 +119,71 @@ export const initialBookings: Booking[] = [
     bookingCode: 'BK-20260831-02',
     guestName: 'คุณกิตติศักดิ์ พรเจริญ',
     guestPhone: '089-456-7890',
-    channel: 'LINE Official',
-    roomId: 'r-v3',
-    roomNumber: 'บ้าน 3',
-    roomType: 'วิลล่าเดี่ยวส่วนตัว',
+    channel: 'Phone',
+    roomId: 'room-s1',
+    roomNumber: 'S1',
+    roomType: 'บ้านพักหลังกลาง',
     checkInDate: '2026-08-31',
     checkOutDate: '2026-09-01',
     totalNights: 1,
     totalGuests: 2,
-    totalAmount: 3500,
-    paidAmount: 3500,
+    roomPrice: 1200,
+    addOns: [
+      { id: 'ad-3', name: 'หมูกระทะชุดเล็ก', category: 'mookata_small', price: 350, quantity: 1, createdAt: '2026-08-31T15:00:00Z' }
+    ],
+    totalAmount: 1550, // 1200 + 350
+    paidAmount: 1550,
     paymentStatus: 'paid',
     status: 'checked_in',
-    specialRequests: 'เช็คอินช่วง 15:00 น.',
-    createdAt: '2026-08-28T14:30:00Z'
+    specialRequests: 'เช็คอินช่วงบ่าย',
+    createdAt: '2026-08-28T11:00:00Z'
   },
   {
     id: 'b-103',
-    bookingCode: 'BK-20260902-03',
+    bookingCode: 'BK-20260901-03',
     guestName: 'คุณพัชราภรณ์ สดใส',
     guestPhone: '092-333-4455',
     channel: 'LINE Official',
-    roomId: 'r-v5a',
-    roomNumber: 'บ้าน 5 (ห้อง A)',
-    roomType: 'บ้านแฝด 2 ห้อง (ห้อง A)',
+    roomId: 'room-s5',
+    roomNumber: 'S5',
+    roomType: 'บ้านพักหลังเล็ก',
+    checkInDate: '2026-09-01',
+    checkOutDate: '2026-09-03',
+    totalNights: 2,
+    totalGuests: 2,
+    roomPrice: 1000,
+    addOns: [
+      { id: 'ad-4', name: 'อาหารเช้า 2 ท่าน', category: 'breakfast', price: 60, quantity: 2, createdAt: '2026-08-29T10:00:00Z' }
+    ],
+    totalAmount: 2120, // 1000*2 + 120
+    paidAmount: 2120,
+    paymentStatus: 'paid',
+    status: 'confirmed',
+    specialRequests: 'โอนมัดจำครบแล้ว',
+    createdAt: '2026-08-29T09:00:00Z'
+  },
+  {
+    id: 'b-104',
+    bookingCode: 'BK-20260902-04',
+    guestName: 'คุณธนากร เลิศวิริยะ',
+    guestPhone: '083-777-8899',
+    channel: 'Direct',
+    roomId: 'room-s4',
+    roomNumber: 'S4',
+    roomType: 'บ้านพักหลังใหญ่',
     checkInDate: '2026-09-02',
     checkOutDate: '2026-09-04',
     totalNights: 2,
-    totalGuests: 2,
-    totalAmount: 5600,
-    paidAmount: 2800,
+    totalGuests: 4,
+    roomPrice: 1500,
+    addOns: [
+      { id: 'ad-5', name: 'ที่นอนเสริม 1 ชุด', category: 'bed', price: 300, quantity: 1, createdAt: '2026-08-30T10:00:00Z' }
+    ],
+    totalAmount: 3300, // 1500*2 + 300
+    paidAmount: 1500,
     paymentStatus: 'deposit',
     status: 'confirmed',
-    specialRequests: 'จองทาง LINE โอนมัดจำแล้ว 2,800 บาท',
-    createdAt: '2026-08-30T11:20:00Z'
-  }
-];
-
-export const initialHousekeeping: HousekeepingTask[] = [
-  {
-    id: 'hk-1',
-    roomNumber: 'บ้าน 4',
-    roomType: 'วิลล่าเดี่ยวส่วนตัว',
-    assignedTo: 'แม่บ้านสมศรี',
-    status: 'in_progress',
-    priority: 'high',
-    notes: 'เปลี่ยนชุดเครื่องนอน และเติมของใช้ในห้องน้ำ',
-    updatedAt: '10:30'
+    specialRequests: 'ผู้ใหญ่ 4 ท่าน เด็ก 1 คน',
+    createdAt: '2026-08-30T08:30:00Z'
   }
 ];

@@ -1,17 +1,15 @@
 export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
-export type RoomType = string;
 
 export interface Room {
   id: string;
-  roomNumber: string;
+  roomNumber: string; // S1, S2, S3, S4, S5, S6
   name: string;
-  type: RoomType;
+  type: string; // บ้านพักหลังใหญ่, บ้านพักหลังกลาง, บ้านพักหลังเล็ก
+  sizeCategory: 'large' | 'medium' | 'small';
   pricePerNight: number;
-  capacity: number;
   status: RoomStatus;
-  floor?: number;
+  capacity: number;
   amenities: string[];
-  imageUrl?: string;
   currentGuest?: {
     name: string;
     phone: string;
@@ -23,13 +21,16 @@ export interface Room {
 
 export type BookingStatus = 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled';
 export type PaymentStatus = 'paid' | 'deposit' | 'pending';
-export type BookingChannel = 'LINE Official' | 'โทรศัพท์ (Phone)' | 'Walk-in' | 'Facebook Page';
+
+export type AddOnCategory = 'bed' | 'mookata_small' | 'mookata_large' | 'breakfast' | 'drink' | 'custom';
 
 export interface AddOnItem {
   id: string;
   name: string;
+  category: AddOnCategory;
   price: number;
   quantity: number;
+  createdAt: string;
 }
 
 export interface Booking {
@@ -37,16 +38,17 @@ export interface Booking {
   bookingCode: string;
   guestName: string;
   guestPhone: string;
-  guestEmail?: string;
-  channel: BookingChannel;
+  guestIdCard?: string;
+  channel: 'Direct' | 'Walk-in' | 'LINE Official' | 'Phone';
   roomId: string;
   roomNumber: string;
-  roomType: RoomType;
+  roomType: string;
   checkInDate: string; // YYYY-MM-DD
   checkOutDate: string; // YYYY-MM-DD
   totalNights: number;
   totalGuests: number;
-  addOns?: AddOnItem[];
+  roomPrice: number; // Base room price
+  addOns?: AddOnItem[]; // Extra bed, Mookata, Breakfast, Minibar
   totalAmount: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;
@@ -57,17 +59,4 @@ export interface Booking {
 }
 
 export type HousekeepingPriority = 'low' | 'medium' | 'high';
-export type HousekeepingStatus = 'dirty' | 'in_progress' | 'cleaned' | 'inspected';
-
-export interface HousekeepingTask {
-  id: string;
-  roomNumber: string;
-  roomType: string;
-  assignedTo: string;
-  status: HousekeepingStatus;
-  priority: HousekeepingPriority;
-  notes: string;
-  updatedAt: string;
-}
-
 export type TimeRangeFilter = 'daily' | 'monthly' | 'yearly';

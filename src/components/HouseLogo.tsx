@@ -6,9 +6,9 @@ interface HouseLogoProps {
 }
 
 export const HouseLogo: React.FC<HouseLogoProps> = ({ roomNumber, size = 'md' }) => {
-  const isTwin = roomNumber.includes('5');
-  const isRoomA = roomNumber.includes('A');
-  const isRoomB = roomNumber.includes('B');
+  const isLarge = roomNumber === 'S3' || roomNumber === 'S4';
+  const isMedium = roomNumber === 'S1' || roomNumber === 'S2';
+  const isSmall = roomNumber === 'S5' || roomNumber === 'S6';
 
   const dimensionClasses = {
     sm: 'w-10 h-10',
@@ -20,45 +20,44 @@ export const HouseLogo: React.FC<HouseLogoProps> = ({ roomNumber, size = 'md' })
 
   return (
     <div 
-      className={`${dimensionClasses} rounded-2xl flex items-center justify-center border shadow-xs select-none shrink-0 transition-all ${
-        isTwin
-          ? 'bg-gradient-to-b from-[#fdfbf7] to-[#f4ebe1] border-[#e2d4c0] shadow-sm'
-          : 'bg-gradient-to-b from-[#fdfaf5] to-[#f5ede3] border-[#e5d8c6] shadow-sm'
+      className={`${dimensionClasses} rounded-2xl flex items-center justify-center border select-none shrink-0 transition-all ${
+        isLarge
+          ? 'bg-gradient-to-b from-[#fdfaf5] to-[#f4ebdE] border-[#dfcfbc] shadow-sm'
+          : (isMedium 
+              ? 'bg-gradient-to-b from-[#fdfbf7] to-[#f5eee4] border-[#e2d5c3] shadow-sm' 
+              : 'bg-gradient-to-b from-[#fefdfb] to-[#f7f2ea] border-[#e8ded0] shadow-sm')
       }`}
       title={roomNumber}
     >
-      {/* Pure Vector Cream & Rich Wood Brown House Art (No text inside) */}
-      {isTwin ? (
-        // Duplex Twin Houses (Room A Left / Room B Right)
+      {/* Pure Vector Cream & Rich Wood Brown Villa Art (Zero Text inside) */}
+      {isLarge ? (
+        // 🏰 Large Villa (S3, S4 - ฿1,500)
         <svg 
           width={svgSize} 
-          height={svgSize * 0.75} 
-          viewBox="0 0 32 24" 
+          height={svgSize * 0.8} 
+          viewBox="0 0 24 20" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Left House */}
+          {/* Main Large Villa Roof */}
           <path 
-            d="M3 10L9 4L15 10V22H3V10Z" 
-            fill={isRoomA ? '#b45309' : '#fef3c7'} 
+            d="M1 9L12 1.5L23 9V19H1V9Z" 
+            fill="#fef3c7" 
             stroke="#78350f" 
             strokeWidth="1.8" 
             strokeLinejoin="round"
           />
-          <path d="M7 22V14H11V22" fill={isRoomA ? '#78350f' : '#d97706'} stroke="#78350f" strokeWidth="1.2" />
-          
-          {/* Right House (Connected) */}
-          <path 
-            d="M15 10L21 4L27 10V22H15V10Z" 
-            fill={isRoomB ? '#b45309' : '#fef3c7'} 
-            stroke="#78350f" 
-            strokeWidth="1.8" 
-            strokeLinejoin="round"
-          />
-          <path d="M19 22V14H23V22" fill={isRoomB ? '#78350f' : '#d97706'} stroke="#78350f" strokeWidth="1.2" />
+          {/* Upper Window / Attic */}
+          <path d="M10.5 7H13.5V9H10.5V7Z" fill="#78350f" stroke="#78350f" strokeWidth="0.8" />
+          {/* Double Grand Doors */}
+          <path d="M8.5 19V12H15.5V19" fill="#92400e" stroke="#78350f" strokeWidth="1.3" />
+          <path d="M12 12V19" stroke="#fef3c7" strokeWidth="1" />
+          {/* Roof Line & Chimney */}
+          <path d="M17.5 4.5V2.5H19.5V6" stroke="#78350f" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M0.5 9L12 1L23.5 9" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
         </svg>
-      ) : (
-        // Single Standalone Villa
+      ) : (isMedium ? (
+        // 🏡 Medium Villa (S1, S2 - ฿1,200)
         <svg 
           width={svgSize} 
           height={svgSize * 0.8} 
@@ -67,18 +66,37 @@ export const HouseLogo: React.FC<HouseLogoProps> = ({ roomNumber, size = 'md' })
           xmlns="http://www.w3.org/2000/svg"
         >
           <path 
-            d="M1 9.5L12 2L23 9.5V19.5H1V9.5Z" 
+            d="M2 9L12 2L22 9V19H2V9Z" 
             fill="#fef3c7" 
             stroke="#78350f" 
             strokeWidth="1.8" 
             strokeLinejoin="round"
           />
-          <path d="M9 19.5V11.5H15V19.5" fill="#92400e" stroke="#78350f" strokeWidth="1.4" />
-          <path d="M4 11.5H6.5" stroke="#78350f" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M17.5 11.5H20" stroke="#78350f" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M0.5 9.5L12 1.5L23.5 9.5" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
+          <path d="M9 19V12H15V19" fill="#92400e" stroke="#78350f" strokeWidth="1.3" />
+          <path d="M4 12H6.5" stroke="#78350f" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M17.5 12H20" stroke="#78350f" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M1 9L12 1.5L23 9" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
         </svg>
-      )}
+      ) : (
+        // 🛖 Small Villa (S5, S6 - ฿1,000)
+        <svg 
+          width={svgSize} 
+          height={svgSize * 0.8} 
+          viewBox="0 0 24 20" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path 
+            d="M3 10L12 3L21 10V18.5H3V10Z" 
+            fill="#fef3c7" 
+            stroke="#78350f" 
+            strokeWidth="1.8" 
+            strokeLinejoin="round"
+          />
+          <path d="M10 18.5V13H14V18.5" fill="#92400e" stroke="#78350f" strokeWidth="1.3" />
+          <path d="M2 10L12 2.5L22 10" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      ))}
     </div>
   );
 };

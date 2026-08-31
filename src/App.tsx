@@ -11,25 +11,37 @@ import { TimelineCalendarView } from './components/TimelineCalendarView';
 import { BookingsView } from './components/BookingsView';
 import { FinanceView } from './components/FinanceView';
 import { NewBookingModal } from './components/NewBookingModal';
+import { AddOrderModal } from './components/AddOrderModal';
 import { initialRooms, initialBookings } from './data/initialData';
-import type { Room, Booking, RoomStatus } from './types/pms';
+import type { Room, Booking, RoomStatus, AddOnItem } from './types/pms';
 
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: User }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [selectedBookingForAddOrder, setSelectedBookingForAddOrder] = useState<Booking | null>(null);
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // PMS Core Data States (with localStorage persistence)
+  // PMS Core Data States (v3 with S1-S6 real room breakdown & add-ons)
   const [rooms, setRooms] = useState<Room[]>(() => {
-    const saved = localStorage.getItem('swanhill_rooms_v2');
-    return saved ? JSON.parse(saved) : initialRooms;
+    const saved = localStorage.getItem('swanhill_rooms_v3');
+    if (!saved) return initialRooms;
+    try {
+      const parsed: Room[] = JSON.parse(saved);
+      // If cached rooms don't match 6 rooms (S1-S6), reload initialRooms
+      if (parsed.length !== 6 || !parsed.some(r => r.roomNumber === 'S6')) {
+        return initialRooms;
+      }
+      return parsed;
+    } catch {
+      return initialRooms;
+    }
   });
 
   const [bookings, setBookings] = useState<Booking[]>(() => {
-    const saved = localStorage.getItem('swanhill_bookings_v2');
+    const saved = localStorage.getItem('swanhill_bookings_v3');
     if (!saved) return initialBookings;
     try {
       const parsed: Booking[] = JSON.parse(saved);
@@ -48,11 +60,11 @@ const MainDashboard = ({ user }: { user: User }) => {
 
   // Save to localStorage whenever data changes
   useEffect(() => {
-    localStorage.setItem('swanhill_rooms_v2', JSON.stringify(rooms));
+    localStorage.setItem('swanhill_rooms_v3', JSON.stringify(rooms));
   }, [rooms]);
 
   useEffect(() => {
-    localStorage.setItem('swanhill_bookings_v2', JSON.stringify(bookings));
+    localStorage.setItem('swanhill_bookings_v3', JSON.stringify(bookings));
   }, [bookings]);
 
   // Action: Update Room Status
@@ -165,6 +177,22 @@ const MainDashboard = ({ user }: { user: User }) => {
     }
   };
 
+  // Action: Update In-Stay Add-On Services (Extra beds, Mookata, Breakfast, Minibar)
+  const handleUpdateBookingAddOns = (bookingId: string, updatedAddOns: AddOnItem[]) => {
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      const addOnsTotal = updatedAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const baseRoomTotal = (b.roomPrice || 1200) * b.totalNights;
+      const grandTotal = baseRoomTotal + addOnsTotal;
+
+      return {
+        ...b,
+        addOns: updatedAddOns,
+        totalAmount: grandTotal,
+      };
+    }));
+  };
+
   const handleOpenTimelineBooking = (roomId: string, date: string) => {
     setPrefillRoomId(roomId);
     setPrefillDate(date);
@@ -217,6 +245,7 @@ const MainDashboard = ({ user }: { user: User }) => {
               onCheckOutGuest={handleCheckOutGuest}
               onOpenNewBookingForRoom={handleOpenBookingForRoom}
               onOpenNewBooking={handleOpenNormalBooking}
+              onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
             />
           )}
 
@@ -225,8 +254,6 @@ const MainDashboard = ({ user }: { user: User }) => {
               rooms={rooms}
               bookings={bookings}
               onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
-              onCheckInGuest={handleCheckInGuest}
-              onCheckOutGuest={handleCheckOutGuest}
             />
           )}
 
@@ -240,6 +267,7 @@ const MainDashboard = ({ user }: { user: User }) => {
               onCancelBooking={handleCancelBooking}
               onRestoreBooking={handleRestoreBooking}
               onPermanentDeleteBooking={handlePermanentDeleteBooking}
+              onOpenAddOrder={(booking) => setSelectedBookingForAddOrder(booking)}
             />
           )}
 
@@ -251,31 +279,36 @@ const MainDashboard = ({ user }: { user: User }) => {
         </main>
       </div>
 
-      {/* Mobile Smartphone Bottom Navigation Bar */}
+      {/* Mobile Floating Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenNewBooking={handleOpenNormalBooking}
       />
 
-      {/* Simplified Mobile-Friendly New Booking Modal */}
+      {/* New Booking Modal */}
       <NewBookingModal
         isOpen={isNewBookingOpen}
-        onClose={() => {
-          setIsNewBookingOpen(false);
-          setPrefillRoomId(undefined);
-          setPrefillDate(undefined);
-        }}
+        onClose={() => setIsNewBookingOpen(false)}
         rooms={rooms}
         onAddBooking={handleAddBooking}
         prefillRoomId={prefillRoomId}
         prefillDate={prefillDate}
       />
+
+      {/* In-Stay Add-Ons & Food Ordering Modal */}
+      <AddOrderModal
+        isOpen={!!selectedBookingForAddOrder}
+        onClose={() => setSelectedBookingForAddOrder(null)}
+        booking={selectedBookingForAddOrder}
+        onUpdateBookingAddOns={handleUpdateBookingAddOns}
+      />
     </div>
   );
 };
 
-function App() {
+// Top-Level App Component with Routing and Firebase Auth Guard
+export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -289,9 +322,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mb-4"></div>
-        <p className="text-sm font-bold text-emerald-400">กำลังเปิดระบบ Swan HILL...</p>
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center text-slate-800">
+        <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-xs font-black tracking-widest text-slate-500 uppercase">
+          กำลังโหลด Swan HILL PMS...
+        </p>
       </div>
     );
   }
@@ -299,17 +334,21 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to="/dashboard" /> : <AuthPage />} 
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" replace /> : <AuthPage />}
         />
-        <Route 
-          path="/dashboard" 
-          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" />} 
+        <Route
+          path="/dashboard"
+          element={user ? <MainDashboard user={user} /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="*" 
-          element={<Navigate to={user ? "/dashboard" : "/login"} />} 
+        <Route
+          path="/"
+          element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
+        />
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
         />
       </Routes>
     </BrowserRouter>

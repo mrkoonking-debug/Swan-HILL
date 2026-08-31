@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   User,
   MessageCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  UtensilsCrossed
 } from 'lucide-react';
 import type { Booking, BookingStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -26,6 +27,7 @@ interface BookingsViewProps {
   onCancelBooking: (bookingId: string) => void; // Move to trash
   onRestoreBooking?: (bookingId: string) => void; // Restore from trash
   onPermanentDeleteBooking?: (bookingId: string) => void; // Delete permanently
+  onOpenAddOrder?: (booking: Booking) => void; // Add-ons modal
 }
 
 export const BookingsView: React.FC<BookingsViewProps> = ({
@@ -37,6 +39,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onCancelBooking,
   onRestoreBooking,
   onPermanentDeleteBooking,
+  onOpenAddOrder,
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -103,7 +106,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
   return (
     <div className="space-y-4 pb-28 md:pb-8">
-      {/* TOP METRIC STATUS COUNTERS - Apple Glass Finish */}
+      {/* TOP METRIC STATUS COUNTERS */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 md:gap-3">
         {/* 1. All Bookings */}
         <div 
@@ -242,7 +245,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         </div>
       )}
 
-      {/* APPLE LIQUID LUXURY BOOKING CARDS */}
+      {/* LUXURY BOOKING CARDS */}
       <div className="space-y-3">
         {displayedBookings.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 shadow-xs">
@@ -257,6 +260,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         ) : (
           displayedBookings.map((b) => {
             const initials = b.guestName.replace(/คุณ/g, '').trim().slice(0, 2);
+            const remainingBalance = Math.max(0, b.totalAmount - b.paidAmount);
 
             return (
               <div
@@ -268,7 +272,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 }`}
               >
                 {/* Section 1: Customer Profile & Booking Code */}
-                <div className="flex items-start gap-3 min-w-[240px]">
+                <div className="flex items-start gap-3 min-w-[230px]">
                   {/* Avatar Circle */}
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0 border border-slate-700">
                     {initials || <User className="w-5 h-5" />}
@@ -313,14 +317,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Section 2: Room Logo Badge & Stay Route Timeline */}
-                <div className="flex items-center gap-3.5 bg-slate-50/80 p-3 rounded-2xl border border-slate-100 flex-1 min-w-[280px]">
+                {/* Section 2: Room Logo Badge & Stay Route Timeline + Add-ons List */}
+                <div className="flex items-start gap-3.5 bg-slate-50/80 p-3 rounded-2xl border border-slate-100 flex-1 min-w-[280px]">
                   {/* Custom Vector Cream-Brown House Logo */}
                   <HouseLogo roomNumber={b.roomNumber} size="md" />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-xs font-bold text-slate-800 truncate">{b.roomType}</span>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-800 truncate">
+                        ห้อง {b.roomNumber} &bull; {b.roomType}
+                      </span>
                       {getStatusBadge(b.status)}
                     </div>
 
@@ -346,8 +352,20 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       </div>
                     </div>
 
+                    {/* Add-ons Chips list */}
+                    {b.addOns && b.addOns.length > 0 && (
+                      <div className="pt-1 border-t border-slate-200/60 flex flex-wrap gap-1">
+                        {b.addOns.map((ad) => (
+                          <span key={ad.id} className="text-[10px] font-bold bg-white text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1">
+                            <span>{ad.name}</span>
+                            <span className="text-emerald-700 font-extrabold">(฿{(ad.price * ad.quantity).toLocaleString()})</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {b.specialRequests && (
-                      <p className="text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded-md mt-1.5 font-semibold border border-amber-200 truncate">
+                      <p className="text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded-md font-semibold border border-amber-200 truncate">
                         หมายเหตุ: {b.specialRequests}
                       </p>
                     )}
@@ -355,25 +373,43 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </div>
 
                 {/* Section 3: Price Breakdown & Action Buttons */}
-                <div className="flex sm:flex-col lg:flex-row items-center justify-between lg:justify-end gap-3 min-w-[200px] pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                <div className="flex sm:flex-col lg:flex-row items-center justify-between lg:justify-end gap-3 min-w-[210px] pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                   {/* Price */}
                   <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-slate-500 font-bold block uppercase">ยอดรวม</span>
+                    <span className="text-[10px] text-slate-500 font-bold block uppercase">ยอดรวมสุทธิ</span>
                     <span className="text-base md:text-lg font-black text-emerald-800">
                       ฿{b.totalAmount.toLocaleString()}
                     </span>
-                    <span className="text-[10px] block font-bold text-emerald-600">
-                      {b.paymentStatus === 'paid' ? 'ชำระเต็มแล้ว' : (b.paymentStatus === 'deposit' ? `มัดจำ ฿${b.paidAmount.toLocaleString()}` : 'รอชำระ')}
-                    </span>
+                    {remainingBalance > 0 ? (
+                      <span className="text-[10px] block font-extrabold text-red-600">
+                        ค้างชำระ: ฿{remainingBalance.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] block font-bold text-emerald-600">
+                        ชำระครบแล้ว
+                      </span>
+                    )}
                   </div>
 
                   {/* Actions */}
                   {statusFilter !== 'trash' ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {/* Add Order Button */}
+                      {onOpenAddOrder && b.status !== 'checked_out' && (
+                        <button
+                          onClick={() => onOpenAddOrder(b)}
+                          className="px-2.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1 transition-all active:scale-95"
+                          title="สั่งอาหาร / หมูกระทะ / บริการเสริม"
+                        >
+                          <UtensilsCrossed className="w-3.5 h-3.5" />
+                          <span>สั่งอาหาร</span>
+                        </button>
+                      )}
+
                       {b.status === 'confirmed' && (
                         <button
                           onClick={() => onCheckInGuest(b.id)}
-                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                          className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>เช็คอิน</span>
@@ -383,7 +419,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {b.status === 'checked_in' && (
                         <button
                           onClick={() => onCheckOutGuest(b.id)}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                          className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                           <span>เช็คเอาท์</span>
