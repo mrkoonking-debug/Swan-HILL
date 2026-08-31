@@ -187,10 +187,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <div>
                 <img 
                   src="/swan-hill-dark.png" 
-                  alt="สวอนฮิลล์ รีสอร์ท" 
+                  alt="Swan HILL Resort" 
                   className="h-10 w-auto object-contain mb-1" 
                 />
-                <p className="text-xs font-black text-slate-900 tracking-wide">สวอนฮิลล์ รีสอร์ท</p>
+                <p className="text-xs font-black text-slate-900 tracking-wider">SWAN HILL RESORT</p>
                 <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5 font-medium">
                   <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
                   บ้านพักธรรมชาติและบรรยากาศส่วนตัว
@@ -324,7 +324,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             {/* Footer / Signature */}
             <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-xs text-slate-600">
               <div>
-                <p className="font-black text-slate-800">ขอบพระคุณที่ไว้วางใจเลือกพักกับ สวอนฮิลล์ รีสอร์ท</p>
+                <p className="font-black text-slate-800">ขอบพระคุณที่ไว้วางใจเลือกพักกับ Swan HILL Resort</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">ขอให้มีความสุขและความสะดวกสบายตลอดการเข้าพัก</p>
               </div>
 
