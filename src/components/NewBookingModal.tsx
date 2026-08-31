@@ -9,6 +9,7 @@ import {
 } from './MenuIcons';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
+import { ThaiDatePicker } from './ThaiDatePicker';
 import { sanitizePhoneInput } from '../utils/phoneUtils';
 
 interface NewBookingModalProps {
@@ -251,32 +252,18 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             />
           </div>
 
-          {/* 3. Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                วันเข้าพัก
-              </label>
-              <input
-                type="date"
-                required
-                value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50 shadow-xs"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                วันออก ({totalNights} คืน)
-              </label>
-              <input
-                type="date"
-                required
-                value={checkOutDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-500 outline-none font-semibold bg-slate-50 shadow-xs"
-              />
-            </div>
+          {/* 3. Dates (วัน - เดือน - ปี พ.ศ.) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ThaiDatePicker
+              label="วันเข้าพัก"
+              value={checkInDate}
+              onChange={(val) => setCheckInDate(val)}
+            />
+            <ThaiDatePicker
+              label={`วันเช็คเอาท์ (${totalNights} คืน)`}
+              value={checkOutDate}
+              onChange={(val) => setCheckOutDate(val)}
+            />
           </div>
 
           {/* 4. บริการเสริมตอนจอง (Add-on Services with Custom SVG Icons) */}

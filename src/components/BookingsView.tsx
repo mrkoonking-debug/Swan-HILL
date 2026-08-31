@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { Booking, BookingStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
+import { formatThaiDate } from '../utils/dateUtils';
 
 interface BookingsViewProps {
   bookings: Booking[];
@@ -285,7 +286,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         {b.bookingCode}
                       </span>
                       <span className="text-[10px] text-slate-500 font-medium">
-                        {b.createdAt ? new Date(b.createdAt).toLocaleDateString('th-TH') : 'วันนี้'}
+                        {formatThaiDate(b.createdAt)}
                       </span>
                     </div>
 
@@ -334,11 +335,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       {getStatusBadge(b.status)}
                     </div>
 
-                    {/* Stay Route: CheckIn -> Nights -> CheckOut */}
+                    {/* Stay Route: CheckIn -> Nights -> CheckOut (วัน เดือน ปี พ.ศ.) */}
                     <div className="flex items-center gap-2 text-xs text-slate-700 font-medium">
                       <div className="text-left">
                         <span className="text-[10px] text-slate-500 block uppercase font-bold">เข้าพัก</span>
-                        <span className="font-bold text-slate-900 text-xs">{b.checkInDate}</span>
+                        <span className="font-bold text-slate-900 text-xs">{formatThaiDate(b.checkInDate)}</span>
                       </div>
 
                       <div className="flex-1 flex flex-col items-center px-1">
@@ -352,7 +353,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                       <div className="text-right">
                         <span className="text-[10px] text-slate-500 block uppercase font-bold">ออก</span>
-                        <span className="font-bold text-slate-900 text-xs">{b.checkOutDate}</span>
+                        <span className="font-bold text-slate-900 text-xs">{formatThaiDate(b.checkOutDate)}</span>
                       </div>
                     </div>
 

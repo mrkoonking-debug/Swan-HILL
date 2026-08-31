@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
+import { formatThaiDate } from '../utils/dateUtils';
 
 interface DashboardViewProps {
   rooms: Room[];
@@ -132,7 +133,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Users className="w-3 h-3 text-blue-600 shrink-0" />
                 {room.currentGuest.name}
               </span>
-              <span className="text-[10px] text-slate-600 block">ออก {room.currentGuest.checkOut}</span>
+              <span className="text-[10px] text-slate-600 block">ออก {formatThaiDate(room.currentGuest.checkOut)}</span>
 
               {/* Add-on Summary Pill */}
               {currentBooking?.addOns && currentBooking.addOns.length > 0 && (
@@ -485,7 +486,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                   <p className="text-slate-600 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    เข้าพัก: {selectedRoomModal.currentGuest.checkIn} ถึง {selectedRoomModal.currentGuest.checkOut}
+                    เข้าพัก: {formatThaiDate(selectedRoomModal.currentGuest.checkIn)} ถึง {formatThaiDate(selectedRoomModal.currentGuest.checkOut)}
                   </p>
                 </div>
               )}

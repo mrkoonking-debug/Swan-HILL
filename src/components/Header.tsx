@@ -25,12 +25,13 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = { 
-        weekday: 'short', 
-        day: 'numeric',
-        month: 'short',
-      };
-      setCurrentDateTime(now.toLocaleDateString('th-TH', options));
+      const dayNames = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+      const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      const dayName = dayNames[now.getDay()];
+      const day = now.getDate();
+      const month = thaiMonths[now.getMonth()];
+      const yearBE = now.getFullYear() + 543;
+      setCurrentDateTime(`${dayName} ${day} ${month} ${yearBE}`);
     };
     updateTime();
   }, []);
