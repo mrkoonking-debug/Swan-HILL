@@ -1,17 +1,16 @@
 import React, { useRef, useState } from 'react';
 import { 
+  X, 
   Printer, 
   Download, 
   Image as ImageIcon, 
-  X, 
-  CheckCircle2, 
-  Phone, 
   MapPin, 
-  Receipt,
+  Phone, 
+  CheckCircle2, 
   Check
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import type { Booking } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
 
@@ -32,48 +31,45 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  // Calculations
   const roomBaseTotal = booking.roomPrice * booking.totalNights;
   const addOnsTotal = booking.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = booking.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = Math.max(0, grandTotal - booking.paidAmount);
 
-  // 1. Download as High-Resolution PNG Image
+  // 1. Download as Image (PNG)
   const handleDownloadImage = async () => {
     if (!receiptRef.current) return;
-    setIsExporting(true);
     try {
+      setIsExporting(true);
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2.5, // Crisp retina clarity
+        scale: 3, // Ultra high-res crisp rendering
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
       });
 
-      const imageUri = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.href = imageUri;
-      link.download = `SwanHILL_Receipt_${booking.bookingCode}.png`;
-      document.body.appendChild(link);
+      link.href = imgData;
+      link.download = `ใบเสร็จ_${booking.roomNumber}_${booking.bookingCode}.png`;
       link.click();
-      document.body.removeChild(link);
 
-      setExportSuccess('ดาวน์โหลดรูปภาพ (PNG) สำเร็จ!');
-      setTimeout(() => setExportSuccess(null), 2500);
+      setExportSuccess('บันทึกรูปภาพใบเสร็จเรียบร้อยแล้ว');
+      setTimeout(() => setExportSuccess(null), 3000);
     } catch (err) {
-      console.error('Export image error:', err);
+      console.error('Failed to export image:', err);
     } finally {
       setIsExporting(false);
     }
   };
 
-  // 2. Download as PDF (Identical to Image)
+  // 2. Download as PDF
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;
-    setIsExporting(true);
     try {
+      setIsExporting(true);
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2.5,
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
@@ -89,68 +85,74 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`SwanHILL_Receipt_${booking.bookingCode}.pdf`);
+      pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight);
+      pdf.save(`ใบเสร็จ_${booking.roomNumber}_${booking.bookingCode}.pdf`);
 
-      setExportSuccess('ดาวน์โหลด PDF สำเร็จ!');
-      setTimeout(() => setExportSuccess(null), 2500);
+      setExportSuccess('ดาวน์โหลดไฟล์ PDF เรียบร้อยแล้ว');
+      setTimeout(() => setExportSuccess(null), 3000);
     } catch (err) {
-      console.error('Export PDF error:', err);
+      console.error('Failed to export PDF:', err);
     } finally {
       setIsExporting(false);
     }
   };
 
-  // 3. Print Slip
+  // 3. Print
   const handlePrint = () => {
     window.print();
   };
 
+  // Channel Thai Translator
+  const getChannelThai = (ch?: string) => {
+    if (ch === 'LINE Official') return 'ไลน์ (LINE Official)';
+    if (ch === 'Phone') return 'โทรศัพท์';
+    if (ch === 'Direct') return 'ติดต่อโดยตรง';
+    return ch || 'ไลน์ (LINE Official)';
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-slate-900 text-slate-100 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-800 flex flex-col max-h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+      <div className="bg-slate-900 border border-slate-700/80 w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
         
         {/* Top Control Bar */}
-        <div className="p-3.5 sm:p-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-emerald-400" />
-            <div>
-              <h3 className="text-sm sm:text-base font-black text-white">ใบเสร็จรับเงิน / ใบยืนยันการจอง</h3>
-              <p className="text-[11px] text-slate-400 font-medium">{booking.bookingCode}</p>
-            </div>
+            <span className="text-sm sm:text-base font-black text-white">
+              ใบเสร็จรับเงิน / ใบยืนยันการจอง
+            </span>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Download PNG Button */}
+          <div className="flex items-center gap-2">
+            {/* Download Image Button */}
             <button
               onClick={handleDownloadImage}
               disabled={isExporting}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all active:scale-95 border border-slate-700"
-              title="ดาวน์โหลดเป็นรูปภาพ PNG"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="บันทึกเป็นรูปภาพ"
             >
-              <ImageIcon className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">รูปภาพ</span> (PNG)
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>บันทึกเป็นรูปภาพ</span>
             </button>
 
             {/* Download PDF Button */}
             <button
               onClick={handleDownloadPDF}
               disabled={isExporting}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
               title="ดาวน์โหลดเป็นไฟล์ PDF"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">เอกสาร</span> (PDF)
+              <span>ดาวน์โหลด PDF</span>
             </button>
 
             {/* Print Button */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all active:scale-95 border border-slate-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all active:scale-95 border border-slate-700"
               title="สั่งพิมพ์ใบเสร็จ"
             >
               <Printer className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">พิมพ์</span>
+              <span>สั่งพิมพ์</span>
             </button>
 
             {/* Close Button */}
@@ -174,7 +176,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         {/* Receipt Container Preview (Will be exported to Image/PDF/Print) */}
         <div className="p-3 sm:p-6 overflow-y-auto no-scrollbar flex-1 bg-slate-900/50 flex justify-center">
           
-          {/* Printable Sheet (Standard A4 / Luxury Receipt Style) */}
+          {/* Printable Sheet (100% Pure Thai Language) */}
           <div
             ref={receiptRef}
             className="w-full max-w-[540px] bg-white text-slate-900 p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 space-y-5 print:p-0 print:border-none print:shadow-none"
@@ -185,86 +187,85 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <div>
                 <img 
                   src="/swan-hill-dark.png" 
-                  alt="Swan HILL" 
+                  alt="สวอนฮิลล์ รีสอร์ท" 
                   className="h-10 w-auto object-contain mb-1" 
                 />
-                <p className="text-[11px] font-black text-slate-800 tracking-wider">SWAN HILL RESORT</p>
-                <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                  สวอนฮิลล์ รีสอร์ท ที่พักธรรมชาติ
+                <p className="text-xs font-black text-slate-900 tracking-wide">สวอนฮิลล์ รีสอร์ท</p>
+                <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5 font-medium">
+                  <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                  บ้านพักธรรมชาติและบรรยากาศส่วนตัว
                 </p>
-                <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                  <Phone className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                <p className="text-[11px] text-slate-600 flex items-center gap-1 font-medium">
+                  <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
                   ติดต่อ: 081-234-5678
                 </p>
               </div>
 
               <div className="text-right">
-                <span className="inline-block bg-slate-900 text-white font-black text-[11px] px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+                <span className="inline-block bg-slate-900 text-white font-black text-xs px-3 py-1 rounded-md tracking-wide">
                   ใบเสร็จรับเงิน
                 </span>
-                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">RECEIPT / SLIP</p>
-                <p className="text-xs font-black text-slate-900 mt-1">เลขที่: {booking.bookingCode}</p>
-                <p className="text-[10px] text-slate-600">วันที่ออก: {formatThaiDate(new Date())}</p>
+                <p className="text-xs font-black text-slate-900 mt-2">เลขที่: {booking.bookingCode}</p>
+                <p className="text-[11px] text-slate-600 mt-0.5">วันที่ออกเอกสาร: {formatThaiDate(new Date())}</p>
               </div>
             </div>
 
             {/* Guest & Stay Details Grid */}
             <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
               <div>
-                <span className="text-[10px] text-slate-500 font-bold block uppercase">ข้อมูลลูกค้า (Guest)</span>
+                <span className="text-[11px] text-slate-500 font-bold block">ข้อมูลลูกค้าผู้เข้าพัก</span>
                 <p className="font-black text-slate-900 text-sm mt-0.5">{booking.guestName}</p>
-                <p className="text-slate-600 font-medium mt-0.5">{booking.guestPhone}</p>
-                <p className="text-[10px] text-slate-500">ช่องทาง: {booking.channel}</p>
+                <p className="text-slate-700 font-bold mt-0.5">{booking.guestPhone}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">ช่องทางการจอง: {getChannelThai(booking.channel)}</p>
               </div>
 
               <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-bold block uppercase">ห้องพักที่จอง (Room)</span>
-                <p className="font-black text-emerald-800 text-sm mt-0.5">
+                <span className="text-[11px] text-slate-500 font-bold block">ห้องพักที่จอง</span>
+                <p className="font-black text-emerald-900 text-sm mt-0.5">
                   ห้อง {booking.roomNumber} ({booking.roomType})
                 </p>
-                <p className="text-slate-700 font-semibold mt-0.5">
-                  เข้าพัก: {formatThaiDate(booking.checkInDate)}
+                <p className="text-slate-800 font-bold mt-0.5">
+                  วันเข้าพัก: {formatThaiDate(booking.checkInDate)}
                 </p>
-                <p className="text-slate-700 font-semibold">
-                  ออก: {formatThaiDate(booking.checkOutDate)} ({booking.totalNights} คืน)
+                <p className="text-slate-800 font-bold">
+                  วันออก: {formatThaiDate(booking.checkOutDate)} ({booking.totalNights} คืน)
                 </p>
               </div>
             </div>
 
             {/* Itemized Table */}
             <div>
-              <div className="border-b border-slate-300 pb-1.5 mb-2 flex justify-between text-xs font-black text-slate-900 uppercase">
-                <span>รายการ (Description)</span>
-                <span>จำนวนเงิน (THB)</span>
+              <div className="border-b-2 border-slate-300 pb-1.5 mb-2 flex justify-between text-xs font-black text-slate-900">
+                <span>รายการ</span>
+                <span>จำนวนเงิน (บาท)</span>
               </div>
 
               <div className="space-y-2 text-xs text-slate-800">
                 {/* 1. Room Charge */}
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="font-bold text-slate-900 block">
+                    <span className="font-black text-slate-900 block">
                       ค่าที่พักห้อง {booking.roomNumber} ({booking.totalNights} คืน)
                     </span>
-                    <span className="text-[10px] text-slate-500">
-                      อัตรา ฿{booking.roomPrice.toLocaleString()} / คืน
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      ราคาคืนละ ฿{booking.roomPrice.toLocaleString()} บาท
                     </span>
                   </div>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-black text-slate-900">
                     ฿{roomBaseTotal.toLocaleString()}
                   </span>
                 </div>
 
                 {/* 2. Add-ons Items */}
                 {booking.addOns && booking.addOns.length > 0 && booking.addOns.map((item) => (
-                  <div key={item.id} className="flex justify-between items-start pt-1 border-t border-slate-100">
+                  <div key={item.id} className="flex justify-between items-start pt-1.5 border-t border-slate-100">
                     <div>
-                      <span className="font-bold text-slate-900 block">{item.name}</span>
-                      <span className="text-[10px] text-slate-500">
-                        {item.quantity} x ฿{item.price.toLocaleString()}
+                      <span className="font-black text-slate-900 block">{item.name}</span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        จำนวน {item.quantity} รายการ (รายการละ ฿{item.price.toLocaleString()} บาท)
                       </span>
                     </div>
-                    <span className="font-bold text-emerald-800">
+                    <span className="font-black text-emerald-800">
                       +฿{(item.price * item.quantity).toLocaleString()}
                     </span>
                   </div>
@@ -274,63 +275,63 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
             {/* Financial Summary */}
             <div className="pt-3 border-t-2 border-slate-900 space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>ยอดรวมก่อนบริการเสริม:</span>
-                <span>฿{roomBaseTotal.toLocaleString()}</span>
+              <div className="flex justify-between text-slate-600 font-medium">
+                <span>ยอดรวมค่าห้องพัก:</span>
+                <span className="font-bold text-slate-800">฿{roomBaseTotal.toLocaleString()} บาท</span>
               </div>
 
               {addOnsTotal > 0 && (
-                <div className="flex justify-between text-slate-600">
-                  <span>ยอดบริการเสริม & อาหาร:</span>
-                  <span className="text-emerald-700 font-bold">+฿{addOnsTotal.toLocaleString()}</span>
+                <div className="flex justify-between text-slate-600 font-medium">
+                  <span>ยอดค่าอาหารและบริการเสริม:</span>
+                  <span className="text-emerald-800 font-bold">+฿{addOnsTotal.toLocaleString()} บาท</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-slate-900 font-black text-sm pt-1.5 border-t border-slate-200">
-                <span>ยอดเงินสุทธิทั้งสิ้น (Grand Total):</span>
+              <div className="flex justify-between text-slate-950 font-black text-sm pt-2 border-t border-slate-200">
+                <span>ยอดเงินสุทธิทั้งสิ้น:</span>
                 <span className="text-emerald-950 text-base">฿{grandTotal.toLocaleString()} บาท</span>
               </div>
 
-              <div className="flex justify-between text-slate-700 font-bold pt-1">
-                <span>ยอดที่ชำระแล้ว:</span>
-                <span className="text-emerald-700">฿{booking.paidAmount.toLocaleString()} บาท</span>
+              <div className="flex justify-between text-slate-800 font-bold pt-1">
+                <span>ยอดเงินที่ชำระแล้ว:</span>
+                <span className="text-emerald-800 font-black">฿{booking.paidAmount.toLocaleString()} บาท</span>
               </div>
 
               {remainingBalance > 0 ? (
-                <div className="flex justify-between text-rose-700 font-black text-xs pt-1 bg-rose-50 p-2 rounded-lg border border-rose-200">
-                  <span>ยอดค้างชำระ (เก็บตอนเช็คเอาท์):</span>
-                  <span>฿{remainingBalance.toLocaleString()} บาท</span>
+                <div className="flex justify-between text-rose-900 font-black text-xs pt-1.5 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                  <span>ยอดคงเหลือที่ต้องชำระ (เก็บตอนเช็คเอาท์):</span>
+                  <span className="text-rose-700 text-sm">฿{remainingBalance.toLocaleString()} บาท</span>
                 </div>
               ) : (
-                <div className="flex justify-between text-emerald-800 font-black text-xs pt-1 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    สถานะการชำระ:
+                <div className="flex justify-between text-emerald-950 font-black text-xs pt-1.5 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    สถานะการชำระเงิน:
                   </span>
-                  <span>ชำระเงินครบถ้วนแล้ว</span>
+                  <span className="text-emerald-800">ชำระเงินครบถ้วนแล้ว</span>
                 </div>
               )}
             </div>
 
             {/* Special Requests */}
             {booking.specialRequests && (
-              <div className="p-2 bg-slate-50 rounded-lg text-[10px] text-slate-600 border border-slate-200">
-                <span className="font-bold text-slate-800 block">หมายเหตุ:</span>
+              <div className="p-2.5 bg-slate-50 rounded-xl text-xs text-slate-700 border border-slate-200">
+                <span className="font-bold text-slate-900 block mb-0.5">หมายเหตุเพิ่มเติม:</span>
                 <span>{booking.specialRequests}</span>
               </div>
             )}
 
             {/* Footer / Signature */}
-            <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-[10px] text-slate-500">
+            <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-xs text-slate-600">
               <div>
-                <p className="font-bold text-slate-700">ขอบพระคุณที่ไว้วางใจเลือกพักกับเรา</p>
-                <p>Thank you for choosing Swan HILL Resort</p>
+                <p className="font-black text-slate-800">ขอบพระคุณที่ไว้วางใจเลือกพักกับ สวอนฮิลล์ รีสอร์ท</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">ขอให้มีความสุขและความสะดวกสบายตลอดการเข้าพัก</p>
               </div>
 
-              <div className="text-center w-36">
-                <div className="border-b border-slate-400 pb-4 mb-1"></div>
-                <p className="font-bold text-slate-700">ผู้รับเงิน / พนักงานต้อนรับ</p>
-                <p>(Authorized Signature)</p>
+              <div className="text-center w-40">
+                <div className="border-b border-slate-400 pb-5 mb-1.5"></div>
+                <p className="font-bold text-slate-800">ผู้รับเงิน / พนักงานต้อนรับ</p>
+                <p className="text-[10px] text-slate-500">(ลงชื่อผู้รับเงิน)</p>
               </div>
             </div>
           </div>
