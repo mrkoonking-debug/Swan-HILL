@@ -308,6 +308,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         {b.channel}
                       </span>
                     </div>
+
+                    {statusFilter === 'trash' && (
+                      <p className="text-[10px] text-red-600 font-bold mt-1">
+                        ลบถาวรอัตโนมัติในอีก {getDaysRemainingInTrash(b.deletedAt)} วัน
+                      </p>
+                    )}
                   </div>
                 </div>
 
