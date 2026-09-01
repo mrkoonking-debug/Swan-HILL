@@ -152,4 +152,8 @@ export interface ResortSettings {
 
   // Staff & Authorized PIN Access
   staffList?: StaffMember[];
+
+  // External Mookata Supplier / Delivery Shop
+  mookataSupplierName?: string;
+  mookataSupplierPhone?: string;
 }

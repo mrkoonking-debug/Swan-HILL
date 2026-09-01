@@ -604,6 +604,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           {activeTab === 'bookings' && (
             <BookingsView
               bookings={bookings}
+              settings={settings}
               searchTerm={searchTerm}
               onOpenNewBooking={handleOpenNormalBooking}
               onCheckInGuest={handleCheckInGuest}

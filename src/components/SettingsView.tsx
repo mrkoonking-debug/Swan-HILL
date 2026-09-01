@@ -415,6 +415,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
               <p>ราคาห้องพักยังไม่รวมอาหารเช้าและหมูกระทะตอนเย็น ลูกค้าสามารถสั่งเพิ่มได้ผ่านระบบตลอดเวลา</p>
             </div>
+
+            {/* External Mookata Supplier Config */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <span className="font-bold text-slate-800 text-xs block flex items-center gap-1.5">
+                <span>🛵 ร้านหมูกระทะข้างนอก (สั่งภายนอก • ไม่ได้ทำเอง)</span>
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">ชื่อร้านหมูกระทะ</label>
+                  <input
+                    type="text"
+                    value={formData.mookataSupplierName || ''}
+                    onChange={(e) => handleChange('mookataSupplierName', e.target.value)}
+                    placeholder="เช่น ร้านหมูกระทะน้องบอย"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">เบอร์โทรสำหรับโทรสั่ง</label>
+                  <input
+                    type="tel"
+                    value={formData.mookataSupplierPhone || ''}
+                    onChange={(e) => handleChange('mookataSupplierPhone', e.target.value)}
+                    placeholder="081-234-5678"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:border-emerald-500 outline-none bg-slate-50 focus:bg-white text-xs font-mono font-bold text-emerald-800"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

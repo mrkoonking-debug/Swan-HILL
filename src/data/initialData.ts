@@ -237,6 +237,10 @@ export const initialSettings: ResortSettings = {
       createdAt: '2026-08-01T00:00:00Z',
     },
   ],
+
+  // External Mookata Supplier
+  mookataSupplierName: 'ร้านหมูกระทะ (ส่งเดลิเวอรี่ประจำ)',
+  mookataSupplierPhone: '081-234-5678',
 };
 
 export const initialLogs: ActivityLog[] = [

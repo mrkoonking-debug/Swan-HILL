@@ -15,9 +15,11 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Copy,
+  Check
 } from 'lucide-react';
-import type { Booking, BookingStatus, AddOnItem } from '../types/pms';
+import type { Booking, BookingStatus, AddOnItem, ResortSettings } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
 import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
 import { ConfirmDialogModal } from './ConfirmDialogModal';
@@ -41,6 +43,7 @@ interface BookingsViewProps {
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenCheckoutModal?: (booking: Booking) => void;
+  settings?: ResortSettings;
 }
 
 const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
@@ -68,9 +71,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onOpenReceipt,
   onOpenAddPayment,
   onOpenCheckoutModal,
+  settings,
 }) => {
   // Mode: Daily Operations View (Default) vs All Bookings List
   const [viewMode, setViewMode] = useState<'daily' | 'all'>('daily');
+  const [copyMookataSuccess, setCopyMookataSuccess] = useState(false);
 
   // Daily View Date State
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -429,73 +434,175 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
           </div>
 
-          {/* Kitchen & Supplies Prep Summary Bar (หมูกระทะ & อาหารเช้าที่ต้องเตรียมวันนี้) */}
-          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-                  <UtensilsCrossed className="w-4 h-4" />
+          {/* Kitchen & External Supplier Summary Bar */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-xl space-y-4">
+            
+            {/* Header with date info */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0 border border-amber-500/30">
+                  <UtensilsCrossed className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
-                    <span>ยอดที่ครัวและแม่บ้านต้องจัดเตรียมประจำวัน</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span>ยอดที่ต้องจัดเตรียม & สั่งร้านภายนอก</span>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                       รวม {activeOnDate.length} ห้องพัก
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400 font-medium mt-0.5">
-                    สรุปออเดอร์หมูกระทะและอาหารเช้าทั้งหมดสำหรับวันที่ {formatThaiDate(selectedDate)}
+                    สรุปยอดหมูกระทะ (สั่งร้านข้างนอก) และอาหารเช้าสำหรับ {formatThaiFullDate(selectedDate)}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* 4 Summary Counters */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {/* Mookata Large */}
-              <div className="bg-slate-800/80 border border-red-500/30 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                  <MookataLargeIcon size={22} />
+            {/* PART 1: หมูกระทะ (สั่งร้านภายนอก • ไม่ได้ทำเอง) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-800/90 border border-orange-500/40 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[11px] font-bold">
+                    🛵 สั่งร้านภายนอก (ไม่ได้ทำเอง)
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-white">
+                    {settings?.mookataSupplierName || 'ร้านหมูกระทะประจำรีสอร์ท'}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดใหญ่)</span>
-                  <span className="text-lg sm:text-xl font-black text-red-400">{kitchenSummary.mookataLarge} <span className="text-xs text-slate-300 font-normal">ชุด</span></span>
+
+                {/* Copy / Call Actions */}
+                <div className="flex items-center gap-2">
+                  {/* Copy Order for LINE */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const totalMookata = kitchenSummary.mookataLarge + kitchenSummary.mookataSmall;
+                      const text = `สั่งหมูกระทะสำหรับ สวอนฮิลล์ รีสอร์ท (Swan HILL)\n📅 ประจำวันที่: ${formatThaiDate(selectedDate)}\n- หมูกระทะชุดใหญ่: ${kitchenSummary.mookataLarge} ชุด\n- หมูกระทะชุดเล็ก: ${kitchenSummary.mookataSmall} ชุด\nรวมทั้งหมด: ${totalMookata} ชุด\n📍 ส่งที่: สวอนฮิลล์ รีสอร์ท`;
+                      navigator.clipboard.writeText(text);
+                      setCopyMookataSuccess(true);
+                      setTimeout(() => setCopyMookataSuccess(false), 2500);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 active:scale-95 text-orange-300 font-bold text-xs rounded-xl border border-orange-500/40 transition-all cursor-pointer shadow-xs"
+                    title="คัดลอกข้อความสรุปยอดเพื่อส่งทาง LINE หาร้าน"
+                  >
+                    {copyMookataSuccess ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                        <span className="text-emerald-300">คัดลอกส่ง LINE แล้ว!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-orange-400" />
+                        <span>คัดลอกส่ง LINE</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Phone Call to Supplier */}
+                  {settings?.mookataSupplierPhone && (
+                    <a
+                      href={`tel:${settings.mookataSupplierPhone.replace(/[^0-9+]/g, '')}`}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                      title="กดเพื่อโทรสั่งร้านหมูกระทะทันที"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>โทรสั่งร้าน</span>
+                    </a>
+                  )}
                 </div>
               </div>
 
-              {/* Mookata Small */}
-              <div className="bg-slate-800/80 border border-orange-500/30 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
-                  <MookataSmallIcon size={22} />
+              {/* Mookata Counters */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                {/* Large */}
+                <div className="bg-slate-900/90 border border-red-500/40 p-3 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                      <MookataLargeIcon size={22} />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดใหญ่)</span>
+                      <span className="text-xs text-red-300 font-medium">฿500 /ชุด</span>
+                    </div>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-red-400">
+                    {kitchenSummary.mookataLarge} <span className="text-xs text-slate-400 font-normal">ชุด</span>
+                  </span>
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดเล็ก)</span>
-                  <span className="text-lg sm:text-xl font-black text-orange-400">{kitchenSummary.mookataSmall} <span className="text-xs text-slate-300 font-normal">ชุด</span></span>
-                </div>
-              </div>
 
-              {/* Breakfast */}
-              <div className="bg-slate-800/80 border border-teal-500/30 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
-                  <BreakfastIcon size={22} />
+                {/* Small */}
+                <div className="bg-slate-900/90 border border-orange-500/40 p-3 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                      <MookataSmallIcon size={22} />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดเล็ก)</span>
+                      <span className="text-xs text-orange-300 font-medium">฿350 /ชุด</span>
+                    </div>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-orange-400">
+                    {kitchenSummary.mookataSmall} <span className="text-xs text-slate-400 font-normal">ชุด</span>
+                  </span>
                 </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block">อาหารเช้า</span>
-                  <span className="text-lg sm:text-xl font-black text-teal-400">{kitchenSummary.breakfast} <span className="text-xs text-slate-300 font-normal">ท่าน</span></span>
-                </div>
-              </div>
 
-              {/* Extra Beds */}
-              <div className="bg-slate-800/80 border border-amber-500/30 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                  <ExtraBedIcon size={22} />
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-400 block">ที่นอนเสริม</span>
-                  <span className="text-lg sm:text-xl font-black text-amber-400">{kitchenSummary.extraBeds} <span className="text-xs text-slate-300 font-normal">หลัง</span></span>
+                {/* Total Mookata Sets */}
+                <div className="bg-slate-900/90 border border-slate-700 p-3 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-400 block">รวมหมูกระทะที่ต้องสั่ง</span>
+                    <span className="text-xs text-emerald-400 font-medium">โทรสั่งร้านล่วงหน้า</span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-white">
+                    {kitchenSummary.mookataLarge + kitchenSummary.mookataSmall} <span className="text-xs text-slate-400 font-normal">ชุด</span>
+                  </span>
                 </div>
               </div>
             </div>
+
+            {/* PART 2: รายการที่รีสอร์ทจัดเตรียมเอง (อาหารเช้า & ที่นอนเสริม) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Breakfast */}
+              <div className="bg-slate-800/60 border border-teal-500/30 p-3 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
+                    <BreakfastIcon size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-200">อาหารเช้า</span>
+                      <span className="text-[10px] font-bold text-teal-400 bg-teal-500/20 px-1.5 py-0.2 rounded border border-teal-500/30">
+                        รีสอร์ททำเอง
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">ครัวจัดเตรียม</span>
+                  </div>
+                </div>
+                <span className="text-lg sm:text-xl font-black text-teal-400">
+                  {kitchenSummary.breakfast} <span className="text-xs text-slate-400 font-normal">ท่าน</span>
+                </span>
+              </div>
+
+              {/* Extra Beds */}
+              <div className="bg-slate-800/60 border border-amber-500/30 p-3 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <ExtraBedIcon size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-200">ที่นอนเสริม</span>
+                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                        แม่บ้านจัดเอง
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium">ปูเตียงเพิ่มในห้อง</span>
+                  </div>
+                </div>
+                <span className="text-lg sm:text-xl font-black text-amber-400">
+                  {kitchenSummary.extraBeds} <span className="text-xs text-slate-400 font-normal">หลัง</span>
+                </span>
+              </div>
+            </div>
+
           </div>
 
           {/* Categorized Daily Rooms List */}
