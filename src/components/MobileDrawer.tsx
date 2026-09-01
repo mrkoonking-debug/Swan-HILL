@@ -31,11 +31,14 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onOpenNewBooking,
   userEmail,
 }) => {
-  const menuItems = [
+  const coreMenuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', subtitle: 'ตรวจสอบสถานะห้องพักและเช็คอิน', icon: Home },
     { id: 'timeline', label: 'ปฏิทินห้องพัก', subtitle: 'ตารางปฏิทินรายเดือน 30-31 วัน', icon: CalendarDays },
     { id: 'bookings', label: 'รายการจอง', subtitle: 'ค้นหาและจัดการข้อมูลลูกค้า', icon: ListOrdered },
     { id: 'finance', label: 'สรุปยอดเงิน', subtitle: 'รายงานรายรับและการเงิน', icon: DollarSign },
+  ];
+
+  const systemMenuItems = [
     { id: 'logs', label: 'ประวัติการทำงาน (Logs)', subtitle: 'ตรวจสอบว่าใครทำอะไร เมื่อไหร่', icon: History },
     { id: 'settings', label: 'ตั้งค่าระบบรีสอร์ท', subtitle: 'ปรับราคา ข้อมูล และเมนูอาหาร', icon: Settings },
   ];
@@ -76,12 +79,50 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
         {/* Main Navigation Menu */}
         <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-4">
           
-          {/* Main Category */}
+          {/* Category 1: ระบบจัดการรีสอร์ท (PMS Core) */}
           <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2">
-              ระบบจัดการรีสอร์ท (PMS Core)
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2 block">
+              ระบบจัดการรีสอร์ท
             </span>
-            {menuItems.map((item) => {
+            {coreMenuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as ActiveTab);
+                    onClose();
+                  }}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-2xl transition-all text-left ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-sm font-black'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white font-bold'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs block leading-tight">{item.label}</span>
+                    <span className={`text-[10px] truncate block ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                      {item.subtitle}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Category 2: ประวัติ & ตั้งค่าระบบ */}
+          <div className="space-y-1 pt-2 border-t border-slate-800">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2 block">
+              ประวัติ & ตั้งค่าระบบ
+            </span>
+            {systemMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 

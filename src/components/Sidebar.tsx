@@ -32,11 +32,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenInstallPWA,
   isPWAInstalled = false,
 }) => {
-  const menuItems = [
+  const coreMenuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', icon: Home },
     { id: 'timeline', label: 'ปฏิทินห้องพัก', icon: CalendarDays },
     { id: 'bookings', label: 'รายการจอง', icon: ListOrdered },
     { id: 'finance', label: 'สรุปยอดเงิน', icon: DollarSign },
+  ];
+
+  const systemMenuItems = [
     { id: 'logs', label: 'ประวัติการทำงาน', icon: History },
     { id: 'settings', label: 'ตั้งค่าระบบ', icon: Settings },
   ];
@@ -63,25 +66,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-2 space-y-1 overflow-y-auto pt-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as ActiveTab)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all text-left whitespace-nowrap truncate cursor-pointer ${
-                isActive 
-                  ? 'bg-emerald-600 text-white shadow-xs' 
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-              <span className="truncate">{item.label}</span>
-            </button>
-          );
-        })}
+      <nav className="flex-1 px-2 space-y-3 overflow-y-auto pt-1">
+        {/* Category 1: ระบบจัดการรีสอร์ท */}
+        <div className="space-y-1">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 block">
+            ระบบจัดการรีสอร์ท
+          </span>
+          {coreMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as ActiveTab)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all text-left whitespace-nowrap truncate cursor-pointer ${
+                  isActive 
+                    ? 'bg-emerald-600 text-white shadow-xs' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Category 2: ประวัติ & ตั้งค่าระบบ */}
+        <div className="space-y-1 pt-2 border-t border-slate-800/80">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 block">
+            ประวัติ & ตั้งค่าระบบ
+          </span>
+          {systemMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as ActiveTab)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all text-left whitespace-nowrap truncate cursor-pointer ${
+                  isActive 
+                    ? 'bg-emerald-600 text-white shadow-xs' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
       {/* User Info, PWA Install & Sign Out */}
