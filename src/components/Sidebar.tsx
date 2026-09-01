@@ -7,7 +7,8 @@ import {
   Plus,
   User,
   History,
-  Settings
+  Settings,
+  Download
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -19,13 +20,17 @@ interface SidebarProps {
   setActiveTab: (tab: ActiveTab) => void;
   onOpenNewBooking: () => void;
   userEmail: string | null;
+  onOpenInstallPWA?: () => void;
+  isPWAInstalled?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activeTab, 
   setActiveTab, 
   onOpenNewBooking,
-  userEmail 
+  userEmail,
+  onOpenInstallPWA,
+  isPWAInstalled = false,
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', icon: Home },
@@ -50,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3">
         <button
           onClick={onOpenNewBooking}
-          className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-sm py-2.5 px-3 rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+          className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-sm py-2.5 px-3 rounded-xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>+ บันทึกการจอง</span>
@@ -66,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as ActiveTab)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-sm transition-all text-left whitespace-nowrap truncate ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-sm transition-all text-left whitespace-nowrap truncate cursor-pointer ${
                 isActive 
                   ? 'bg-emerald-600 text-white shadow-sm' 
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -79,16 +84,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
-      {/* User Info & Sign Out */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-        <div className="flex items-center gap-2 mb-2 px-1 text-slate-300 text-xs font-medium truncate">
+      {/* User Info, PWA Install & Sign Out */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2">
+        {onOpenInstallPWA && !isPWAInstalled && (
+          <button
+            onClick={onOpenInstallPWA}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 rounded-xl transition-all border border-emerald-800/40 cursor-pointer active:scale-95 shadow-xs"
+            title="ติดตั้งเป็นแอพลงเครื่อง (PWA)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>ติดตั้งแอพ (PWA)</span>
+          </button>
+        )}
+
+        <div className="flex items-center gap-2 px-1 text-slate-300 text-xs font-medium truncate">
           <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="truncate">{userEmail || 'ผู้ดูแลระบบ'}</span>
         </div>
 
         <button
           onClick={() => auth.signOut()}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-950/50 hover:text-red-300 rounded-lg transition-colors border border-red-900/30"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-950/50 hover:text-red-300 rounded-lg transition-colors border border-red-900/30 cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>ออกจากระบบ</span>

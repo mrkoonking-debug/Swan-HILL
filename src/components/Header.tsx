@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw, Menu } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, Menu, Download } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -11,6 +11,8 @@ interface HeaderProps {
   setSearchTerm: (term: string) => void;
   onLogoClick?: () => void;
   onOpenMobileDrawer?: () => void;
+  onOpenInstallPWA?: () => void;
+  isPWAInstalled?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   setSearchTerm,
   onLogoClick,
   onOpenMobileDrawer,
+  onOpenInstallPWA,
+  isPWAInstalled = false,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -105,6 +109,17 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Buttons (Mobile) */}
         <div className="flex items-center gap-1.5">
+          {onOpenInstallPWA && !isPWAInstalled && (
+            <button
+              onClick={onOpenInstallPWA}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 active:scale-95 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all shadow-xs cursor-pointer"
+              title="ติดตั้งเป็นแอพลงเครื่อง (PWA)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>โหลดแอพ</span>
+            </button>
+          )}
+
           <button
             onClick={handleClearCacheAndReload}
             disabled={isClearing}
@@ -148,6 +163,18 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
             />
           </div>
+
+          {/* Desktop Install PWA Button */}
+          {onOpenInstallPWA && !isPWAInstalled && (
+            <button
+              onClick={onOpenInstallPWA}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="ติดตั้งเป็นแอพลงเครื่อง (PWA) ลื่นไหลและเร็วขึ้น"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>ติดตั้งแอพ (PWA)</span>
+            </button>
+          )}
 
           {/* Available Badge */}
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">

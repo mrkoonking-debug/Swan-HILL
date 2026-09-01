@@ -12,7 +12,8 @@ import {
   UtensilsCrossed,
   ShieldCheck,
   History,
-  Settings
+  Settings,
+  Download
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -25,6 +26,8 @@ interface MobileDrawerProps {
   setActiveTab: (tab: ActiveTab) => void;
   onOpenNewBooking: () => void;
   userEmail: string | null;
+  onOpenInstallPWA?: () => void;
+  isPWAInstalled?: boolean;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -34,6 +37,8 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   setActiveTab,
   onOpenNewBooking,
   userEmail,
+  onOpenInstallPWA,
+  isPWAInstalled = false,
 }) => {
   if (!isOpen) return null;
 
@@ -169,6 +174,20 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
         {/* Footer: User & Sign Out */}
         <div className="p-3 bg-slate-950 border-t border-slate-800 shrink-0 space-y-2">
+          {onOpenInstallPWA && !isPWAInstalled && (
+            <button
+              onClick={() => {
+                onOpenInstallPWA();
+                onClose();
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 rounded-xl transition-all border border-emerald-800/40 cursor-pointer active:scale-95 shadow-xs"
+              title="ติดตั้งเป็นแอพลงเครื่อง (PWA)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>ติดตั้งแอพลงมือถือ (PWA)</span>
+            </button>
+          )}
+
           <div className="flex items-center gap-2 px-1 text-slate-300 text-xs font-medium truncate">
             <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="truncate">{userEmail || 'ผู้ดูแลระบบ Swan HILL'}</span>

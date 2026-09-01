@@ -18,6 +18,8 @@ import { PaymentModal } from './components/PaymentModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
+import { usePWA } from './hooks/usePWA';
+import { PWAInstallModal, PWAUpdateBanner } from './components/PWAInstallModal';
 import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
 import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentMethod, ResortSettings, ActivityLog, ActivityLogCategory } from './types/pms';
 import { 
@@ -42,6 +44,18 @@ const MainDashboard = ({ user }: { user: User }) => {
   const currentPath = location.pathname.replace('/', '') as ActiveTab;
   const validTabs: ActiveTab[] = ['dashboard', 'timeline', 'bookings', 'finance', 'logs', 'settings'];
   const activeTab: ActiveTab = validTabs.includes(currentPath) ? currentPath : 'dashboard';
+
+  // PWA Install & Update Lifecycle
+  const {
+    isInstalled,
+    isIOS,
+    showIOSModal,
+    setShowIOSModal,
+    needRefresh,
+    installApp,
+    reloadApp,
+  } = usePWA();
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const setActiveTab = (tab: ActiveTab) => {
     navigate(`/${tab}`);
@@ -512,6 +526,8 @@ const MainDashboard = ({ user }: { user: User }) => {
         setActiveTab={setActiveTab} 
         onOpenNewBooking={handleOpenNormalBooking}
         userEmail={user.email}
+        onOpenInstallPWA={() => setIsInstallModalOpen(true)}
+        isPWAInstalled={isInstalled}
       />
 
       {/* Mobile Drawer */}
@@ -522,6 +538,8 @@ const MainDashboard = ({ user }: { user: User }) => {
         setActiveTab={setActiveTab}
         onOpenNewBooking={handleOpenNormalBooking}
         userEmail={user.email}
+        onOpenInstallPWA={() => setIsInstallModalOpen(true)}
+        isPWAInstalled={isInstalled}
       />
 
       {/* Main Content Area */}
@@ -534,6 +552,8 @@ const MainDashboard = ({ user }: { user: User }) => {
           setSearchTerm={setSearchTerm}
           onLogoClick={() => setActiveTab('dashboard')}
           onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+          onOpenInstallPWA={() => setIsInstallModalOpen(true)}
+          isPWAInstalled={isInstalled}
         />
 
         {/* Dynamic Viewport Container */}
@@ -671,6 +691,21 @@ const MainDashboard = ({ user }: { user: User }) => {
         onClose={() => setSelectedBookingForCheckoutId(null)}
         booking={selectedBookingForCheckout}
         onConfirmCheckout={handleConfirmCheckout}
+      />
+
+      {/* PWA Update Banner */}
+      {needRefresh && <PWAUpdateBanner onReload={reloadApp} />}
+
+      {/* PWA Installation Modal */}
+      <PWAInstallModal
+        isOpen={isInstallModalOpen || showIOSModal}
+        onClose={() => {
+          setIsInstallModalOpen(false);
+          setShowIOSModal(false);
+        }}
+        onInstall={installApp}
+        isIOS={isIOS}
+        isInstalled={isInstalled}
       />
     </div>
   );
