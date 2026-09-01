@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Check } from 'lucide-react';
+import { X, Plus, Minus, Check, Sparkles, UtensilsCrossed } from 'lucide-react';
 import type { Booking, AddOnItem } from '../types/pms';
 import { 
   ExtraBedIcon, 
@@ -150,189 +150,279 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
   return (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-sm overscroll-contain animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-sm overscroll-contain animate-in fade-in"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[92vh] flex flex-col overscroll-contain"
+        className="bg-white text-slate-900 w-full sm:max-w-xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col overscroll-contain font-['Prompt']"
       >
         {/* Modal Header */}
-        <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
-          <div>
-            <h3 className="text-base font-bold flex items-center gap-2">
-              <span>สั่งบริการเสริม & หมูกระทะ / อาหาร</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5 font-medium">
-              ห้อง {booking.roomNumber} &bull; {booking.guestName}
-            </p>
+        <div className="p-4 sm:p-5 bg-slate-950 text-white flex items-center justify-between shrink-0 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold">
+              <UtensilsCrossed className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black flex items-center gap-2 text-white">
+                <span>สั่งหมูกระทะ & บริการเสริมด่วน</span>
+              </h3>
+              <p className="text-xs text-emerald-400 font-bold mt-0.5">
+                บ้าน {booking.roomNumber} &bull; {booking.guestName}
+              </p>
+            </div>
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white"
+            className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 flex items-center justify-center text-slate-300 hover:text-white cursor-pointer transition-all"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Content - Scrollbar Completely Hidden */}
-        <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 text-slate-800 overscroll-contain">
-          {/* Menu Items Selection Grid */}
-          <div className="space-y-2.5">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-              รายการบริการเสริม & อาหาร (เลือกจำนวน)
+        <div className="p-4 sm:p-5 overflow-y-auto no-scrollbar space-y-4 flex-1 text-slate-800 overscroll-contain">
+          
+          {/* Quick 1-Tap Add Buttons (Fast for Elderly/Non-tech staff) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-black text-slate-700 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>แตะ 1 ครั้งเพื่อเพิ่มทันที (1-Tap Quick Add)</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {/* Quick Mookata Large */}
+              <button
+                type="button"
+                onClick={() => setMookataLarge(prev => prev + 1)}
+                className="p-3 rounded-2xl bg-red-50 hover:bg-red-100/80 active:scale-95 border-2 border-red-200/80 text-left transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <span className="text-[11px] font-bold text-red-600 block">+ เพิ่ม 1 ชุด</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">หมูกระทะชุดใหญ่</span>
+                  <span className="text-xs font-bold text-red-700">฿500</span>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center font-bold shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </div>
+              </button>
+
+              {/* Quick Mookata Small */}
+              <button
+                type="button"
+                onClick={() => setMookataSmall(prev => prev + 1)}
+                className="p-3 rounded-2xl bg-orange-50 hover:bg-orange-100/80 active:scale-95 border-2 border-orange-200/80 text-left transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <span className="text-[11px] font-bold text-orange-600 block">+ เพิ่ม 1 ชุด</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">หมูกระทะชุดเล็ก</span>
+                  <span className="text-xs font-bold text-orange-700">฿350</span>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </div>
+              </button>
+
+              {/* Quick Breakfast */}
+              <button
+                type="button"
+                onClick={() => setBreakfast(prev => prev + 1)}
+                className="p-3 rounded-2xl bg-teal-50 hover:bg-teal-100/80 active:scale-95 border-2 border-teal-200/80 text-left transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <span className="text-[11px] font-bold text-teal-600 block">+ เพิ่ม 1 ท่าน</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">อาหารเช้า</span>
+                  <span className="text-xs font-bold text-teal-700">฿60</span>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </div>
+              </button>
+
+              {/* Quick Extra Bed */}
+              <button
+                type="button"
+                onClick={() => setExtraBeds(prev => prev + 1)}
+                className="p-3 rounded-2xl bg-amber-50 hover:bg-amber-100/80 active:scale-95 border-2 border-amber-200/80 text-left transition-all cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <span className="text-[11px] font-bold text-amber-600 block">+ เพิ่ม 1 หลัง</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">ที่นอนเสริม</span>
+                  <span className="text-xs font-bold text-amber-700">฿300</span>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Menu Items with Big Large Buttons (+ / -) */}
+          <div className="space-y-2.5 pt-2 border-t border-slate-100">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              ปรับเพิ่ม/ลด จำนวนตามต้องการ
             </h4>
 
-            {/* 1. ที่นอนเสริม ฿300 */}
-            <div className="p-3 rounded-2xl border border-slate-200 flex items-center justify-between bg-slate-50/50 hover:bg-white transition-colors">
+            {/* 1. หมูกระทะชุดใหญ่ ฿500 */}
+            <div className={`p-3 sm:p-4 rounded-2xl border transition-all flex items-center justify-between ${
+              mookataLarge > 0 ? 'bg-red-50/70 border-red-300 ring-2 ring-red-400/20' : 'bg-slate-50/60 border-slate-200'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                  <ExtraBedIcon size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-800 flex items-center justify-center shrink-0">
+                  <MookataLargeIcon size={26} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-900">ที่นอนเสริม</p>
-                  <p className="text-[11px] font-bold text-amber-700">฿300 <span className="text-slate-500 font-normal">/ท่าน</span></p>
+                  <p className="text-sm font-black text-slate-900">หมูกระทะ (ชุดใหญ่)</p>
+                  <p className="text-xs font-bold text-red-700">฿500 <span className="text-slate-500 font-normal">/ชุด</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => setExtraBeds(Math.max(0, extraBeds - 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold"
+                  onClick={() => setMookataLarge(Math.max(0, mookataLarge - 1))}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-700 flex items-center justify-center font-bold cursor-pointer transition-all"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-5 h-5 stroke-[3]" />
                 </button>
-                <span className="w-6 text-center font-black text-sm">{extraBeds}</span>
+                <span className="w-8 text-center font-black text-lg sm:text-xl text-slate-900">{mookataLarge}</span>
                 <button
                   type="button"
-                  onClick={() => setExtraBeds(extraBeds + 1)}
-                  className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold"
+                  onClick={() => setMookataLarge(mookataLarge + 1)}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-red-600 hover:bg-red-700 active:scale-90 text-white flex items-center justify-center font-bold cursor-pointer shadow-md shadow-red-600/20 transition-all"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-5 h-5 stroke-[3]" />
                 </button>
               </div>
             </div>
 
             {/* 2. หมูกระทะชุดเล็ก ฿350 */}
-            <div className="p-3 rounded-2xl border border-slate-200 flex items-center justify-between bg-slate-50/50 hover:bg-white transition-colors">
+            <div className={`p-3 sm:p-4 rounded-2xl border transition-all flex items-center justify-between ${
+              mookataSmall > 0 ? 'bg-orange-50/70 border-orange-300 ring-2 ring-orange-400/20' : 'bg-slate-50/60 border-slate-200'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center">
-                  <MookataSmallIcon size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-800 flex items-center justify-center shrink-0">
+                  <MookataSmallIcon size={26} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-900">หมูกระทะ (ชุดเล็ก)</p>
-                  <p className="text-[11px] font-bold text-orange-700">฿350 <span className="text-slate-500 font-normal">/ชุด</span></p>
+                  <p className="text-sm font-black text-slate-900">หมูกระทะ (ชุดเล็ก)</p>
+                  <p className="text-xs font-bold text-orange-700">฿350 <span className="text-slate-500 font-normal">/ชุด</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setMookataSmall(Math.max(0, mookataSmall - 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-700 flex items-center justify-center font-bold cursor-pointer transition-all"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-5 h-5 stroke-[3]" />
                 </button>
-                <span className="w-6 text-center font-black text-sm">{mookataSmall}</span>
+                <span className="w-8 text-center font-black text-lg sm:text-xl text-slate-900">{mookataSmall}</span>
                 <button
                   type="button"
                   onClick={() => setMookataSmall(mookataSmall + 1)}
-                  className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-90 text-white flex items-center justify-center font-bold cursor-pointer shadow-md shadow-orange-600/20 transition-all"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-5 h-5 stroke-[3]" />
                 </button>
               </div>
             </div>
 
-            {/* 3. หมูกระทะชุดใหญ่ ฿500 */}
-            <div className="p-3 rounded-2xl border border-slate-200 flex items-center justify-between bg-slate-50/50 hover:bg-white transition-colors">
+            {/* 3. อาหารเช้าเพิ่มเติม ฿60 */}
+            <div className={`p-3 sm:p-4 rounded-2xl border transition-all flex items-center justify-between ${
+              breakfast > 0 ? 'bg-teal-50/70 border-teal-300 ring-2 ring-teal-400/20' : 'bg-slate-50/60 border-slate-200'
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 text-red-800 flex items-center justify-center">
-                  <MookataLargeIcon size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
+                  <BreakfastIcon size={26} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-900">หมูกระทะ (ชุดใหญ่)</p>
-                  <p className="text-[11px] font-bold text-red-700">฿500 <span className="text-slate-500 font-normal">/ชุด</span></p>
+                  <p className="text-sm font-black text-slate-900">อาหารเช้าเพิ่มเติม</p>
+                  <p className="text-xs font-bold text-teal-700">฿60 <span className="text-slate-500 font-normal">/ท่าน</span></p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMookataLarge(Math.max(0, mookataLarge - 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <span className="w-6 text-center font-black text-sm">{mookataLarge}</span>
-                <button
-                  type="button"
-                  onClick={() => setMookataLarge(mookataLarge + 1)}
-                  className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* 4. อาหารเช้าเพิ่มเติม ฿60 */}
-            <div className="p-3 rounded-2xl border border-slate-200 flex items-center justify-between bg-slate-50/50 hover:bg-white transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center">
-                  <BreakfastIcon size={22} />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-900">อาหารเช้าเพิ่มเติม</p>
-                  <p className="text-[11px] font-bold text-teal-700">฿60 <span className="text-slate-500 font-normal">/ท่าน</span></p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setBreakfast(Math.max(0, breakfast - 1))}
-                  className="w-7 h-7 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-700 flex items-center justify-center font-bold cursor-pointer transition-all"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-5 h-5 stroke-[3]" />
                 </button>
-                <span className="w-6 text-center font-black text-sm">{breakfast}</span>
+                <span className="w-8 text-center font-black text-lg sm:text-xl text-slate-900">{breakfast}</span>
                 <button
                   type="button"
                   onClick={() => setBreakfast(breakfast + 1)}
-                  className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center font-bold"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-90 text-white flex items-center justify-center font-bold cursor-pointer shadow-md shadow-teal-600/20 transition-all"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-5 h-5 stroke-[3]" />
+                </button>
+              </div>
+            </div>
+
+            {/* 4. ที่นอนเสริม ฿300 */}
+            <div className={`p-3 sm:p-4 rounded-2xl border transition-all flex items-center justify-between ${
+              extraBeds > 0 ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/20' : 'bg-slate-50/60 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <ExtraBedIcon size={26} />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-900">ที่นอนเสริม</p>
+                  <p className="text-xs font-bold text-amber-700">฿300 <span className="text-slate-500 font-normal">/ท่าน</span></p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setExtraBeds(Math.max(0, extraBeds - 1))}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-200 hover:bg-slate-300 active:scale-90 text-slate-700 flex items-center justify-center font-bold cursor-pointer transition-all"
+                >
+                  <Minus className="w-5 h-5 stroke-[3]" />
+                </button>
+                <span className="w-8 text-center font-black text-lg sm:text-xl text-slate-900">{extraBeds}</span>
+                <button
+                  type="button"
+                  onClick={() => setExtraBeds(extraBeds + 1)}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-90 text-white flex items-center justify-center font-bold cursor-pointer shadow-md shadow-amber-600/20 transition-all"
+                >
+                  <Plus className="w-5 h-5 stroke-[3]" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* 5. อาหารตามสั่ง & เครื่องดื่มเพิ่มเติม (Custom) */}
-          <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-2">
+          <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 space-y-2">
             <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <CustomDishIcon size={16} />
-              <span>อาหารตามสั่ง / เครื่องดื่มในห้องพัก (พิมพ์เพิ่มเอง)</span>
+              <span>อาหารตามสั่ง / เครื่องดื่มในห้องพัก (ถ้ามี)</span>
             </h4>
 
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="ชื่อรายการ (เช่น กะเพราหมูสับ, น้ำอัดลม)"
+                placeholder="ชื่อรายการ (เช่น น้ำแข็ง, เบียร์)"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-emerald-500 bg-white"
+                className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl outline-none focus:border-emerald-500 bg-white"
               />
               <input
                 type="number"
-                placeholder="ราคา (บาท)"
+                placeholder="ราคา"
                 value={customPrice}
                 onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : '')}
-                className="w-24 px-3 py-1.5 text-xs border border-slate-200 rounded-xl outline-none focus:border-emerald-500 bg-white font-bold"
+                className="w-24 px-3 py-2 text-xs border border-slate-300 rounded-xl outline-none focus:border-emerald-500 bg-white font-bold"
               />
               <button
                 type="button"
                 onClick={handleAddCustom}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shrink-0"
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 cursor-pointer"
               >
                 + เพิ่ม
               </button>
@@ -340,18 +430,18 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
 
             {/* Custom items list */}
             {customList.length > 0 && (
-              <div className="space-y-1 pt-1 border-t border-slate-200/60">
+              <div className="space-y-1 pt-1 border-t border-slate-200">
                 {customList.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-xs py-1 px-2 bg-white rounded-lg border border-slate-200">
-                    <span className="font-semibold">{item.name}</span>
+                  <div key={item.id} className="flex items-center justify-between text-xs py-1.5 px-3 bg-white rounded-xl border border-slate-200">
+                    <span className="font-semibold text-slate-800">{item.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-emerald-800">฿{item.price.toLocaleString()}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveCustom(item.id)}
-                        className="text-red-500 hover:text-red-700 font-bold px-1"
+                        className="text-red-500 hover:text-red-700 font-bold px-1 cursor-pointer"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -361,48 +451,48 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
           </div>
 
           {/* Billing Summary Box */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs space-y-1.5">
+          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs space-y-1.5">
             <div className="flex justify-between text-slate-700">
               <span>ค่าบ้านพัก ({booking.roomNumber} &bull; {booking.totalNights} คืน):</span>
               <span className="font-bold">฿{roomBaseTotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-slate-700">
-              <span>รวมค่าบริการเสริม & อาหาร:</span>
-              <span className="font-bold text-emerald-800">+฿{totalAddOns.toLocaleString()}</span>
+              <span>รวมค่าบริการเสริม & หมูกระทะ:</span>
+              <span className="font-black text-emerald-700 text-sm">+฿{totalAddOns.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-slate-900 font-black text-sm pt-1 border-t border-emerald-200/70">
+            <div className="flex justify-between text-slate-900 font-black text-sm pt-2 border-t border-emerald-200">
               <span>ยอดรวมทั้งสิ้น (Grand Total):</span>
-              <span className="text-emerald-950">฿{grandTotal.toLocaleString()}</span>
+              <span className="text-emerald-950 text-base">฿{grandTotal.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-slate-600 pt-0.5">
-              <span>ยอดที่จ่ายแล้ว:</span>
-              <span className="font-semibold text-emerald-700">฿{booking.paidAmount.toLocaleString()}</span>
-            </div>
-            {remainingAtCheckout > 0 && (
-              <div className="flex justify-between text-red-700 font-black pt-1 border-t border-emerald-200/70">
-                <span>ยอดค้างชำระที่ต้องเก็บตอนเช็คเอาท์:</span>
-                <span className="text-sm">฿{remainingAtCheckout.toLocaleString()} บาท</span>
+            {remainingAtCheckout > 0 ? (
+              <div className="flex justify-between text-red-700 font-black pt-1.5 border-t border-red-200 text-xs sm:text-sm">
+                <span>ยอดค้างชำระ:</span>
+                <span>฿{remainingAtCheckout.toLocaleString()} บาท</span>
+              </div>
+            ) : (
+              <div className="text-emerald-700 font-bold pt-1 text-center">
+                ✓ ชำระเงินครบถ้วนแล้ว
               </div>
             )}
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2.5 shrink-0">
+        {/* Modal Footer - Giant Save Button */}
+        <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="w-1/3 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100"
+            className="w-1/3 py-3.5 rounded-2xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-200 cursor-pointer transition-colors"
           >
             ยกเลิก
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-sm shadow-sm flex items-center justify-center gap-1.5 transition-all"
+            className="w-2/3 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
-            <Check className="w-4 h-4 stroke-[3]" />
-            <span>บันทึกบริการเสริม</span>
+            <Check className="w-5 h-5 stroke-[3]" />
+            <span>บันทึกออเดอร์ (฿{totalAddOns.toLocaleString()})</span>
           </button>
         </div>
       </div>
