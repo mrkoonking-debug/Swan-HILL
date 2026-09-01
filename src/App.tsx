@@ -569,6 +569,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           setSearchTerm={setSearchTerm}
           onLogoClick={() => setActiveTab('dashboard')}
           onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+          onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+          isMobileDrawerOpen={isMobileDrawerOpen}
           onOpenInstallPWA={() => setIsInstallModalOpen(true)}
           isPWAInstalled={isInstalled}
           onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}

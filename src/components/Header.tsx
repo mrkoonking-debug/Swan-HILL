@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw, Menu, Download } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, Menu, Download, X } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -11,6 +11,8 @@ interface HeaderProps {
   setSearchTerm: (term: string) => void;
   onLogoClick?: () => void;
   onOpenMobileDrawer?: () => void;
+  onCloseMobileDrawer?: () => void;
+  isMobileDrawerOpen?: boolean;
   onOpenInstallPWA?: () => void;
   isPWAInstalled?: boolean;
   onOpenQuickChecker?: () => void;
@@ -23,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   setSearchTerm,
   onLogoClick,
   onOpenMobileDrawer,
+  onCloseMobileDrawer,
+  isMobileDrawerOpen = false,
   onOpenInstallPWA,
   isPWAInstalled = false,
   onOpenQuickChecker,
@@ -95,12 +99,20 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2">
           {onOpenMobileDrawer && (
             <button
-              onClick={onOpenMobileDrawer}
-              className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-emerald-400 flex items-center justify-center border border-slate-700 transition-all shrink-0 shadow-xs"
-              title="เปิดเมนูนำทาง (Sidebar Drawer)"
-              aria-label="เปิดเมนูนำทาง"
+              onClick={isMobileDrawerOpen ? onCloseMobileDrawer : onOpenMobileDrawer}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all shrink-0 shadow-xs active:scale-90 cursor-pointer ${
+                isMobileDrawerOpen
+                  ? 'bg-rose-950/80 hover:bg-rose-900 border-rose-700/60 text-rose-300'
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-emerald-400'
+              }`}
+              title={isMobileDrawerOpen ? 'ปิดเมนูนำทาง' : 'เปิดเมนูนำทาง (Sidebar Drawer)'}
+              aria-label={isMobileDrawerOpen ? 'ปิดเมนูนำทาง' : 'เปิดเมนูนำทาง'}
             >
-              <Menu className="w-4 h-4 stroke-[2.5]" />
+              {isMobileDrawerOpen ? (
+                <X className="w-4 h-4 stroke-[2.5]" />
+              ) : (
+                <Menu className="w-4 h-4 stroke-[2.5]" />
+              )}
             </button>
           )}
           <BrandLogo 

@@ -7,7 +7,6 @@ import {
   LogOut, 
   Plus,
   User,
-  X,
   Sparkles,
   UtensilsCrossed,
   ShieldCheck,
@@ -72,7 +71,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
         style={{ fontFamily: "'Prompt', sans-serif" }}
       >
         {/* Top Header */}
-        <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center">
           <BrandLogo 
             theme="dark" 
             onClick={() => {
@@ -80,12 +79,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               onClose();
             }} 
           />
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Quick Action: New Booking */}
