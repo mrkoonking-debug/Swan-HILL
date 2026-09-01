@@ -557,7 +557,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
       {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}
       <div 
-        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform relative z-10 ${
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-220 ease-out will-change-transform relative z-10 ${
           isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 shadow-2xl rounded-l-2xl' : 'translate-x-0'
         }`}
       >
@@ -666,12 +666,20 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
             )}
           </div>
         </main>
+        {/* Snappy Dimming Overlay on the Pushed Canvas (Moves with canvas, zero blur lag) */}
+        <div 
+          onClick={() => setIsMobileDrawerOpen(false)}
+          className={`absolute inset-0 z-30 bg-slate-950/40 transition-opacity duration-200 ease-out lg:hidden ${
+            isMobileDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          title="แตะเพื่อปิดเมนู"
+        />
       </div>
 
       {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
       {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
         <div 
-          className={`fixed bottom-0 inset-x-0 z-20 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+          className={`fixed bottom-0 inset-x-0 z-20 transition-transform duration-220 ease-out will-change-transform ${
             isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 pointer-events-none' : 'translate-x-0'
           }`}
         >
