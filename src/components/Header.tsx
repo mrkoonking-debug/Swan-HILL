@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenMobileDrawer && (
             <button
               onClick={isMobileDrawerOpen ? onCloseMobileDrawer : onOpenMobileDrawer}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all shrink-0 shadow-xs active:scale-90 cursor-pointer ${
+              className={`relative z-50 w-8 h-8 rounded-xl flex items-center justify-center border transition-all shrink-0 shadow-xs active:scale-90 cursor-pointer ${
                 isMobileDrawerOpen
                   ? 'bg-rose-950/80 hover:bg-rose-900 border-rose-700/60 text-rose-300'
                   : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-emerald-400'

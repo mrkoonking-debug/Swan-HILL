@@ -558,7 +558,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}
       <div 
         className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-220 ease-out will-change-transform relative z-10 ${
-          isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 shadow-2xl rounded-l-2xl' : 'translate-x-0'
+          isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0' : 'translate-x-0'
         }`}
       >
         {/* Top Header */}
@@ -666,10 +666,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
             )}
           </div>
         </main>
-        {/* Snappy Dimming Overlay on the Pushed Canvas (Moves with canvas, zero blur lag) */}
+        {/* Snappy Dimming Overlay on the Pushed Canvas (Moves with canvas, covers header fully, zero blur lag) */}
         <div 
           onClick={() => setIsMobileDrawerOpen(false)}
-          className={`absolute inset-0 z-30 bg-slate-950/40 transition-opacity duration-200 ease-out lg:hidden ${
+          className={`absolute inset-0 z-40 bg-black/40 transition-opacity duration-220 ease-out lg:hidden ${
             isMobileDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           title="แตะเพื่อปิดเมนู"
