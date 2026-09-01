@@ -16,6 +16,7 @@ import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { formatLocalDate, shiftDateStr } from '../utils/dateUtils';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -42,11 +43,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   prefillDate
 }) => {
   useLockBodyScroll(isOpen);
+  const defaultCheckIn = formatLocalDate(new Date());
+  const defaultCheckOut = shiftDateStr(defaultCheckIn, 1);
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
-  const [checkInDate, setCheckInDate] = useState('2026-09-01');
-  const [checkOutDate, setCheckOutDate] = useState('2026-09-02');
+  const [checkInDate, setCheckInDate] = useState(defaultCheckIn);
+  const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('deposit');
   const [depositAmount, setDepositAmount] = useState<number>(0);
   const [notes, setNotes] = useState('');
@@ -59,11 +62,16 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId) || rooms[0];
 
-  // Calculate nights
-  const dIn = new Date(checkInDate);
-  const dOut = new Date(checkOutDate);
-  const diffTime = dOut.getTime() - dIn.getTime();
-  const totalNights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  // Calculate nights safely without timezone drift
+  const diffNights = () => {
+    const pIn = checkInDate.split('-').map(Number);
+    const pOut = checkOutDate.split('-').map(Number);
+    const d1 = new Date(pIn[0], pIn[1] - 1, pIn[2]);
+    const d2 = new Date(pOut[0], pOut[1] - 1, pOut[2]);
+    const diff = d2.getTime() - d1.getTime();
+    return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)));
+  };
+  const totalNights = diffNights();
 
   // Calculate Totals
   const roomPricePerNight = selectedRoom?.pricePerNight || 1200;
@@ -77,9 +85,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (prefillDate) {
       setCheckInDate(prefillDate);
-      const nextDay = new Date(prefillDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      setCheckOutDate(nextDay.toISOString().slice(0, 10));
+      setCheckOutDate(shiftDateStr(prefillDate, 1));
     }
   }, [prefillRoomId, prefillDate, isOpen, rooms]);
 

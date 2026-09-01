@@ -22,10 +22,12 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
   // Add Room form state
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<RoomType>('Pool Villa');
-  const [newPrice, setNewPrice] = useState(4500);
-  const [newCapacity, setNewCapacity] = useState(2);
-  const [newAmenities, setNewAmenities] = useState('King Bed, Balcony, Mountain View, Smart TV');
+  const [newType, setNewType] = useState<RoomType>('บ้านพักหลังใหญ่');
+  const [newPrice, setNewPrice] = useState(1500);
+  const [newCapacity, setNewCapacity] = useState(4);
+  const [newAmenities, setNewAmenities] = useState('เครื่องปรับอากาศ, สมาร์ททีวี, เครื่องทำน้ำอุ่น, ตู้เย็น, ระเบียงชมวิว');
+
+  const availableRoomTypes = Array.from(new Set(rooms.map(r => r.type).filter(Boolean)));
 
   const filteredRooms = rooms.filter((r) => {
     const matchesSearch = 
@@ -64,34 +66,32 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
   const getStatusBadge = (status: RoomStatus) => {
     switch (status) {
       case 'available':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">🟢 ห้องว่าง (Available)</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">🟢 ห้องว่าง (Available)</span>;
       case 'occupied':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">🔵 มีผู้พัก (Occupied)</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300">🔵 มีผู้พัก (Occupied)</span>;
       case 'cleaning':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">🟡 ทำความสะอาด (Cleaning)</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">🟡 ทำความสะอาด (Cleaning)</span>;
       case 'maintenance':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">🔴 ปิดซ่อมบำรุง</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300">🔴 ปิดซ่อมบำรุง</span>;
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-['Prompt']">
       {/* Filter and Add Header */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Room Type Filter */}
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3.5 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700"
+            className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700 cursor-pointer"
           >
-            <option value="all">ทุกประเภทห้องพัก</option>
-            <option value="Pool Villa">Pool Villa</option>
-            <option value="Lakeview Suite">Lakeview Suite</option>
-            <option value="Deluxe Hillside">Deluxe Hillside</option>
-            <option value="Family Cottage">Family Cottage</option>
-            <option value="Glamping Tent">Glamping Tent</option>
+            <option value="all">ทุกประเภทบ้านพัก ({rooms.length} หลัง)</option>
+            {availableRoomTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
           </select>
 
           {/* Status Filter */}
@@ -222,27 +222,31 @@ export const RoomsView: React.FC<RoomsViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">ประเภทวิลล่า *</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">ประเภทบ้านพัก *</label>
                   <select
                     value={newType}
-                    onChange={(e) => setNewType(e.target.value as RoomType)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
+                    onChange={(e) => {
+                      const t = e.target.value as RoomType;
+                      setNewType(t);
+                      if (t === 'บ้านพักหลังใหญ่') { setNewPrice(1500); setNewCapacity(4); }
+                      else if (t === 'บ้านพักหลังกลาง') { setNewPrice(1200); setNewCapacity(2); }
+                      else if (t === 'บ้านพักแฝดหลังเล็ก') { setNewPrice(1000); setNewCapacity(2); }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium text-xs"
                   >
-                    <option value="Pool Villa">Pool Villa</option>
-                    <option value="Lakeview Suite">Lakeview Suite</option>
-                    <option value="Deluxe Hillside">Deluxe Hillside</option>
-                    <option value="Family Cottage">Family Cottage</option>
-                    <option value="Glamping Tent">Glamping Tent</option>
+                    <option value="บ้านพักหลังใหญ่">บ้านพักหลังใหญ่ (1,500 บาท/คืน, 4 ท่าน)</option>
+                    <option value="บ้านพักหลังกลาง">บ้านพักหลังกลาง (1,200 บาท/คืน, 2 ท่าน)</option>
+                    <option value="บ้านพักแฝดหลังเล็ก">บ้านพักแฝดหลังเล็ก (1,000 บาท/คืน, 2 ท่าน)</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อเรียกห้องพัก *</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">ชื่อเรียกบ้านพัก *</label>
                 <input
                   type="text"
                   required
-                  placeholder="เช่น Swan Pool Villa 3"
+                  placeholder="เช่น สวอน วิลล่า S7"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"

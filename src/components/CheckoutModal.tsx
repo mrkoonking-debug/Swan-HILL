@@ -52,7 +52,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {remainingBalance > 0 ? <AlertTriangle className="w-5 h-5" /> : <DoorOpen className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900">เช็คเอาท์ห้อง {booking.roomNumber}</h3>
+              <h3 className="text-base font-bold text-slate-900">เช็คเอาท์ห้อง {booking.roomNumber}</h3>
               <p className="text-xs text-slate-500 font-medium">{booking.guestName}</p>
             </div>
           </div>
@@ -69,15 +69,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="space-y-3">
             {/* Warning Banner */}
             <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl space-y-1 text-amber-950">
-              <span className="text-xs font-black flex items-center gap-1.5 text-amber-900">
+              <span className="text-xs font-bold flex items-center gap-1.5 text-amber-900">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 ลูกค้ารายนี้ยังมียอดค้างชำระ!
               </span>
-              <p className="text-xs text-amber-800">
+              <p className="text-xs text-amber-800 font-normal">
                 ยอดเงินรวมทั้งสิ้น ฿{grandTotal.toLocaleString()} บาท (จ่ายแล้ว ฿{booking.paidAmount.toLocaleString()})
               </p>
-              <p className="text-sm font-black text-amber-950 pt-1">
-                ยอดคงเหลือที่ต้องเรียกเก็บ: <span className="text-red-600 text-base">฿{remainingBalance.toLocaleString()} บาท</span>
+              <p className="text-sm font-bold text-amber-950 pt-1">
+                ยอดคงเหลือที่ต้องเรียกเก็บ: <span className="text-red-600 text-base font-bold">฿{remainingBalance.toLocaleString()} บาท</span>
               </p>
             </div>
 

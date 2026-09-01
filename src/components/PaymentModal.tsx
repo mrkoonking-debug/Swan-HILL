@@ -26,7 +26,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import type { Booking, PaymentMethod, PaymentTransaction, ResortSettings } from '../types/pms';
-import { formatThaiDate } from '../utils/dateUtils';
+import { formatThaiDate, formatLocalDate } from '../utils/dateUtils';
 import { ConfirmDialogModal } from './ConfirmDialogModal';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
@@ -67,7 +67,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [cashReceived, setCashReceived] = useState<number | ''>('');
   
   // Date & Time Picker
-  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState<string>(formatLocalDate(new Date()));
   const [paymentTime, setPaymentTime] = useState<string>(
     new Date().toTimeString().slice(0, 5)
   );
@@ -115,7 +115,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       setSlipImage(null);
       setActiveTab('payment');
       setEditingTxId(null);
-      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setPaymentDate(formatLocalDate(new Date()));
       setPaymentTime(new Date().toTimeString().slice(0, 5));
 
       if (settings?.bankName && settings?.bankAccountNo) {
@@ -199,7 +199,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setEditMethod(tx.method);
     setEditNote(tx.note || '');
     const d = new Date(tx.paidAt);
-    setEditDate(d.toISOString().split('T')[0]);
+    setEditDate(formatLocalDate(d));
     setEditTime(d.toTimeString().slice(0, 5));
   };
 

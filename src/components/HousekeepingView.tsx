@@ -16,7 +16,7 @@ export const HousekeepingView: React.FC<HousekeepingViewProps> = ({
   onAddTask,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRoomNumber, setSelectedRoomNumber] = useState(rooms[0]?.roomNumber || 'V101');
+  const [selectedRoomNumber, setSelectedRoomNumber] = useState(rooms[0]?.roomNumber || 'S1');
   const [assignedTo, setAssignedTo] = useState('สมใจ (แม่บ้าน)');
   const [priority, setPriority] = useState<HousekeepingPriority>('high');
   const [notes, setNotes] = useState('');
@@ -27,7 +27,7 @@ export const HousekeepingView: React.FC<HousekeepingViewProps> = ({
     const newTask: HousekeepingTask = {
       id: 'hk-' + Date.now(),
       roomNumber: selectedRoomNumber,
-      roomType: r ? r.type : 'Pool Villa',
+      roomType: r ? r.type : 'บ้านพักหลังใหญ่',
       assignedTo,
       status: 'in_progress',
       priority,

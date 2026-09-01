@@ -10,10 +10,12 @@ import {
   UtensilsCrossed,
   X,
   Phone,
-  ChevronRight as ArrowRightIcon
+  ChevronRight as ArrowRightIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { Room, Booking } from '../types/pms';
-import { formatThaiDate } from '../utils/dateUtils';
+import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
@@ -46,10 +48,33 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     return order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber);
   });
 
-  // Calendar for September 2026 (30 days, starts on Tuesday)
-  const currentMonthYear = 'กันยายน 2569';
-  const startDayOfWeek = 2; // Tuesday (0=Sun, 1=Mon, 2=Tue)
-  const totalDays = 30;
+  // Dynamic viewing month/year state (Default to Sept 2026 if bookings exist there, else current month)
+  const [viewDate, setViewDate] = useState<Date>(() => {
+    const now = new Date();
+    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
+    if (hasSept) return new Date(2026, 8, 1);
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth(); // 0-indexed (0=Jan, 8=Sept)
+  const currentMonthYear = `${THAI_MONTHS_FULL[month]} ${year + 543}`;
+
+  const handlePrevMonth = () => {
+    setViewDate(new Date(year, month - 1, 1));
+  };
+  const handleNextMonth = () => {
+    setViewDate(new Date(year, month + 1, 1));
+  };
+  const handleResetToCurrentMonth = () => {
+    const now = new Date();
+    setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  };
+
+  // Day of week of 1st day (0=Sun, 1=Mon, ..., 6=Sat)
+  const startDayOfWeek = new Date(year, month, 1).getDay();
+  // Total days in this month
+  const totalDays = new Date(year, month + 1, 0).getDate();
 
   // Build grid cells with offset
   const calendarCells = [];
@@ -57,7 +82,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     calendarCells.push(null);
   }
   for (let d = 1; d <= totalDays; d++) {
-    const dateStr = `2026-09-${String(d).padStart(2, '0')}`;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     calendarCells.push({
       day: d,
       dateStr,
@@ -77,30 +102,58 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     return activeBookings.find(b => (b.roomId === roomId || b.roomNumber === roomId) && dateStr >= b.checkInDate && dateStr < b.checkOutDate);
   };
 
-  // 15 days range for timeline matrix view
-  const timelineDays = Array.from({ length: 15 }, (_, i) => {
+  // Timeline days for this month (up to 31 days)
+  const timelineDays = Array.from({ length: totalDays }, (_, i) => {
     const d = i + 1;
-    return `2026-09-${String(d).padStart(2, '0')}`;
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   });
 
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
       
       {/* Top Header & View Switcher */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Calendar className="w-5 h-5 text-emerald-600" />
             <span>ปฏิทินห้องพัก Swan HILL Resort</span>
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-500 font-normal mt-0.5">
             {currentMonthYear} &bull; แตะที่วันเพื่อดูสรุปและสถานะห้องพัก 6 หลัง
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Month Shift Navigation Buttons */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+              title="เดือนก่อนหน้า"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleResetToCurrentMonth}
+              className="px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+              title="กลับมาดูเดือนปัจจุบัน"
+            >
+              {currentMonthYear}
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+              title="เดือนถัดไป"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Legend */}
-          <div className="hidden lg:flex items-center gap-2.5 text-[11px] font-bold px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <div className="hidden lg:flex items-center gap-2.5 text-[11px] font-medium px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ว่างพร้อมจอง
             </span>
@@ -116,10 +169,10 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setViewMode('month')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                 viewMode === 'month' 
-                  ? 'bg-emerald-600 text-white shadow-xs font-black' 
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-emerald-600 text-white shadow-xs font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -127,10 +180,10 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('timeline')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                 viewMode === 'timeline' 
-                  ? 'bg-emerald-600 text-white shadow-xs font-black' 
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-emerald-600 text-white shadow-xs font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900 font-medium'
               }`}
             >
               <ListFilter className="w-3.5 h-3.5" />

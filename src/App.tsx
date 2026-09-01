@@ -21,6 +21,7 @@ import { SettingsView } from './components/SettingsView';
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallModal, PWAUpdateBanner } from './components/PWAInstallModal';
 import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
+import { formatLocalDate } from './utils/dateUtils';
 import type { Room, Booking, RoomStatus, AddOnItem, PaymentTransaction, PaymentMethod, ResortSettings, ActivityLog, ActivityLogCategory } from './types/pms';
 import { 
   subscribeToBookings, 
@@ -404,7 +405,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     saveBookingToFirestore(newBooking);
 
     // If checkInDate is today, set room status to occupied
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatLocalDate(new Date());
     if (newBooking.checkInDate === today) {
       setRooms(prev => prev.map(r => {
         if (r.id === newBooking.roomId) {
