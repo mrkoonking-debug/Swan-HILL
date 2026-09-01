@@ -40,8 +40,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onOpenInstallPWA,
   isPWAInstalled = false,
 }) => {
-  if (!isOpen) return null;
-
   const menuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', subtitle: 'ตรวจสอบสถานะห้องพักและเช็คอิน', icon: Home },
     { id: 'timeline', label: 'ปฏิทินห้องพัก', subtitle: 'ตารางปฏิทินรายเดือน 30-31 วัน', icon: CalendarDays },
@@ -52,16 +50,25 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden flex">
-      {/* Backdrop */}
+    <div 
+      className={`fixed inset-0 z-50 lg:hidden transition-all duration-300 ${
+        isOpen ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
+      }`}
+      aria-hidden={!isOpen}
+    >
+      {/* Backdrop (Silky Apple liquid fade & frosted blur) */}
       <div 
         onClick={onClose}
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+        className={`fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          isOpen ? 'opacity-100' : 'opacity-0'
+        }`}
       />
 
-      {/* Drawer Container (Slides from left) */}
+      {/* Drawer Container (Apple Spring Glide from Left) */}
       <aside 
-        className="relative w-4/5 max-w-[310px] bg-slate-900 text-white h-full flex flex-col z-10 shadow-2xl border-r border-slate-800 animate-in slide-in-from-left duration-300"
+        className={`fixed top-0 bottom-0 left-0 w-[84%] max-w-[320px] bg-slate-900 text-white flex flex-col z-10 shadow-2xl border-r border-slate-800/80 transition-transform duration-380 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
         style={{ fontFamily: "'Prompt', sans-serif" }}
       >
         {/* Top Header */}

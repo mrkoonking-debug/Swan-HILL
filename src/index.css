@@ -65,3 +65,41 @@
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+/* Apple Liquid Transitions & Smooth View Swapping */
+@keyframes viewFadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drawerBackdropFade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideIn {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-view-transition {
+  animation: viewFadeSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.apple-spring {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}

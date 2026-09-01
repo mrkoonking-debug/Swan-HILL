@@ -18,6 +18,7 @@ import type { Room, Booking } from '../types/pms';
 import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { LiquidSegmentedControl } from './LiquidSegmentedControl';
 
 interface TimelineCalendarViewProps {
   rooms: Room[];
@@ -165,31 +166,17 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             </span>
           </div>
 
-          {/* Toggle View Mode */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                viewMode === 'month' 
-                  ? 'bg-emerald-600 text-white shadow-xs font-semibold' 
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>ปฏิทินรายเดือน</span>
-            </button>
-            <button
-              onClick={() => setViewMode('timeline')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                viewMode === 'timeline' 
-                  ? 'bg-emerald-600 text-white shadow-xs font-semibold' 
-                  : 'text-slate-600 hover:text-slate-900 font-medium'
-              }`}
-            >
-              <ListFilter className="w-3.5 h-3.5" />
-              <span>ผัง 6 ห้องพัก</span>
-            </button>
-          </div>
+          {/* Toggle View Mode (Apple Liquid Glass Sliding Capsule) */}
+          <LiquidSegmentedControl<'month' | 'timeline'>
+            options={[
+              { value: 'month', label: 'ปฏิทินรายเดือน', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+              { value: 'timeline', label: 'ผัง 6 ห้องพัก', icon: <ListFilter className="w-3.5 h-3.5" /> },
+            ]}
+            value={viewMode}
+            onChange={(val) => setViewMode(val)}
+            variant="emerald"
+            size="sm"
+          />
         </div>
       </div>
 

@@ -23,6 +23,7 @@ import type { Booking, BookingStatus, AddOnItem, ResortSettings } from '../types
 import { HouseLogo } from './HouseLogo';
 import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
 import { ConfirmDialogModal } from './ConfirmDialogModal';
+import { LiquidSegmentedControl } from './LiquidSegmentedControl';
 import { 
   ExtraBedIcon, 
   MookataSmallIcon, 
@@ -458,32 +459,17 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       
       {/* Top Mode Selector & New Booking Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-        {/* Toggle between Daily Operations View and All Bookings */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
-          <button
-            onClick={() => setViewMode('daily')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all cursor-pointer ${
-              viewMode === 'daily'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CalendarDays className="w-4 h-4" />
-            <span>📅 สมุดงานรายวัน (Daily View)</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('all')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all cursor-pointer ${
-              viewMode === 'all'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>📋 รายการทั้งหมด ({countTotal})</span>
-          </button>
-        </div>
+        {/* Toggle between Daily Operations View and All Bookings (Apple Liquid Glass) */}
+        <LiquidSegmentedControl<'daily' | 'all'>
+          options={[
+            { value: 'daily', label: '📅 สมุดงานรายวัน (Daily View)', icon: <CalendarDays className="w-4 h-4" /> },
+            { value: 'all', label: `📋 รายการทั้งหมด (${countTotal})`, icon: <FileSpreadsheet className="w-4 h-4" /> },
+          ]}
+          value={viewMode}
+          onChange={(val) => setViewMode(val)}
+          variant="emerald"
+          size="md"
+        />
 
         <button
           onClick={onOpenNewBooking}
@@ -975,29 +961,21 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
           </div>
 
-          {/* Filter Sub-Tabs */}
+          {/* Filter Sub-Tabs (Apple Liquid Glass Sliding Capsule) */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar">
-              {[
-                { id: 'all', label: `ทั้งหมด (${countTotal})` },
-                { id: 'confirmed', label: 'รอลูกค้ามา' },
-                { id: 'checked_in', label: 'กำลังพักอยู่' },
-                { id: 'checked_out', label: 'เช็คเอาท์แล้ว' },
-                { id: 'trash', label: `ถังขยะ (${countTrash})` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer ${
-                    statusFilter === tab.id
-                      ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <LiquidSegmentedControl
+              options={[
+                { value: 'all', label: `ทั้งหมด (${countTotal})` },
+                { value: 'confirmed', label: 'รอลูกค้ามา' },
+                { value: 'checked_in', label: 'กำลังพักอยู่' },
+                { value: 'checked_out', label: 'เช็คเอาท์แล้ว' },
+                { value: 'trash', label: `ถังขยะ (${countTrash})` },
+              ]}
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val)}
+              variant="light"
+              size="sm"
+            />
           </div>
 
           {/* Full Bookings Cards List */}

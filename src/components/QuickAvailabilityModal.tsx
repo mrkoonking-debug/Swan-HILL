@@ -14,6 +14,7 @@ import type { Room, Booking } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
 import { formatLocalDate, shiftDateStr, formatThaiDate } from '../utils/dateUtils';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { LiquidSegmentedControl } from './LiquidSegmentedControl';
 
 interface QuickAvailabilityModalProps {
   isOpen: boolean;
@@ -218,41 +219,24 @@ export const QuickAvailabilityModal: React.FC<QuickAvailabilityModalProps> = ({
               />
             </div>
 
-            {/* Capacity Filter */}
+            {/* Capacity Filter (Apple Liquid Glass Sliding Capsule) */}
             <div className="sm:col-span-4 space-y-1">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                 <Users className="w-3.5 h-3.5 text-purple-600" />
                 <span>จำนวนผู้เข้าพัก</span>
               </label>
-              <div className="grid grid-cols-3 gap-1 bg-slate-200/80 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('all')}
-                  className={`py-1 rounded-lg text-xs font-medium transition-all ${
-                    capacityFilter === 'all' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  ทั้งหมด
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('2')}
-                  className={`py-1 rounded-lg text-xs font-medium transition-all ${
-                    capacityFilter === '2' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  2 ท่าน
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCapacityFilter('4')}
-                  className={`py-1 rounded-lg text-xs font-medium transition-all ${
-                    capacityFilter === '4' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600'
-                  }`}
-                >
-                  4+ ท่าน
-                </button>
-              </div>
+              <LiquidSegmentedControl<'all' | '2' | '4'>
+                options={[
+                  { value: 'all', label: 'ทั้งหมด' },
+                  { value: '2', label: '2 ท่าน' },
+                  { value: '4', label: '4+ ท่าน' },
+                ]}
+                value={capacityFilter}
+                onChange={(val) => setCapacityFilter(val)}
+                variant="light"
+                size="sm"
+                fullWidth
+              />
             </div>
           </div>
         </div>

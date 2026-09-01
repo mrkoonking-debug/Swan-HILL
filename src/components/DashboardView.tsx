@@ -29,6 +29,7 @@ import { formatThaiDate, THAI_MONTHS_FULL, shiftDateStr } from '../utils/dateUti
 import { ConfirmDialogModal, type ConfirmType } from './ConfirmDialogModal';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { QuickAvailabilityModal } from './QuickAvailabilityModal';
+import { LiquidSegmentedControl } from './LiquidSegmentedControl';
 
 const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
 
@@ -701,36 +702,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        {/* View Switcher: 3D แผนผัง vs รายการแยกขนาด */}
-        <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-inner">
-          <button
-            onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
-              viewMode === 'map'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Map className="w-3.5 h-3.5" />
-            <span>3D แผนผังรีสอร์ท</span>
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
-              viewMode === 'grid'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>รายการบ้านพัก</span>
-          </button>
-        </div>
+        {/* View Switcher: Apple Liquid Glass Sliding Capsule */}
+        <LiquidSegmentedControl<'map' | 'grid'>
+          options={[
+            { value: 'map', label: '3D แผนผังรีสอร์ท', icon: <Map className="w-3.5 h-3.5" /> },
+            { value: 'grid', label: 'รายการบ้านพัก', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+          ]}
+          value={viewMode}
+          onChange={(val) => setViewMode(val)}
+          variant="emerald"
+          size="md"
+        />
       </div>
 
       {/* VIEW 1: 3D REALISTIC RESORT MASTERPLAN & ROOMSCOPE INSPECTOR */}
       {viewMode === 'map' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-view-transition">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             
             {/* LEFT / TOP: 3D Interactive Masterplan Map (7 cols on desktop) */}
@@ -826,33 +813,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* RIGHT: RoomScope-style Inspector & Multi-Room Availability Panel (5 cols on desktop) */}
             <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-xl p-4 md:p-5 space-y-4">
               
-              {/* Tab Switcher: All 6 Rooms vs Single Room Inspector */}
-              <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setRightPanelTab('all')}
-                  className={`flex-1 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    rightPanelTab === 'all'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Home className="w-3.5 h-3.5" />
-                  <span>⚡ สรุปทั้ง 6 หลัง (ว่าง {rooms.filter(r => getRoomStatusOnDate(r).status === 'available').length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRightPanelTab('single')}
-                  className={`flex-1 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    rightPanelTab === 'single'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>ปฏิทินบ้าน {selectedMapRoom?.roomNumber || 'S1'}</span>
-                </button>
-              </div>
+              {/* Tab Switcher: Apple Liquid Glass Sliding Capsule */}
+              <LiquidSegmentedControl<'all' | 'single'>
+                options={[
+                  { 
+                    value: 'all', 
+                    label: `⚡ สรุปทั้ง 6 หลัง (ว่าง ${rooms.filter(r => getRoomStatusOnDate(r).status === 'available').length})`,
+                    icon: <Home className="w-3.5 h-3.5" />
+                  },
+                  { 
+                    value: 'single', 
+                    label: `ปฏิทินบ้าน ${selectedMapRoom?.roomNumber || 'S1'}`,
+                    icon: <Calendar className="w-3.5 h-3.5" />
+                  },
+                ]}
+                value={rightPanelTab}
+                onChange={(val) => setRightPanelTab(val)}
+                variant="emerald"
+                size="md"
+                fullWidth
+              />
 
               {/* TAB 1: ALL 6 HOUSES AVAILABILITY */}
               {rightPanelTab === 'all' && (
@@ -1203,7 +1183,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* VIEW 2: CATEGORIZED GRID VIEW */}
       {viewMode === 'grid' && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-view-transition">
           {/* SECTION 1: บ้านพักหลังกลาง (S1, S2 - ฿1,200) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">

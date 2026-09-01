@@ -572,91 +572,93 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
         {/* Dynamic Viewport Container */}
         <main className="flex-1 p-3 md:p-6 overflow-y-auto max-w-7xl mx-auto w-full">
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              rooms={rooms}
-              bookings={bookings}
-              onUpdateRoomStatus={handleUpdateRoomStatus}
-              onCheckInGuest={handleCheckInGuest}
-              onCheckOutGuest={(bId) => {
-                const b = bookings.find(item => item.id === bId);
-                if (b) setSelectedBookingForCheckoutId(b.id);
-                else handleConfirmCheckout(bId);
-              }}
-              onOpenNewBookingForRoom={(roomId) => {
-                setPrefillRoomId(roomId);
-                setPrefillDate(undefined);
-                setPrefillCheckOutDate(undefined);
-                setIsNewBookingOpen(true);
-              }}
-              onOpenNewBooking={handleOpenNormalBooking}
-              onOpenNewBookingWithDates={(roomId, checkIn, checkOut) => {
-                setPrefillRoomId(roomId);
-                setPrefillDate(checkIn);
-                setPrefillCheckOutDate(checkOut);
-                setIsNewBookingOpen(true);
-              }}
-              onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
-              onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
-              onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
-              onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
-              onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
-            />
-          )}
+          <div key={activeTab} className="animate-view-transition">
+            {activeTab === 'dashboard' && (
+              <DashboardView
+                rooms={rooms}
+                bookings={bookings}
+                onUpdateRoomStatus={handleUpdateRoomStatus}
+                onCheckInGuest={handleCheckInGuest}
+                onCheckOutGuest={(bId) => {
+                  const b = bookings.find(item => item.id === bId);
+                  if (b) setSelectedBookingForCheckoutId(b.id);
+                  else handleConfirmCheckout(bId);
+                }}
+                onOpenNewBookingForRoom={(roomId) => {
+                  setPrefillRoomId(roomId);
+                  setPrefillDate(undefined);
+                  setPrefillCheckOutDate(undefined);
+                  setIsNewBookingOpen(true);
+                }}
+                onOpenNewBooking={handleOpenNormalBooking}
+                onOpenNewBookingWithDates={(roomId, checkIn, checkOut) => {
+                  setPrefillRoomId(roomId);
+                  setPrefillDate(checkIn);
+                  setPrefillCheckOutDate(checkOut);
+                  setIsNewBookingOpen(true);
+                }}
+                onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
+                onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
+                onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
+                onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
+                onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
+              />
+            )}
 
-          {activeTab === 'timeline' && (
-            <TimelineCalendarView
-              rooms={rooms}
-              bookings={bookings}
-              onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
-              onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
-              onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
-              onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
-            />
-          )}
+            {activeTab === 'timeline' && (
+              <TimelineCalendarView
+                rooms={rooms}
+                bookings={bookings}
+                onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
+                onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
+                onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
+                onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
+              />
+            )}
 
-          {activeTab === 'bookings' && (
-            <BookingsView
-              bookings={bookings}
-              settings={settings}
-              searchTerm={searchTerm}
-              onOpenNewBooking={handleOpenNormalBooking}
-              onCheckInGuest={handleCheckInGuest}
-              onCheckOutGuest={(bId) => {
-                const b = bookings.find(item => item.id === bId);
-                if (b) setSelectedBookingForCheckoutId(b.id);
-                else handleConfirmCheckout(bId);
-              }}
-              onCancelBooking={handleCancelBooking}
-              onRestoreBooking={handleRestoreBooking}
-              onPermanentDeleteBooking={handlePermanentDeleteBooking}
-              onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
-              onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
-              onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
-              onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
-              onUpdateBookingAddOns={handleUpdateBookingAddOns}
-            />
-          )}
+            {activeTab === 'bookings' && (
+              <BookingsView
+                bookings={bookings}
+                settings={settings}
+                searchTerm={searchTerm}
+                onOpenNewBooking={handleOpenNormalBooking}
+                onCheckInGuest={handleCheckInGuest}
+                onCheckOutGuest={(bId) => {
+                  const b = bookings.find(item => item.id === bId);
+                  if (b) setSelectedBookingForCheckoutId(b.id);
+                  else handleConfirmCheckout(bId);
+                }}
+                onCancelBooking={handleCancelBooking}
+                onRestoreBooking={handleRestoreBooking}
+                onPermanentDeleteBooking={handlePermanentDeleteBooking}
+                onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
+                onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
+                onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
+                onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
+                onUpdateBookingAddOns={handleUpdateBookingAddOns}
+              />
+            )}
 
-          {activeTab === 'finance' && (
-            <FinanceView
-              bookings={bookings}
-            />
-          )}
+            {activeTab === 'finance' && (
+              <FinanceView
+                bookings={bookings}
+              />
+            )}
 
-          {activeTab === 'logs' && (
-            <LogsView
-              logs={logs}
-              onClearLogs={() => setLogs([])}
-            />
-          )}
+            {activeTab === 'logs' && (
+              <LogsView
+                logs={logs}
+                onClearLogs={() => setLogs([])}
+              />
+            )}
 
-          {activeTab === 'settings' && (
-            <SettingsView
-              settings={settings}
-              onSaveSettings={handleSaveSettings}
-            />
-          )}
+            {activeTab === 'settings' && (
+              <SettingsView
+                settings={settings}
+                onSaveSettings={handleSaveSettings}
+              />
+            )}
+          </div>
         </main>
       </div>
 
