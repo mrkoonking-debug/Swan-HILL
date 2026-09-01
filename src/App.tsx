@@ -726,10 +726,22 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-['Prompt']">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-medium text-slate-300">กำลังเชื่อมต่อฐานข้อมูล Swan HILL...</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-['Prompt'] relative overflow-hidden select-none">
+        {/* Ambient Radial Luxury Glow */}
+        <div className="absolute w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+
+        <div className="text-center space-y-4 relative z-10 px-4 flex flex-col items-center">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-emerald-500/20 border-2 border-emerald-500/40 bg-slate-900 p-1 animate-pulse">
+            <img src="/pwa-192x192.png" alt="Swan HILL Logo" className="w-full h-full object-cover rounded-xl" />
+          </div>
+          <div>
+            <img src="/swan-hill-white.png" alt="Swan HILL" className="h-7 mx-auto object-contain drop-shadow-md mb-1.5" />
+            <p className="text-[10px] font-extrabold text-emerald-400 tracking-widest uppercase">RESORT MANAGEMENT SYSTEM</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs font-medium text-slate-400">กำลังเชื่อมต่อฐานข้อมูล Swan HILL...</p>
+          </div>
         </div>
       </div>
     );
