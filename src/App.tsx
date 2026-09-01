@@ -532,7 +532,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-900 text-slate-900 overflow-hidden font-['Prompt'] select-none">
+    <div className="flex h-screen bg-slate-100 lg:bg-slate-900 text-slate-900 overflow-hidden font-['Prompt'] select-none">
       {/* Desktop Navigation Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
@@ -555,8 +555,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
       {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}
       <div 
-        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-220 ease-out will-change-transform relative z-10 ${
-          isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0' : 'translate-x-0'
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-220 ease-out relative z-10 ${
+          isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 will-change-transform' : 'translate-x-0'
         }`}
       >
         {/* Top Header */}

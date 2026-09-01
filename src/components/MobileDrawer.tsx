@@ -45,8 +45,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
   return (
     <aside 
-      className={`fixed top-0 bottom-0 left-0 w-[280px] bg-slate-900 text-white flex flex-col z-30 shadow-[6px_0_24px_rgba(0,0,0,0.5)] border-r border-slate-800 transition-transform duration-220 ease-out will-change-transform lg:hidden ${
-        isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+      className={`fixed top-0 bottom-0 left-0 w-[280px] bg-slate-900 text-white flex flex-col z-30 transition-all duration-220 ease-out will-change-transform lg:hidden ${
+        isOpen 
+          ? 'translate-x-0 shadow-[6px_0_24px_rgba(0,0,0,0.5)] border-r border-slate-800 opacity-100 visible' 
+          : '-translate-x-full pointer-events-none shadow-none border-none opacity-0 invisible'
       }`}
       style={{ fontFamily: "'Prompt', sans-serif" }}
       aria-hidden={!isOpen}
