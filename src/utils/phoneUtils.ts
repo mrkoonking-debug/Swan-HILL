@@ -5,7 +5,7 @@
 
 // Sanitizes phone input on typing: allows digits, dashes, commas, slashes, plus, and spaces
 export const sanitizePhoneInput = (input: string): string => {
-  return input.replace(/[^0-9+\-,\/\s\n]/g, '');
+  return input.replace(/[^0-9+\-,/\s\n]/g, '');
 };
 
 // Extracts individual clean phone numbers from string

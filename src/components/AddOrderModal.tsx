@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Check } from 'lucide-react';
 import type { Booking, AddOnItem } from '../types/pms';
 import { 
@@ -25,30 +25,41 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
 }) => {
   useLockBodyScroll(isOpen);
 
-  if (!isOpen || !booking) return null;
-
-  const currentAddOns: AddOnItem[] = booking.addOns || [];
-
   // Temporary local state for add-on counts
-  const [extraBeds, setExtraBeds] = useState<number>(
-    currentAddOns.filter(a => a.category === 'bed').reduce((sum, a) => sum + a.quantity, 0)
-  );
-  const [mookataSmall, setMookataSmall] = useState<number>(
-    currentAddOns.filter(a => a.category === 'mookata_small').reduce((sum, a) => sum + a.quantity, 0)
-  );
-  const [mookataLarge, setMookataLarge] = useState<number>(
-    currentAddOns.filter(a => a.category === 'mookata_large').reduce((sum, a) => sum + a.quantity, 0)
-  );
-  const [breakfast, setBreakfast] = useState<number>(
-    currentAddOns.filter(a => a.category === 'breakfast').reduce((sum, a) => sum + a.quantity, 0)
-  );
+  const [extraBeds, setExtraBeds] = useState<number>(0);
+  const [mookataSmall, setMookataSmall] = useState<number>(0);
+  const [mookataLarge, setMookataLarge] = useState<number>(0);
+  const [breakfast, setBreakfast] = useState<number>(0);
 
   // Custom order item
   const [customName, setCustomName] = useState('');
   const [customPrice, setCustomPrice] = useState<number | ''>('');
-  const [customList, setCustomList] = useState<AddOnItem[]>(
-    currentAddOns.filter(a => a.category === 'custom' || a.category === 'drink')
-  );
+  const [customList, setCustomList] = useState<AddOnItem[]>([]);
+
+  useEffect(() => {
+    if (booking && isOpen) {
+      const currentAddOns: AddOnItem[] = booking.addOns || [];
+      setExtraBeds(
+        currentAddOns.filter(a => a.category === 'bed').reduce((sum, a) => sum + a.quantity, 0)
+      );
+      setMookataSmall(
+        currentAddOns.filter(a => a.category === 'mookata_small').reduce((sum, a) => sum + a.quantity, 0)
+      );
+      setMookataLarge(
+        currentAddOns.filter(a => a.category === 'mookata_large').reduce((sum, a) => sum + a.quantity, 0)
+      );
+      setBreakfast(
+        currentAddOns.filter(a => a.category === 'breakfast').reduce((sum, a) => sum + a.quantity, 0)
+      );
+      setCustomList(
+        currentAddOns.filter(a => a.category === 'custom' || a.category === 'drink')
+      );
+      setCustomName('');
+      setCustomPrice('');
+    }
+  }, [booking, isOpen]);
+
+  if (!isOpen || !booking) return null;
 
   const handleAddCustom = () => {
     if (!customName || !customPrice || Number(customPrice) <= 0) return;
