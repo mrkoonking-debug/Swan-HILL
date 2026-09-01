@@ -109,13 +109,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   const getStatusBadge = (status: BookingStatus) => {
     switch (status) {
       case 'confirmed':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">● รอลูกค้าเช็คอิน</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">● รอลูกค้าเช็คอิน</span>;
       case 'checked_in':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-800 border border-blue-300">● กำลังพักอยู่</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">● กำลังพักอยู่</span>;
       case 'checked_out':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700 border border-slate-300">✓ เช็คเอาท์แล้ว</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">✓ เช็คเอาท์แล้ว</span>;
       case 'cancelled':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-300">✕ ยกเลิก</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200">✕ ยกเลิก</span>;
       default:
         return null;
     }
@@ -180,30 +180,30 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   const countFullyPaid = activeBookings.filter(b => b.paidAmount >= b.totalAmount).length;
   const countTrash = bookings.filter(b => !!b.deletedAt || b.status === 'cancelled').length;
 
-  // Render a Single Room Card in Daily View (Designed for Speed & Elderly/Non-tech staff)
+  // Render a Single Room Card in Daily View (Clean, Proportional & Friendly)
   const renderDailyRoomCard = (b: Booking, _category: 'arrival' | 'stayover' | 'departure') => {
     const remainingBalance = Math.max(0, b.totalAmount - b.paidAmount);
 
     return (
       <div 
         key={b.id}
-        className="bg-white rounded-3xl border-2 border-slate-200/90 hover:border-emerald-400 p-4 sm:p-5 shadow-sm transition-all space-y-3.5"
+        className="bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 p-3.5 sm:p-4 shadow-xs transition-all space-y-3"
       >
         {/* Top Row: Room & Guest Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <HouseLogo roomNumber={b.roomNumber} size="md" />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-black text-slate-900">
+                <span className="text-sm sm:text-base font-bold text-slate-900">
                   บ้าน {b.roomNumber}
                 </span>
-                <span className="text-xs text-slate-500 font-bold">
+                <span className="text-xs text-slate-500 font-normal">
                   ({b.roomType})
                 </span>
                 {getStatusBadge(b.status)}
               </div>
-              <h3 className="text-sm sm:text-base font-black text-emerald-950 mt-0.5">
+              <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
                 {b.guestName}
               </h3>
             </div>
@@ -213,21 +213,21 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <a 
               href={`tel:${b.guestPhone.replace(/[^0-9+]/g, '')}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 transition-all shadow-2xs"
+              className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 font-medium text-xs rounded-xl border border-emerald-200 transition-all"
             >
               <Phone className="w-3.5 h-3.5 text-emerald-600" />
               <span>{b.guestPhone}</span>
             </a>
-            <span className="px-2.5 py-1 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl">
+            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 font-medium text-xs rounded-xl">
               {b.totalGuests} ท่าน &bull; {b.totalNights} คืน
             </span>
           </div>
         </div>
 
         {/* Middle Row: Active Orders (Mookata, Extra Bed, Breakfast) */}
-        <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-medium text-slate-500 block">
               รายการอาหาร & บริการเสริมที่สั่งไว้:
             </span>
             {b.addOns && b.addOns.length > 0 ? (
@@ -235,57 +235,57 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 {b.addOns.map((ad: AddOnItem) => (
                   <span 
                     key={ad.id} 
-                    className="inline-flex items-center gap-1 text-xs font-extrabold bg-white text-slate-900 px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs"
+                    className="inline-flex items-center gap-1 text-xs font-normal bg-white text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs"
                   >
                     <span>{ad.name}</span>
-                    <span className="text-emerald-700 font-black">(฿{(ad.price * ad.quantity).toLocaleString()})</span>
+                    <span className="text-emerald-700 font-semibold">(฿{(ad.price * ad.quantity).toLocaleString()})</span>
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-xs font-bold text-slate-400">ยังไม่มีรายการสั่งอาหารหรือบริการเสริม</p>
+              <p className="text-xs font-normal text-slate-400">ยังไม่มีรายการสั่งอาหารหรือบริการเสริม</p>
             )}
           </div>
 
           {/* Pricing Balance */}
           <div className="text-left sm:text-right shrink-0">
-            <span className="text-[11px] text-slate-500 font-bold block">ยอดรวมทั้งสิ้น</span>
-            <span className="text-base sm:text-lg font-black text-slate-900 block leading-tight">
+            <span className="text-[11px] text-slate-500 font-normal block">ยอดรวมทั้งสิ้น</span>
+            <span className="text-sm sm:text-base font-bold text-slate-900 block leading-tight">
               ฿{b.totalAmount.toLocaleString()}
             </span>
             {remainingBalance > 0 ? (
-              <span className="text-xs font-black text-red-600 block mt-0.5">
+              <span className="text-xs font-semibold text-red-600 block mt-0.5">
                 ค้างชำระ: ฿{remainingBalance.toLocaleString()}
               </span>
             ) : (
-              <span className="text-xs font-bold text-emerald-600 block mt-0.5">
+              <span className="text-xs font-medium text-emerald-600 block mt-0.5">
                 ✓ ชำระเงินครบแล้ว
               </span>
             )}
           </div>
         </div>
 
-        {/* Bottom Row: Fast Action Buttons (Designed for 1-Tap Speed) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          {/* 1. FAST MOOKATA ORDER BUTTON (Prominent Amber/Orange) */}
+        {/* Bottom Row: Fast Action Buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          {/* 1. FAST MOOKATA ORDER BUTTON */}
           {onOpenAddOrder && (
             <button
               onClick={() => onOpenAddOrder(b)}
               disabled={b.status === 'checked_out'}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white text-xs sm:text-sm font-black rounded-2xl shadow-md shadow-amber-500/25 cursor-pointer transition-all disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-xs cursor-pointer transition-all disabled:opacity-50"
             >
-              <UtensilsCrossed className="w-4 h-4 stroke-[2.5]" />
+              <UtensilsCrossed className="w-3.5 h-3.5" />
               <span>+ สั่งหมูกระทะ / อาหาร</span>
             </button>
           )}
 
           {/* Quick Payment / Receipt / Checkin Actions */}
-          <div className="flex items-center gap-2 flex-wrap flex-1 sm:flex-none justify-end">
+          <div className="flex items-center gap-1.5 flex-wrap flex-1 sm:flex-none justify-end">
             {/* Payment Button */}
             {onOpenAddPayment && remainingBalance > 0 && b.status !== 'checked_out' && (
               <button
                 onClick={() => onOpenAddPayment(b)}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-medium rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>รับเงิน (฿{remainingBalance.toLocaleString()})</span>
@@ -296,7 +296,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             {onOpenReceipt && (
               <button
                 onClick={() => onOpenReceipt(b)}
-                className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 transition-all cursor-pointer"
                 title="ดูใบเสร็จรับเงิน"
               >
                 <Receipt className="w-3.5 h-3.5" />
@@ -308,9 +308,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             {b.status === 'confirmed' && (
               <button
                 onClick={() => onCheckInGuest(b.id)}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black rounded-xl shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                <DoorOpen className="w-4 h-4" />
+                <DoorOpen className="w-3.5 h-3.5" />
                 <span>เช็คอินเข้าพัก</span>
               </button>
             )}
@@ -322,9 +322,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   if (onOpenCheckoutModal) onOpenCheckoutModal(b);
                   else onCheckOutGuest(b.id);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                <DoorOpen className="w-4 h-4" />
+                <DoorOpen className="w-3.5 h-3.5" />
                 <span>เช็คเอาท์ออก</span>
               </button>
             )}
@@ -338,39 +338,39 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt'] select-none">
       
       {/* Top Mode Selector & New Booking Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-3xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         {/* Toggle between Daily Operations View and All Bookings */}
-        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 w-full sm:w-auto">
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
           <button
             onClick={() => setViewMode('daily')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all cursor-pointer ${
               viewMode === 'daily'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <CalendarDays className="w-4 h-4 stroke-[2.5]" />
+            <CalendarDays className="w-4 h-4" />
             <span>📅 สมุดงานรายวัน (Daily View)</span>
           </button>
 
           <button
             onClick={() => setViewMode('all')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-black rounded-xl transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all cursor-pointer ${
               viewMode === 'all'
-                ? 'bg-slate-900 text-white shadow-md'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4 stroke-[2.5]" />
+            <FileSpreadsheet className="w-4 h-4" />
             <span>📋 รายการทั้งหมด ({countTotal})</span>
           </button>
         </div>
 
         <button
           onClick={onOpenNewBooking}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm py-2.5 px-4 rounded-2xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-medium text-xs sm:text-sm py-2 px-3.5 rounded-xl shadow-xs transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4" />
           <span>+ สร้างการจองใหม่</span>
         </button>
       </div>
@@ -381,16 +381,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       {viewMode === 'daily' && (
         <div className="space-y-4 animate-in fade-in">
           
-          {/* Date Navigation Bar (Huge Buttons, Friendly for Elderly Staff) */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Date Navigation Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {/* Previous Day Button */}
               <button
                 type="button"
                 onClick={() => handleShiftDate(-1)}
-                className="flex items-center gap-1 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-2xl border border-slate-200 transition-all cursor-pointer shrink-0"
+                className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
               >
-                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                <ChevronLeft className="w-4 h-4" />
                 <span>เมื่อวาน</span>
               </button>
 
@@ -398,7 +398,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               <button
                 type="button"
                 onClick={handleResetToToday}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 text-xs sm:text-sm font-black rounded-2xl border border-emerald-200 transition-all cursor-pointer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200 transition-all cursor-pointer"
               >
                 <Clock className="w-4 h-4 text-emerald-600" />
                 <span>📌 วันนี้</span>
@@ -408,18 +408,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleShiftDate(1)}
-                className="flex items-center gap-1 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-2xl border border-slate-200 transition-all cursor-pointer shrink-0"
+                className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
               >
                 <span>พรุ่งนี้</span>
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Current Active Date Title & Date Picker Input */}
             <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
               <div className="text-left sm:text-right">
-                <span className="text-[11px] font-bold text-slate-400 block uppercase">ตารางงานประจำวัน</span>
-                <span className="text-sm sm:text-base font-black text-slate-900 block">
+                <span className="text-[11px] font-normal text-slate-400 block">ตารางงานประจำวัน</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
                   {formatThaiFullDate(selectedDate)}
                 </span>
               </div>
@@ -428,29 +428,29 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 type="date"
                 value={selectedDate}
                 onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-                className="px-3 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
+                className="px-2.5 py-1.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
                 title="แตะเพื่อเลือกวันที่ในปฏิทิน"
               />
             </div>
           </div>
 
           {/* Kitchen & External Supplier Summary Bar */}
-          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-xl space-y-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-4 border border-slate-800 shadow-md space-y-3">
             
             {/* Header with date info */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0 border border-amber-500/30">
-                  <UtensilsCrossed className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0 border border-amber-500/30">
+                  <UtensilsCrossed className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black flex items-center gap-2 text-white">
+                  <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-white">
                     <span>ยอดที่ต้องจัดเตรียม & สั่งร้านภายนอก</span>
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span className="text-[10px] font-medium px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                       รวม {activeOnDate.length} ห้องพัก
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  <p className="text-[11px] text-slate-400 font-normal mt-0.5">
                     สรุปยอดหมูกระทะ (สั่งร้านข้างนอก) และอาหารเช้าสำหรับ {formatThaiFullDate(selectedDate)}
                   </p>
                 </div>
@@ -458,13 +458,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
 
             {/* PART 1: หมูกระทะ (สั่งร้านภายนอก • ไม่ได้ทำเอง) */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-800/90 border border-orange-500/40 space-y-3">
+            <div className="p-3 rounded-xl bg-slate-800/90 border border-orange-500/30 space-y-2.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[11px] font-bold">
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-medium">
                     🛵 สั่งร้านภายนอก (ไม่ได้ทำเอง)
                   </span>
-                  <span className="text-xs sm:text-sm font-black text-white">
+                  <span className="text-xs font-semibold text-white">
                     {settings?.mookataSupplierName || 'ร้านหมูกระทะประจำรีสอร์ท'}
                   </span>
                 </div>
@@ -481,13 +481,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       setCopyMookataSuccess(true);
                       setTimeout(() => setCopyMookataSuccess(false), 2500);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 active:scale-95 text-orange-300 font-bold text-xs rounded-xl border border-orange-500/40 transition-all cursor-pointer shadow-xs"
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/20 hover:bg-orange-500/30 active:scale-95 text-orange-300 font-medium text-xs rounded-lg border border-orange-500/40 transition-all cursor-pointer"
                     title="คัดลอกข้อความสรุปยอดเพื่อส่งทาง LINE หาร้าน"
                   >
                     {copyMookataSuccess ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                        <span className="text-emerald-300">คัดลอกส่ง LINE แล้ว!</span>
+                        <Check className="w-3.5 h-3.5 text-emerald-400 stroke-2" />
+                        <span className="text-emerald-300 text-xs">คัดลอกแล้ว!</span>
                       </>
                     ) : (
                       <>
@@ -501,7 +501,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   {settings?.mookataSupplierPhone && (
                     <a
                       href={`tel:${settings.mookataSupplierPhone.replace(/[^0-9+]/g, '')}`}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+                      className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-medium text-xs rounded-lg transition-all"
                       title="กดเพื่อโทรสั่งร้านหมูกระทะทันที"
                     >
                       <Phone className="w-3.5 h-3.5" />
@@ -512,46 +512,46 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               </div>
 
               {/* Mookata Counters */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
                 {/* Large */}
-                <div className="bg-slate-900/90 border border-red-500/40 p-3 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                      <MookataLargeIcon size={22} />
+                <div className="bg-slate-900/90 border border-red-500/30 p-2.5 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                      <MookataLargeIcon size={18} />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดใหญ่)</span>
-                      <span className="text-xs text-red-300 font-medium">฿500 /ชุด</span>
+                      <span className="text-[11px] font-normal text-slate-400 block">หมูกระทะ (ชุดใหญ่)</span>
+                      <span className="text-[11px] text-red-300 font-normal">฿500 /ชุด</span>
                     </div>
                   </div>
-                  <span className="text-xl sm:text-2xl font-black text-red-400">
+                  <span className="text-base sm:text-lg font-bold text-red-400">
                     {kitchenSummary.mookataLarge} <span className="text-xs text-slate-400 font-normal">ชุด</span>
                   </span>
                 </div>
 
                 {/* Small */}
-                <div className="bg-slate-900/90 border border-orange-500/40 p-3 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
-                      <MookataSmallIcon size={22} />
+                <div className="bg-slate-900/90 border border-orange-500/30 p-2.5 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                      <MookataSmallIcon size={18} />
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold text-slate-400 block">หมูกระทะ (ชุดเล็ก)</span>
-                      <span className="text-xs text-orange-300 font-medium">฿350 /ชุด</span>
+                      <span className="text-[11px] font-normal text-slate-400 block">หมูกระทะ (ชุดเล็ก)</span>
+                      <span className="text-[11px] text-orange-300 font-normal">฿350 /ชุด</span>
                     </div>
                   </div>
-                  <span className="text-xl sm:text-2xl font-black text-orange-400">
+                  <span className="text-base sm:text-lg font-bold text-orange-400">
                     {kitchenSummary.mookataSmall} <span className="text-xs text-slate-400 font-normal">ชุด</span>
                   </span>
                 </div>
 
                 {/* Total Mookata Sets */}
-                <div className="bg-slate-900/90 border border-slate-700 p-3 rounded-2xl flex items-center justify-between">
+                <div className="bg-slate-900/90 border border-slate-700 p-2.5 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] font-bold text-slate-400 block">รวมหมูกระทะที่ต้องสั่ง</span>
-                    <span className="text-xs text-emerald-400 font-medium">โทรสั่งร้านล่วงหน้า</span>
+                    <span className="text-[11px] font-normal text-slate-400 block">รวมที่ต้องสั่งร้าน</span>
+                    <span className="text-[10px] text-emerald-400 font-normal">สั่งล่วงหน้า</span>
                   </div>
-                  <span className="text-xl sm:text-2xl font-black text-white">
+                  <span className="text-base sm:text-lg font-bold text-white">
                     {kitchenSummary.mookataLarge + kitchenSummary.mookataSmall} <span className="text-xs text-slate-400 font-normal">ชุด</span>
                   </span>
                 </div>
@@ -559,45 +559,45 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
 
             {/* PART 2: รายการที่รีสอร์ทจัดเตรียมเอง (อาหารเช้า & ที่นอนเสริม) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {/* Breakfast */}
-              <div className="bg-slate-800/60 border border-teal-500/30 p-3 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
-                    <BreakfastIcon size={22} />
+              <div className="bg-slate-800/60 border border-teal-500/30 p-2.5 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
+                    <BreakfastIcon size={18} />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-slate-200">อาหารเช้า</span>
-                      <span className="text-[10px] font-bold text-teal-400 bg-teal-500/20 px-1.5 py-0.2 rounded border border-teal-500/30">
+                      <span className="text-xs font-semibold text-slate-200">อาหารเช้า</span>
+                      <span className="text-[10px] font-normal text-teal-400 bg-teal-500/20 px-1.5 rounded border border-teal-500/30">
                         รีสอร์ททำเอง
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">ครัวจัดเตรียม</span>
+                    <span className="text-[11px] text-slate-400 font-normal">ครัวจัดเตรียม</span>
                   </div>
                 </div>
-                <span className="text-lg sm:text-xl font-black text-teal-400">
+                <span className="text-base font-bold text-teal-400">
                   {kitchenSummary.breakfast} <span className="text-xs text-slate-400 font-normal">ท่าน</span>
                 </span>
               </div>
 
               {/* Extra Beds */}
-              <div className="bg-slate-800/60 border border-amber-500/30 p-3 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                    <ExtraBedIcon size={22} />
+              <div className="bg-slate-800/60 border border-amber-500/30 p-2.5 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <ExtraBedIcon size={18} />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-slate-200">ที่นอนเสริม</span>
-                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                      <span className="text-xs font-semibold text-slate-200">ที่นอนเสริม</span>
+                      <span className="text-[10px] font-normal text-amber-400 bg-amber-500/20 px-1.5 rounded border border-amber-500/30">
                         แม่บ้านจัดเอง
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">ปูเตียงเพิ่มในห้อง</span>
+                    <span className="text-[11px] text-slate-400 font-normal">ปูเตียงเพิ่ม</span>
                   </div>
                 </div>
-                <span className="text-lg sm:text-xl font-black text-amber-400">
+                <span className="text-base font-bold text-amber-400">
                   {kitchenSummary.extraBeds} <span className="text-xs text-slate-400 font-normal">หลัง</span>
                 </span>
               </div>
@@ -606,72 +606,72 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           </div>
 
           {/* Categorized Daily Rooms List */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             
             {/* Category 1: เช็คอินเข้าพักวันนี้ (Arrivals) */}
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2 px-1">
-                <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse" />
-                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
                   เช็คอินเข้าพักวันนี้ (Arrivals)
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                   {arrivalsToday.length} ห้อง
                 </span>
               </div>
 
               {arrivalsToday.length === 0 ? (
-                <div className="p-4 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 font-medium">
+                <div className="p-3 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-400 font-normal">
                   ไม่มีลูกค้าเช็คอินเข้าพักใหม่ในวันนี้
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2.5">
                   {arrivalsToday.map(b => renderDailyRoomCard(b, 'arrival'))}
                 </div>
               )}
             </div>
 
             {/* Category 2: พักอยู่ต่อเนื่อง (Stayover) */}
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2 px-1">
-                <span className="w-3.5 h-3.5 rounded-full bg-blue-500" />
-                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
                   พักอยู่ต่อเนื่อง (Stayover)
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
                   {stayoverToday.length} ห้อง
                 </span>
               </div>
 
               {stayoverToday.length === 0 ? (
-                <div className="p-4 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 font-medium">
+                <div className="p-3 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-400 font-normal">
                   ไม่มีห้องที่พักต่อเนื่องในวันนี้
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2.5">
                   {stayoverToday.map(b => renderDailyRoomCard(b, 'stayover'))}
                 </div>
               )}
             </div>
 
             {/* Category 3: เช็คเอาท์ออกวันนี้ (Departures) */}
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center gap-2 px-1">
-                <span className="w-3.5 h-3.5 rounded-full bg-slate-500" />
-                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
                   เช็คเอาท์ออกวันนี้ (Departures)
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                   {departuresToday.length} ห้อง
                 </span>
               </div>
 
               {departuresToday.length === 0 ? (
-                <div className="p-4 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 font-medium">
+                <div className="p-3 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-400 font-normal">
                   ไม่มีลูกค้าเช็คเอาท์คืนห้องในวันนี้
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2.5">
                   {departuresToday.map(b => renderDailyRoomCard(b, 'departure'))}
                 </div>
               )}
@@ -689,89 +689,89 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         <div className="space-y-4 md:space-y-6 animate-in fade-in">
           
           {/* 5 Status Cards at the Top */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
             <div 
               onClick={() => setStatusFilter('all')}
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+              className={`p-3 rounded-xl border transition-all cursor-pointer shadow-2xs ${
                 statusFilter === 'all' 
-                  ? 'bg-slate-900 text-white border-slate-900 ring-2 ring-emerald-500/30' 
+                  ? 'bg-slate-900 text-white border-slate-900' 
                   : 'bg-white text-slate-900 border-slate-200/90 hover:border-slate-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold opacity-80">ทั้งหมด</span>
-                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${statusFilter === 'all' ? 'bg-white/10 text-emerald-400' : 'bg-slate-100 text-slate-600'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium opacity-80">ทั้งหมด</span>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${statusFilter === 'all' ? 'bg-white/10 text-emerald-400' : 'bg-slate-100 text-slate-600'}`}>
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <span className="text-xl sm:text-2xl font-black">{countTotal}</span>
+              <span className="text-lg sm:text-xl font-bold">{countTotal}</span>
             </div>
 
             <div 
               onClick={() => setStatusFilter('checked_in')}
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+              className={`p-3 rounded-xl border transition-all cursor-pointer shadow-2xs ${
                 statusFilter === 'checked_in' 
-                  ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-500/30' 
+                  ? 'bg-blue-600 text-white border-blue-600' 
                   : 'bg-white text-slate-900 border-slate-200/90 hover:border-blue-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold opacity-80">กำลังพัก</span>
-                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${statusFilter === 'checked_in' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium opacity-80">กำลังพัก</span>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${statusFilter === 'checked_in' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
                   <Users className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <span className="text-xl sm:text-2xl font-black">{countCheckedIn}</span>
+              <span className="text-lg sm:text-xl font-bold">{countCheckedIn}</span>
             </div>
 
             <div 
               onClick={() => setStatusFilter('confirmed')}
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+              className={`p-3 rounded-xl border transition-all cursor-pointer shadow-2xs ${
                 statusFilter === 'confirmed' 
-                  ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30' 
+                  ? 'bg-emerald-600 text-white border-emerald-600' 
                   : 'bg-white text-slate-900 border-slate-200/90 hover:border-emerald-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold opacity-80">รอเช็คอิน</span>
-                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${statusFilter === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium opacity-80">รอเช็คอิน</span>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${statusFilter === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
                   <Clock className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <span className="text-xl sm:text-2xl font-black">{countConfirmed}</span>
+              <span className="text-lg sm:text-xl font-bold">{countConfirmed}</span>
             </div>
 
-            <div className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 bg-white text-slate-900 shadow-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-slate-600">ชำระครบ</span>
-                <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="p-3 rounded-xl border border-slate-200/90 bg-white text-slate-900 shadow-2xs">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium text-slate-500">ชำระครบ</span>
+                <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <span className="text-xl sm:text-2xl font-black text-slate-900">{countFullyPaid}</span>
+              <span className="text-lg sm:text-xl font-bold text-slate-900">{countFullyPaid}</span>
             </div>
 
             <div 
               onClick={() => setStatusFilter('trash')}
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer shadow-xs col-span-2 sm:col-span-1 ${
+              className={`p-3 rounded-xl border transition-all cursor-pointer shadow-2xs col-span-2 sm:col-span-1 ${
                 statusFilter === 'trash' 
-                  ? 'bg-red-600 text-white border-red-600 ring-2 ring-red-500/30' 
+                  ? 'bg-red-600 text-white border-red-600' 
                   : 'bg-white text-slate-900 border-slate-200/90 hover:border-red-300'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold opacity-80">ถังขยะ</span>
-                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${statusFilter === 'trash' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium opacity-80">ถังขยะ</span>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${statusFilter === 'trash' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600'}`}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <span className="text-xl sm:text-2xl font-black">{countTrash}</span>
+              <span className="text-lg sm:text-xl font-bold">{countTrash}</span>
             </div>
           </div>
 
           {/* Filter Sub-Tabs */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar">
               {[
                 { id: 'all', label: `ทั้งหมด (${countTotal})` },
                 { id: 'confirmed', label: 'รอลูกค้ามา' },
@@ -782,9 +782,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer ${
                     statusFilter === tab.id
-                      ? 'bg-white text-slate-900 shadow-xs font-black'
+                      ? 'bg-white text-slate-900 shadow-xs font-semibold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -797,10 +797,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           {/* Full Bookings Cards List */}
           <div className="space-y-3">
             {displayedAllBookings.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
-                <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 font-bold text-sm">ไม่พบรายการจองในหมวดนี้</p>
-                <p className="text-slate-400 text-xs mt-0.5">ลองค้นหาด้วยคำอื่น หรือกดสร้างรายการจองใหม่</p>
+              <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200">
+                <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-600 font-medium text-xs sm:text-sm">ไม่พบรายการจองในหมวดนี้</p>
+                <p className="text-slate-400 text-[11px] mt-0.5">ลองค้นหาด้วยคำอื่น หรือกดสร้างรายการจองใหม่</p>
               </div>
             ) : (
               displayedAllBookings.map((b) => {
@@ -809,64 +809,64 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 return (
                   <div
                     key={b.id}
-                    className={`bg-white/95 backdrop-blur-md rounded-2xl border p-3.5 md:p-4 transition-all shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-md ${
+                    className={`bg-white rounded-xl border p-3 md:p-3.5 transition-all shadow-xs hover:shadow-sm ${
                       b.status === 'cancelled' || !!b.deletedAt 
                         ? 'border-red-200 bg-red-50/20' 
                         : 'border-slate-200/90 hover:border-emerald-300'
                     }`}
                   >
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5 items-center">
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-center">
                       
                       {/* Customer Profile */}
-                      <div className="xl:col-span-3 flex items-center gap-3">
+                      <div className="xl:col-span-3 flex items-center gap-2.5">
                         {b.status === 'checked_in' && (
-                          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-blue-500">
-                            <Users className="w-4 h-4 mb-0.5 text-blue-100" />
-                            <span className="text-[10px] font-medium leading-none">กำลังพัก</span>
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex flex-col items-center justify-center p-1 shadow-2xs shrink-0 border border-blue-500">
+                            <Users className="w-3.5 h-3.5 mb-0.5 text-blue-100" />
+                            <span className="text-[9px] font-normal leading-none">กำลังพัก</span>
                           </div>
                         )}
                         {b.status === 'confirmed' && (
-                          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-emerald-500">
-                            <Clock className="w-4 h-4 mb-0.5 text-emerald-100" />
-                            <span className="text-[10px] font-medium leading-none">รอเช็คอิน</span>
+                          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex flex-col items-center justify-center p-1 shadow-2xs shrink-0 border border-emerald-500">
+                            <Clock className="w-3.5 h-3.5 mb-0.5 text-emerald-100" />
+                            <span className="text-[9px] font-normal leading-none">รอเช็คอิน</span>
                           </div>
                         )}
                         {b.status === 'checked_out' && (
-                          <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-200 flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-slate-700">
-                            <CheckCircle2 className="w-4 h-4 mb-0.5 text-slate-400" />
-                            <span className="text-[10px] font-medium leading-none">เช็คเอาท์</span>
+                          <div className="w-10 h-10 rounded-xl bg-slate-800 text-slate-200 flex flex-col items-center justify-center p-1 shadow-2xs shrink-0 border border-slate-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 mb-0.5 text-slate-400" />
+                            <span className="text-[9px] font-normal leading-none">เช็คเอาท์</span>
                           </div>
                         )}
                         {(b.status === 'cancelled' || !!b.deletedAt) && (
-                          <div className="w-12 h-12 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center p-1 shadow-sm shrink-0 border border-red-500">
-                            <Trash2 className="w-4 h-4 mb-0.5 text-red-100" />
-                            <span className="text-[10px] font-medium leading-none">ยกเลิก</span>
+                          <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex flex-col items-center justify-center p-1 shadow-2xs shrink-0 border border-red-500">
+                            <Trash2 className="w-3.5 h-3.5 mb-0.5 text-red-100" />
+                            <span className="text-[9px] font-normal leading-none">ยกเลิก</span>
                           </div>
                         )}
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700 font-black text-[10px]">
+                            <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700 font-medium text-[10px]">
                               {b.bookingCode}
                             </span>
-                            <span className="text-[9px] text-slate-400 font-medium truncate">
+                            <span className="text-[9px] text-slate-400 font-normal truncate">
                               {formatThaiDate(b.createdAt)}
                             </span>
                           </div>
-                          <h3 className="text-sm font-black text-slate-900 truncate mt-0.5">
+                          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 truncate mt-0.5">
                             {b.guestName}
                           </h3>
                           <div className="flex items-center gap-1 text-xs text-slate-600 mt-0.5">
                             <a 
                               href={`tel:${b.guestPhone.replace(/[^0-9+]/g, '')}`} 
-                              className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 text-[11px] transition-colors"
+                              className="flex items-center gap-1 font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 text-[11px] transition-colors"
                             >
                               <Phone className="w-2.5 h-2.5 text-emerald-600" />
                               <span>{b.guestPhone}</span>
                             </a>
                           </div>
                           {statusFilter === 'trash' && (
-                            <p className="text-[10px] text-red-600 font-bold mt-1">
+                            <p className="text-[10px] text-red-600 font-medium mt-1">
                               ลบถาวรในอีก {getDaysRemainingInTrash(b.deletedAt)} วัน
                             </p>
                           )}
@@ -874,30 +874,30 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       </div>
 
                       {/* Room & Dates */}
-                      <div className="xl:col-span-4 flex items-center gap-3 bg-slate-50/90 p-2.5 rounded-2xl border border-slate-200/80">
+                      <div className="xl:col-span-4 flex items-center gap-2.5 bg-slate-50/90 p-2 rounded-xl border border-slate-200/80">
                         <HouseLogo roomNumber={b.roomNumber} size="sm" />
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-black text-slate-900 truncate">
+                            <span className="text-xs font-semibold text-slate-900 truncate">
                               ห้อง {b.roomNumber} &bull; {b.roomType}
                             </span>
                             {getStatusBadge(b.status)}
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-medium">
-                            <span className="font-bold text-slate-900 truncate">{formatThaiDate(b.checkInDate)}</span>
-                            <span className="text-[9px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-200 shrink-0">
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-normal">
+                            <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkInDate)}</span>
+                            <span className="text-[9px] font-medium text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-200 shrink-0">
                               {b.totalNights} คืน
                             </span>
                             <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span className="font-bold text-slate-900 truncate">{formatThaiDate(b.checkOutDate)}</span>
+                            <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkOutDate)}</span>
                           </div>
 
                           {b.addOns && b.addOns.length > 0 && (
                             <div className="flex flex-wrap gap-1 pt-0.5">
                               {b.addOns.map((ad) => (
-                                <span key={ad.id} className="text-[9px] font-bold bg-white text-slate-800 px-1.5 py-0.2 rounded border border-slate-200 shadow-2xs">
-                                  {ad.name} <strong className="text-emerald-700">(฿{(ad.price * ad.quantity).toLocaleString()})</strong>
+                                <span key={ad.id} className="text-[9px] font-normal bg-white text-slate-800 px-1.5 py-0.2 rounded border border-slate-200 shadow-2xs">
+                                  {ad.name} <strong className="text-emerald-700 font-medium">(฿{(ad.price * ad.quantity).toLocaleString()})</strong>
                                 </span>
                               ))}
                             </div>
@@ -907,16 +907,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                       {/* Total & Remaining */}
                       <div className="xl:col-span-2 text-left xl:text-right border-t xl:border-t-0 pt-2 xl:pt-0 border-slate-100">
-                        <span className="text-[9px] text-slate-500 font-bold block uppercase">ยอดรวมสุทธิ</span>
-                        <span className="text-base font-black text-emerald-900 block leading-tight">
+                        <span className="text-[9px] text-slate-400 font-normal block uppercase">ยอดรวมสุทธิ</span>
+                        <span className="text-sm sm:text-base font-bold text-slate-900 block leading-tight">
                           ฿{b.totalAmount.toLocaleString()}
                         </span>
                         {remainingBalance > 0 ? (
-                          <span className="text-[10px] font-extrabold text-red-600 block">
+                          <span className="text-[10px] font-medium text-red-600 block">
                             ค้างชำระ: ฿{remainingBalance.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold text-emerald-600 block">
+                          <span className="text-[10px] font-medium text-emerald-600 block">
                             ✓ ชำระครบแล้ว
                           </span>
                         )}
@@ -930,7 +930,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                               <button
                                 onClick={() => onOpenAddOrder(b)}
                                 disabled={b.status === 'checked_out'}
-                                className="px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-pointer disabled:opacity-40"
+                                className="px-2.5 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1.5 transition-all active:scale-95 bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-pointer disabled:opacity-40"
                               >
                                 <UtensilsCrossed className="w-3.5 h-3.5 text-amber-600" />
                                 <span>สั่งอาหาร</span>
@@ -940,7 +940,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                             {onOpenAddPayment && remainingBalance > 0 && b.status !== 'checked_out' && (
                               <button
                                 onClick={() => onOpenAddPayment(b)}
-                                className="px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer"
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
                                 <span>รับเงิน</span>
@@ -950,7 +950,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                             {onOpenReceipt && (
                               <button
                                 onClick={() => onOpenReceipt(b)}
-                                className="px-2.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1 transition-all active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                                className="px-2 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1 transition-all active:scale-95 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
                                 title="ดูใบเสร็จรับเงิน"
                               >
                                 <Receipt className="w-3.5 h-3.5" />
@@ -960,7 +960,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                             {b.status === 'confirmed' && (
                               <button
                                 onClick={() => onCheckInGuest(b.id)}
-                                className="px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1 transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-700 shadow-xs cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1 transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-700 shadow-xs cursor-pointer"
                               >
                                 <DoorOpen className="w-3.5 h-3.5" />
                                 <span>เช็คอิน</span>
@@ -973,7 +973,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                                   if (onOpenCheckoutModal) onOpenCheckoutModal(b);
                                   else onCheckOutGuest(b.id);
                                 }}
-                                className="px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1 transition-all active:scale-95 bg-slate-900 text-white hover:bg-slate-800 shadow-xs cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1 transition-all active:scale-95 bg-slate-900 text-white hover:bg-slate-800 shadow-xs cursor-pointer"
                               >
                                 <DoorOpen className="w-3.5 h-3.5" />
                                 <span>เช็คเอาท์</span>

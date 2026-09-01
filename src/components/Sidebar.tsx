@@ -52,18 +52,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Action Button */}
-      <div className="p-3">
+      <div className="p-2.5">
         <button
           onClick={onOpenNewBooking}
-          className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-sm py-2.5 px-3 rounded-xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold text-xs py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4" />
           <span>+ บันทึกการจอง</span>
         </button>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-2.5 space-y-1 overflow-y-auto pt-1">
+      <nav className="flex-1 px-2 space-y-1 overflow-y-auto pt-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -71,9 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as ActiveTab)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-sm transition-all text-left whitespace-nowrap truncate cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all text-left whitespace-nowrap truncate cursor-pointer ${
                 isActive 
-                  ? 'bg-emerald-600 text-white shadow-sm' 
+                  ? 'bg-emerald-600 text-white shadow-xs' 
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >

@@ -226,7 +226,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Card Header: Room Number & Status */}
           <div className="flex items-center justify-between gap-1.5 mb-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-xs ${
+              <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${
                 isAvailable ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' :
                 isOccupied ? 'bg-blue-600 text-white shadow-blue-500/20' :
                 isCleaning ? 'bg-amber-500 text-white' : 'bg-slate-300 text-slate-700'
@@ -234,17 +234,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {room.roomNumber}
               </span>
               <div className="min-w-0">
-                <span className="font-extrabold text-xs text-slate-900 truncate block">
+                <span className="font-semibold text-xs text-slate-800 truncate block">
                   {room.name}
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold">
+                <span className="text-[10px] text-slate-500 font-normal">
                   ฿{room.pricePerNight.toLocaleString()}/คืน
                 </span>
               </div>
             </div>
 
             {/* Status Badge */}
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
               isAvailable ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' :
               isOccupied ? 'bg-blue-100 text-blue-900 border border-blue-300' :
               isCleaning ? 'bg-amber-100 text-amber-900 border border-amber-300' :
@@ -257,25 +257,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Guest Stay Information */}
           {isOccupied && room.currentGuest && (
             <div className="p-2 rounded-xl bg-white/90 border border-blue-200/80 text-[11px] space-y-1 shadow-2xs">
-              <span className="font-bold text-slate-900 flex items-center gap-1 truncate">
+              <span className="font-medium text-slate-800 flex items-center gap-1 truncate">
                 <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 <span className="truncate">{room.currentGuest.name}</span>
               </span>
-              <span className="text-[10px] text-slate-500 block font-medium">
+              <span className="text-[10px] text-slate-500 block font-normal">
                 ออก {formatThaiDate(room.currentGuest.checkOut)}
               </span>
 
               {/* Payment Alert Banner */}
               {remainingBalance > 0 ? (
-                <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 font-bold text-[10px] flex items-center justify-between">
+                <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 font-normal text-[10px] flex items-center justify-between">
                   <span className="flex items-center gap-1 truncate">
                     <AlertTriangle className="w-3 h-3 text-amber-700 shrink-0" />
                     ค้างชำระ:
                   </span>
-                  <span className="font-black text-amber-950">฿{remainingBalance.toLocaleString()}</span>
+                  <span className="font-semibold text-amber-950">฿{remainingBalance.toLocaleString()}</span>
                 </div>
               ) : (
-                <div className="p-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold text-[10px] flex items-center gap-1">
+                <div className="p-1 rounded-lg bg-emerald-50 text-emerald-800 font-medium text-[10px] flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   <span>ชำระครบแล้ว (฿{grandTotal.toLocaleString()})</span>
                 </div>
@@ -285,7 +285,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {currentBooking?.addOns && currentBooking.addOns.length > 0 && (
                 <div className="pt-1 border-t border-slate-200 flex flex-wrap gap-1">
                   {currentBooking.addOns.map((a) => (
-                    <span key={a.id} className="text-[9px] font-bold bg-white text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 truncate">
+                    <span key={a.id} className="text-[9px] font-normal bg-white text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 truncate">
                       {a.name}
                     </span>
                   ))}
@@ -296,7 +296,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Cleaning notice */}
           {isCleaning && (
-            <div className="mt-2 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 font-bold flex items-center gap-1 shadow-xs">
+            <div className="mt-2 p-2 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-900 font-medium flex items-center gap-1 shadow-2xs">
               <Clock className="w-3 h-3 text-amber-600 shrink-0" />
               <span>กำลังทำความสะอาด</span>
             </div>
@@ -304,7 +304,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Card Bottom Actions */}
-        <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
+        <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5">
           {isAvailable && (
             <button
               onClick={(e) => {
@@ -312,9 +312,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 if (onOpenNewBookingForRoom) onOpenNewBookingForRoom(room.id);
                 else onOpenNewBooking();
               }}
-              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm shadow-emerald-600/20 transition-all"
+              className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-medium text-xs flex items-center justify-center gap-1 shadow-2xs transition-all"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <Plus className="w-3.5 h-3.5" />
               <span>กดจองห้อง {room.roomNumber}</span>
             </button>
           )}
@@ -436,25 +436,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
       
-      {/* DATE SELECTOR & STATUS BAR (ค่าเริ่มต้นคือวันปัจจุบัน พร้อมบอกวันที่ภาษาไทย) */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* DATE SELECTOR & STATUS BAR */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Date Shift Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto">
           <button
             type="button"
             onClick={() => handleShiftDate(-1)}
-            className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
           >
-            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+            <ChevronLeft className="w-4 h-4" />
             <span>เมื่อวาน</span>
           </button>
 
           <button
             type="button"
             onClick={handleResetToToday}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-black rounded-xl border transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl border transition-all cursor-pointer ${
               isViewingToday 
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' 
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
             }`}
           >
@@ -465,20 +465,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => handleShiftDate(1)}
-            className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
           >
             <span>พรุ่งนี้</span>
-            <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Thai Full Date Label + Date Picker */}
         <div className="flex items-center justify-between sm:justify-end gap-3">
           <div className="text-left sm:text-right">
-            <span className="text-[11px] font-bold text-slate-400 block uppercase">
+            <span className="text-[11px] font-normal text-slate-400 block">
               {isViewingToday ? '📌 วันนี้ (วันปัจจุบัน)' : '📅 ดูสถานะล่วงหน้า'}
             </span>
-            <span className="text-sm sm:text-base font-black text-slate-900 block">
+            <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
               {formatThaiFullDate(selectedDate)}
             </span>
           </div>
@@ -487,77 +487,77 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             type="date"
             value={selectedDate}
             onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-            className="px-3 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
+            className="px-2.5 py-1.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
             title="แตะเพื่อเลือกวันที่ต้องการดูสถานะผังบ้าน"
           />
         </div>
       </div>
 
       {/* Top Banner: Overview KPI Cards (ตามวันที่เลือก) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-emerald-700/10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl p-3.5 md:p-4 text-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-emerald-100 font-bold text-xs">บ้านพักว่างพร้อมขาย</span>
-            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
-              <Home className="w-4 h-4 text-emerald-100" />
+            <span className="text-emerald-100 font-medium text-xs">บ้านพักว่างพร้อมขาย</span>
+            <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-md">
+              <Home className="w-3.5 h-3.5 text-emerald-100" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl md:text-3xl font-black">{availableRooms}</span>
-            <span className="text-xs text-emerald-200 font-medium">/ {totalRooms} หลัง</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-xl md:text-2xl font-bold">{availableRooms}</span>
+            <span className="text-xs text-emerald-200 font-normal">/ {totalRooms} หลัง</span>
           </div>
-          <div className="mt-2 text-[10px] text-emerald-200/90 font-medium">
-            {isViewingToday ? 'เปิดรับแขกได้ทันที' : `สถานะว่างวันที่ ${formatThaiDate(selectedDate)}`}
+          <div className="mt-1 text-[10px] text-emerald-200/90 font-normal">
+            {isViewingToday ? 'เปิดรับแขกได้ทันที' : `ว่างวันที่ ${formatThaiDate(selectedDate)}`}
           </div>
         </div>
 
-        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-800 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-blue-700/10">
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-800 rounded-2xl p-3.5 md:p-4 text-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-blue-100 font-bold text-xs">มีผู้เข้าพัก / จองแล้ว</span>
-            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
-              <Users className="w-4 h-4 text-blue-100" />
+            <span className="text-blue-100 font-medium text-xs">มีคนพัก / จองแล้ว</span>
+            <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-md">
+              <Users className="w-3.5 h-3.5 text-blue-100" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl md:text-3xl font-black">{occupiedRooms}</span>
-            <span className="text-xs text-blue-200 font-medium">/ {totalRooms} หลัง</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-xl md:text-2xl font-bold">{occupiedRooms}</span>
+            <span className="text-xs text-blue-200 font-normal">/ {totalRooms} หลัง</span>
           </div>
-          <div className="mt-2 text-[10px] text-blue-200/90 font-medium">
+          <div className="mt-1 text-[10px] text-blue-200/90 font-normal">
             อัตราเข้าพัก {totalRooms > 0 ? ((occupiedRooms / totalRooms) * 100).toFixed(0) : 0}%
           </div>
         </div>
 
-        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-700 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-amber-600/10">
+        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-700 rounded-2xl p-3.5 md:p-4 text-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-amber-100 font-bold text-xs">เช็คอินเข้าพักวันนี้</span>
-            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
-              <DoorOpen className="w-4 h-4 text-amber-100" />
+            <span className="text-amber-100 font-medium text-xs">เช็คอินเข้าพักวันนี้</span>
+            <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-md">
+              <DoorOpen className="w-3.5 h-3.5 text-amber-100" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl md:text-3xl font-black">
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-xl md:text-2xl font-bold">
               {arrivalsOnDate.length}
             </span>
-            <span className="text-xs text-amber-200 font-medium">ห้อง</span>
+            <span className="text-xs text-amber-200 font-normal">ห้อง</span>
           </div>
-          <div className="mt-2 text-[10px] text-amber-200/90 font-medium">
+          <div className="mt-1 text-[10px] text-amber-200/90 font-normal">
             ออกวันนี้ {departuresOnDate.length} ห้อง
           </div>
         </div>
 
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-slate-900/10">
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-3.5 md:p-4 text-white shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-300 font-bold text-xs">รายได้รวมเดือนนี้</span>
-            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-              <Coins className="w-4 h-4 text-emerald-400" />
+            <span className="text-slate-300 font-medium text-xs">รายได้รวมเดือนนี้</span>
+            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md">
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-xl md:text-2xl font-black text-emerald-400">
+          <div className="mt-1.5 flex items-baseline gap-1">
+            <span className="text-lg md:text-xl font-bold text-emerald-400">
               ฿{totalMonthRevenue.toLocaleString()}
             </span>
           </div>
-          <div className="mt-2 text-[10px] text-slate-400 font-medium">
+          <div className="mt-1 text-[10px] text-slate-400 font-normal">
             รวมค่าห้องและหมูกระทะ
           </div>
         </div>
@@ -566,22 +566,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Header & View Mode Switcher */}
       <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
         <div>
-          <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Trees className="w-6 h-6 text-emerald-600" />
+          <h1 className="text-base md:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Trees className="w-5 h-5 text-emerald-600" />
             <span>ผังบ้านพัก Swan HILL Resort</span>
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-500 font-normal">
             ผัง 3D เสมือนจริง &bull; ตรวจสอบสถานะห้องว่างและรายละเอียดการชำระเงิน
           </p>
         </div>
 
         {/* View Switcher: 3D แผนผัง vs รายการแยกขนาด */}
-        <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200/80 shadow-inner">
+        <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-inner">
           <button
             onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
               viewMode === 'map'
-                ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -590,9 +590,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
           <button
             onClick={() => setViewMode('grid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
               viewMode === 'grid'
-                ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
