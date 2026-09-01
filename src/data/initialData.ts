@@ -218,7 +218,7 @@ export const initialSettings: ResortSettings = {
   staffList: [],
 
   // External Mookata Supplier
-  mookataSupplierName: 'ร้านหมูกระทะ (ส่งเดลิเวอรี่ประจำ)',
+  mookataSupplierName: 'ร้านหมูกระทะ',
   mookataSupplierPhone: '081-234-5678',
 
   // Google & Email Whitelist Control

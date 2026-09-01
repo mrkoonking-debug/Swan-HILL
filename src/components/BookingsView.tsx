@@ -295,10 +295,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           </div>
         </div>
 
-        {/* Middle Row: 1-Line Details Bar in a slightly larger, spacious frame */}
-        <div className="bg-slate-50/90 hover:bg-slate-100/70 p-3 sm:px-4 sm:py-3 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-colors">
-          {/* Left: 1-Line Order Details */}
-          <div className="flex items-center gap-2 min-w-0 overflow-x-auto no-scrollbar py-0.5">
+        {/* Middle Row: 1-Line Details Bar strictly on 1 single line */}
+        <div className="bg-slate-50/90 hover:bg-slate-100/70 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2 text-xs transition-colors overflow-hidden">
+          {/* Left: 1-Line Order Details (Scrollable if multiple items) */}
+          <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar py-0.5 flex-1">
             <span className="text-xs font-semibold text-slate-600 shrink-0">รายละเอียด:</span>
             {b.addOns && b.addOns.length > 0 ? (
               <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
@@ -321,7 +321,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleMookataOrdered(b)}
-                className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 cursor-pointer transition-all ${
+                className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 cursor-pointer transition-all whitespace-nowrap ${
                   isMookataOrdered
                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
                     : 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
@@ -331,12 +331,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 {isMookataOrdered ? (
                   <>
                     <Check className="w-3 h-3 stroke-2 text-emerald-700" />
-                    <span>โทรสั่งร้านแล้ว</span>
+                    <span>โทรสั่งแล้ว</span>
                   </>
                 ) : (
                   <>
                     <Clock className="w-3 h-3 text-amber-700" />
-                    <span>ยังไม่สั่งร้าน</span>
+                    <span>ยังไม่สั่ง</span>
                   </>
                 )}
               </button>
@@ -344,18 +344,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           </div>
 
           {/* Right: 1-Line Total & Payment Balance */}
-          <div className="flex items-center gap-2 shrink-0 whitespace-nowrap sm:pl-3 sm:border-l sm:border-slate-200/80">
+          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap pl-2 border-l border-slate-200/80">
             <span className="text-xs text-slate-500 font-normal">ยอดรวม:</span>
             <span className="text-xs sm:text-sm font-bold text-slate-900">
               ฿{b.totalAmount.toLocaleString()}
             </span>
             {remainingBalance > 0 ? (
-              <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+              <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-200 whitespace-nowrap">
                 ค้าง ฿{remainingBalance.toLocaleString()}
               </span>
             ) : (
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
-                <Check className="w-3 h-3 text-emerald-600" /> จ่ายครบแล้ว
+              <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200 flex items-center gap-0.5 whitespace-nowrap">
+                <Check className="w-3 h-3 text-emerald-600" /> ครบแล้ว
               </span>
             )}
           </div>
@@ -553,52 +553,52 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </div>
                 <div>
                   <h3 className="text-xs sm:text-sm font-semibold flex items-center gap-2 text-white">
-                    <span>ยอดที่ต้องจัดเตรียม & สั่งร้านภายนอก</span>
-                    <span className="text-[10px] font-medium px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      รวม {activeOnDate.length} ห้องพัก
+                    <span>ยอดอาหาร & สั่งร้านนอก</span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      รวม {activeOnDate.length} ห้อง
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-normal mt-0.5">
-                    สรุปยอดหมูกระทะ (สั่งร้านข้างนอก) และอาหารเช้าสำหรับ {formatThaiFullDate(selectedDate)}
+                  <p className="text-[11px] text-slate-400 font-normal mt-0.5 truncate">
+                    สรุปยอดหมูกระทะและอาหารเช้า &bull; {formatThaiDate(selectedDate)}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* PART 1: หมูกระทะ (สั่งร้านภายนอก • แยกตามรายบ้านที่สั่ง) */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-800/95 border border-orange-500/30 space-y-3 shadow-sm">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-semibold">
-                    🛵 สั่งร้านภายนอก (ไม่ได้ทำเอง)
+            {/* PART 1: หมูกระทะ (สั่งร้านนอก) */}
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-800/95 border border-orange-500/30 space-y-2.5 shadow-sm">
+              {/* Header: 1 Single Clean Line */}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-700/60 pb-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-semibold shrink-0">
+                    🛵 สั่งร้านนอก
                   </span>
-                  <span className="text-xs sm:text-sm font-bold text-white">
-                    {settings?.mookataSupplierName || 'ร้านหมูกระทะประจำรีสอร์ท'}
+                  <span className="text-xs sm:text-sm font-bold text-white whitespace-nowrap truncate">
+                    {(settings?.mookataSupplierName || 'ร้านหมูกระทะ').replace(/\s*\(.*?\)/g, '') || 'ร้านหมูกระทะ'}
                   </span>
                   {settings?.mookataSupplierPhone && (
                     <a
                       href={`tel:${settings.mookataSupplierPhone.replace(/[^0-9+]/g, '')}`}
-                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 ml-1 font-medium"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-semibold whitespace-nowrap shrink-0 ml-0.5"
                       title="โทรด่วนหาร้าน"
                     >
-                      <Phone className="w-3 h-3" />
-                      <span>{settings.mookataSupplierPhone}</span>
+                      <Phone className="w-3 h-3 shrink-0" />
+                      <span className="whitespace-nowrap">{settings.mookataSupplierPhone}</span>
                     </a>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                   <span className="text-xs text-slate-300 font-medium">
-                    มีบ้านที่สั่งหมูกระทะ: <strong className="text-orange-400 font-bold">{housesWithMookata.length}</strong> หลัง
+                    สั่งหมูกระทะ <strong className="text-orange-400 font-bold">{housesWithMookata.length}</strong> หลัง
                   </span>
                 </div>
               </div>
 
               {/* LIST OF HOUSES (แยกตามรายบ้าน) */}
               {housesWithMookata.length === 0 ? (
-                <div className="p-4 text-center bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 font-normal">
-                  ยังไม่มีบ้านไหนสั่งหมูกระทะสำหรับวันที่ {formatThaiDate(selectedDate)} (สามารถกด "+ สั่งหมูกระทะ" ที่การ์ดของแต่ละบ้านได้ทันที)
+                <div className="p-3 text-center bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 font-normal">
+                  ไม่มีบ้านไหนสั่งหมูกระทะในวันที่ {formatThaiDate(selectedDate)}
                 </div>
               ) : (
                 <div className="space-y-2.5">
@@ -750,21 +750,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               </div>
             </div>
 
-            {/* PART 2: รายการที่รีสอร์ทจัดเตรียมเอง (อาหารเช้า & ที่นอนเสริม) */}
+            {/* PART 2: อาหารเช้า & ที่นอนเสริม */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {/* Breakfast */}
               <div className="bg-slate-800/60 border border-teal-500/30 p-2.5 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
                     <BreakfastIcon size={18} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-slate-200">อาหารเช้า</span>
-                      <span className="text-[10px] font-normal text-teal-400 bg-teal-500/20 px-1.5 rounded border border-teal-500/30">
-                        รีสอร์ททำเอง
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-slate-200 block">อาหารเช้า</span>
                     <span className="text-[11px] text-slate-400 font-normal">ครัวจัดเตรียม</span>
                   </div>
                 </div>
@@ -775,17 +770,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
               {/* Extra Beds */}
               <div className="bg-slate-800/60 border border-amber-500/30 p-2.5 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
                     <ExtraBedIcon size={18} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-slate-200">ที่นอนเสริม</span>
-                      <span className="text-[10px] font-normal text-amber-400 bg-amber-500/20 px-1.5 rounded border border-amber-500/30">
-                        แม่บ้านจัดเอง
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-slate-200 block">ที่นอนเสริม</span>
                     <span className="text-[11px] text-slate-400 font-normal">ปูเตียงเพิ่ม</span>
                   </div>
                 </div>
