@@ -37,6 +37,21 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
   const [allowedEmails, setAllowedEmails] = useState<string[]>(initialSettings.allowedEmails || []);
   const [allowGoogleLogin, setAllowGoogleLogin] = useState<boolean>(true);
 
+// One-way SHA-256 cryptographic hash for master owner verification (zero plaintext in code)
+const MASTER_AUTH_HASH = '353d93b070e3a064c4bb0178dca5c44cd1fd873c5a3d1482573b4d7f300647f0';
+
+async function computeSha256Hex(text: string): Promise<string> {
+  try {
+    const enc = new TextEncoder();
+    const data = enc.encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return '';
+  }
+}
+
   // Fetch latest staff list & email whitelist from Firestore on mount
   useEffect(() => {
     const fetchStaffConfig = async () => {
@@ -45,31 +60,9 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as ResortSettings;
-          let list = (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0)
-            ? [...data.staffList]
-            : [...(initialSettings.staffList || [])];
-
-          // Ensure owner 0923985962 with PIN 081863 is active and up-to-date
-          const ownerIdx = list.findIndex(s => s.phone.replace(/[^0-9]/g, '') === '0923985962');
-          if (ownerIdx >= 0) {
-            list[ownerIdx] = { ...list[ownerIdx], pin: '081863', isActive: true, role: 'owner' };
-          } else {
-            list.unshift({
-              id: 'staff-owner',
-              name: 'ผู้ดูแลระบบ / เจ้าของ',
-              phone: '0923985962',
-              pin: '081863',
-              role: 'owner',
-              isActive: true,
-              notes: 'ผู้ดูแลหลัก',
-              createdAt: new Date().toISOString(),
-            });
+          if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+            setStaffList(data.staffList);
           }
-
-          setStaffList(list);
-          // Sync into Firestore so remote is always up to date
-          setDoc(docRef, { staffList: list }, { merge: true }).catch(() => {});
-
           if (data.allowedEmails && Array.isArray(data.allowedEmails)) {
             setAllowedEmails(data.allowedEmails);
           }
@@ -77,10 +70,6 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
             setAllowGoogleLogin(data.allowGoogleLogin);
           }
           return;
-        } else {
-          // Document does not exist yet -> initialize with defaults
-          await setDoc(docRef, initialSettings);
-          setStaffList(initialSettings.staffList || []);
         }
       } catch (err) {
         console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
@@ -139,24 +128,35 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
       return;
     }
 
-    // Match against staff list
+    // Match against dynamic staff list (from Firestore or localStorage)
     let matchedStaff = staffList.find(s => {
       const staffCleanPhone = s.phone.replace(/[^0-9]/g, '');
       return staffCleanPhone === cleanInputPhone && s.pin.trim() === cleanInputPin && s.isActive !== false;
     });
 
-    // Explicit fallback for master owner: 0923985962 / 081863
-    if (!matchedStaff && cleanInputPhone === '0923985962' && cleanInputPin === '081863') {
-      matchedStaff = {
-        id: 'staff-owner',
-        name: 'ผู้ดูแลระบบ / เจ้าของ',
-        phone: '0923985962',
-        pin: '081863',
-        role: 'owner',
-        isActive: true,
-        notes: 'ผู้ดูแลหลัก',
-        createdAt: new Date().toISOString(),
-      };
+    // If not found in dynamic staff list, verify against secure one-way hash (No plaintext in code)
+    if (!matchedStaff) {
+      const inputHash = await computeSha256Hex(`swanhill_auth_v1_${cleanInputPhone}:${cleanInputPin}`);
+      if (inputHash && inputHash === MASTER_AUTH_HASH) {
+        matchedStaff = {
+          id: 'staff-owner',
+          name: 'ผู้ดูแลระบบ / เจ้าของ',
+          phone: cleanInputPhone,
+          pin: cleanInputPin,
+          role: 'owner',
+          isActive: true,
+          notes: 'ผู้ดูแลหลัก',
+          createdAt: new Date().toISOString(),
+        };
+
+        // Cache into local state & storage for subsequent sessions
+        const updatedList = [matchedStaff, ...staffList.filter(s => s.role !== 'owner')];
+        setStaffList(updatedList);
+        try {
+          const docRef = doc(db, 'settings', 'resort_config');
+          setDoc(docRef, { staffList: updatedList }, { merge: true }).catch(() => {});
+        } catch {}
+      }
     }
 
     if (!matchedStaff) {
@@ -404,7 +404,7 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
                   value={phone}
                   onChange={handlePhoneChange}
                   className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-base sm:text-lg font-mono font-bold text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-wide"
-                  placeholder="092-398-5962"
+                  placeholder="08X-XXX-XXXX"
                   autoComplete="tel"
                   required
                 />

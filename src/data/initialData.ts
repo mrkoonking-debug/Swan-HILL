@@ -215,28 +215,7 @@ export const initialSettings: ResortSettings = {
   promptPayNo: '081-234-5678',
 
   // Staff & Authorized PIN Access
-  staffList: [
-    {
-      id: 'staff-1',
-      name: 'ผู้ดูแลระบบ / เจ้าของ',
-      phone: '0923985962',
-      pin: '081863',
-      role: 'owner',
-      isActive: true,
-      notes: 'ผู้ดูแลหลัก',
-      createdAt: '2026-08-01T00:00:00Z',
-    },
-    {
-      id: 'staff-2',
-      name: 'พนักงานต้อนรับ',
-      phone: '0899999999',
-      pin: '0000',
-      role: 'reception',
-      isActive: true,
-      notes: 'กะต้อนรับ',
-      createdAt: '2026-08-01T00:00:00Z',
-    },
-  ],
+  staffList: [],
 
   // External Mookata Supplier
   mookataSupplierName: 'ร้านหมูกระทะ (ส่งเดลิเวอรี่ประจำ)',
