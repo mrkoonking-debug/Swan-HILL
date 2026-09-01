@@ -8,9 +8,18 @@ import {
   Save, 
   RotateCcw, 
   Check, 
-  Sparkles
+  Sparkles,
+  Users,
+  Phone,
+  KeyRound,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
-import type { ResortSettings } from '../types/pms';
+import type { ResortSettings, StaffMember, StaffRole } from '../types/pms';
 import { initialSettings } from '../data/initialData';
 import { ConfirmDialogModal } from './ConfirmDialogModal';
 
@@ -26,6 +35,70 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [formData, setFormData] = useState<ResortSettings>(settings);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+  // Staff & PIN Access Control
+  const currentStaffList: StaffMember[] = formData.staffList || initialSettings.staffList || [];
+  const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [newStaffPin, setNewStaffPin] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState<StaffRole>('reception');
+  const [showPins, setShowPins] = useState<Record<string, boolean>>({});
+
+  const handleTogglePin = (id: string) => {
+    setShowPins(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleAddStaff = () => {
+    const cleanPhone = newStaffPhone.replace(/[^0-9]/g, '');
+    const cleanPin = newStaffPin.trim();
+
+    if (!newStaffName.trim()) {
+      alert('กรุณากรอกชื่อพนักงาน');
+      return;
+    }
+    if (cleanPhone.length < 9) {
+      alert('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)');
+      return;
+    }
+    if (cleanPin.length < 4) {
+      alert('กรุณากำหนดรหัส PIN อย่างน้อย 4 หลัก');
+      return;
+    }
+
+    const newStaff: StaffMember = {
+      id: 'staff-' + Date.now(),
+      name: newStaffName.trim(),
+      phone: cleanPhone,
+      pin: cleanPin,
+      role: newStaffRole,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedList = [...currentStaffList, newStaff];
+    setFormData(prev => ({ ...prev, staffList: updatedList }));
+    setNewStaffName('');
+    setNewStaffPhone('');
+    setNewStaffPin('');
+    setNewStaffRole('reception');
+    setIsAddingStaff(false);
+  };
+
+  const handleDeleteStaff = (id: string) => {
+    if (currentStaffList.length <= 1) {
+      alert('ต้องมีพนักงานหรือผู้ดูแลระบบในระบบอย่างน้อย 1 ท่าน');
+      return;
+    }
+    const updatedList = currentStaffList.filter(s => s.id !== id);
+    setFormData(prev => ({ ...prev, staffList: updatedList }));
+  };
+
+  const handleUpdateStaffPin = (id: string, newPin: string) => {
+    const clean = newPin.replace(/[^0-9]/g, '').slice(0, 6);
+    const updatedList = currentStaffList.map(s => s.id === id ? { ...s, pin: clean } : s);
+    setFormData(prev => ({ ...prev, staffList: updatedList }));
+  };
 
   const handleChange = (field: keyof ResortSettings, value: any) => {
     setFormData(prev => ({
@@ -425,6 +498,198 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* CARD 5: Staff Management & PIN Access (Full Width) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <span>จัดการพนักงาน & กำหนดรหัส PIN เข้าสู่ระบบ</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  {currentStaffList.length} ท่าน
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                พนักงานใช้เบอร์โทร + รหัส PIN นี้ล็อกอินเข้าทำงานได้ทันที ฟรี 100% ไม่เสียค่า SMS
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsAddingStaff(!isAddingStaff)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 transition-all active:scale-95 cursor-pointer self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{isAddingStaff ? 'ปิดฟอร์มเพิ่ม' : '+ เพิ่มพนักงานใหม่'}</span>
+          </button>
+        </div>
+
+        {/* Add Staff Form (Collapsible) */}
+        {isAddingStaff && (
+          <div className="p-4 bg-slate-50 border border-emerald-200 rounded-2xl space-y-3 animate-in fade-in zoom-in-95">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-emerald-600" />
+              <span>กรอกข้อมูลพนักงานใหม่</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">ชื่อพนักงาน / ชื่อเล่น</label>
+                <input
+                  type="text"
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  placeholder="เช่น สมชาย (ต้อนรับ)"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:border-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">เบอร์โทรศัพท์</label>
+                <input
+                  type="tel"
+                  value={newStaffPhone}
+                  onChange={(e) => setNewStaffPhone(e.target.value)}
+                  placeholder="0812345678"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:border-emerald-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">กำหนดรหัส PIN (4-6 หลัก)</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={newStaffPin}
+                  onChange={(e) => setNewStaffPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  placeholder="เช่น 1234"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-emerald-600 focus:border-emerald-500 outline-none tracking-widest"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">ตำแหน่งหน้าที่</label>
+                <select
+                  value={newStaffRole}
+                  onChange={(e) => setNewStaffRole(e.target.value as StaffRole)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:border-emerald-500 outline-none"
+                >
+                  <option value="owner">👑 เจ้าของ / ผู้จัดการ</option>
+                  <option value="reception">🛎️ พนักงานต้อนรับ</option>
+                  <option value="housekeeping">🧹 แม่บ้าน</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAddingStaff(false)}
+                className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleAddStaff}
+                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+              >
+                บันทึกพนักงาน
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Staff Table / List */}
+        <div className="divide-y divide-slate-100">
+          {currentStaffList.map((staff) => {
+            const isOwner = staff.role === 'owner';
+            const roleLabels: Record<StaffRole, { label: string; badge: string }> = {
+              owner: { label: '👑 เจ้าของ / ผู้ดูแล', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
+              manager: { label: '⭐ ผู้จัดการ', badge: 'bg-blue-100 text-blue-800 border-blue-200' },
+              reception: { label: '🛎️ พนักงานต้อนรับ', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+              housekeeping: { label: '🧹 แม่บ้าน', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
+            };
+
+            const roleInfo = roleLabels[staff.role] || roleLabels.reception;
+            const isPinVisible = showPins[staff.id];
+
+            return (
+              <div 
+                key={staff.id}
+                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 p-2 rounded-2xl transition-colors"
+              >
+                {/* Staff Info */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-900 text-emerald-400 flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+                    {staff.name.slice(0, 1)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs text-slate-900">{staff.name}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleInfo.badge}`}>
+                        {roleInfo.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{staff.phone}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PIN Control & Actions */}
+                <div className="flex items-center gap-2 sm:self-center">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs">
+                    <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-[11px] font-medium text-slate-500">PIN:</span>
+                    <input
+                      type={isPinVisible ? "text" : "password"}
+                      maxLength={6}
+                      value={staff.pin}
+                      onChange={(e) => handleUpdateStaffPin(staff.id, e.target.value)}
+                      className="w-16 bg-transparent font-mono font-bold text-xs text-slate-900 outline-none text-center"
+                      title="กดเพื่อแก้ไขรหัส PIN ได้ทันที"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePin(staff.id)}
+                      className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      title={isPinVisible ? "ซ่อนรหัส PIN" : "แสดงรหัส PIN"}
+                    >
+                      {isPinVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {!isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStaff(staff.id)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      title="ลบพนักงานท่านนี้"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Security & Helper Notice */}
+        <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-800">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <strong>คำแนะนำสำหรับผู้ดูแล:</strong> พนักงานสามารถล็อกอินด้วยเบอร์โทรศัพท์และรหัส PIN ข้างต้นได้ทันที และหากติ๊ก <strong>"จดจำการเข้าสู่ระบบไว้ในเครื่องนี้"</strong> ตัวเครื่องจะจำการเข้าสู่ระบบไว้ตลอด ไม่ต้องเสียเวลากรอกซ้ำทุกวัน
+          </div>
+        </div>
       </div>
 
       {/* Bottom Save Action Bar */}

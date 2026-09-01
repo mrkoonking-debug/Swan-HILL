@@ -111,6 +111,19 @@ export interface ActivityLog {
   targetBookingCode?: string;
 }
 
+export type StaffRole = 'owner' | 'manager' | 'reception' | 'housekeeping';
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone: string; // e.g. '0812345678'
+  pin: string; // 4-6 digits, e.g. '1234'
+  role: StaffRole;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface ResortSettings {
   resortNameEn: string;
   resortNameTh: string;
@@ -136,4 +149,7 @@ export interface ResortSettings {
   bankAccountNo: string;
   bankAccountName: string;
   promptPayNo: string;
+
+  // Staff & Authorized PIN Access
+  staffList?: StaffMember[];
 }

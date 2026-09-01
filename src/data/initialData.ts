@@ -213,6 +213,30 @@ export const initialSettings: ResortSettings = {
   bankAccountNo: '123-4-56789-0',
   bankAccountName: 'สวอนฮิลล์ รีสอร์ท',
   promptPayNo: '081-234-5678',
+
+  // Staff & Authorized PIN Access
+  staffList: [
+    {
+      id: 'staff-1',
+      name: 'ผู้ดูแลระบบ / เจ้าของ',
+      phone: '0812345678',
+      pin: '1234',
+      role: 'owner',
+      isActive: true,
+      notes: 'ผู้ดูแลหลัก',
+      createdAt: '2026-08-01T00:00:00Z',
+    },
+    {
+      id: 'staff-2',
+      name: 'พนักงานต้อนรับ',
+      phone: '0899999999',
+      pin: '0000',
+      role: 'reception',
+      isActive: true,
+      notes: 'กะต้อนรับ',
+      createdAt: '2026-08-01T00:00:00Z',
+    },
+  ],
 };
 
 export const initialLogs: ActivityLog[] = [

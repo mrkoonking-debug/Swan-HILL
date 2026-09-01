@@ -2,107 +2,211 @@ import React, { useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber,
-  type ConfirmationResult
+  signInAnonymously,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
-import { auth, googleProvider } from './lib/firebase';
-import { Phone, Mail, Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, googleProvider, db } from './lib/firebase';
+import { initialSettings } from './data/initialData';
+import type { ResortSettings, StaffMember } from './types/pms';
+import { Phone, Mail, Lock, KeyRound, Eye, EyeOff, ShieldCheck, Sparkles, CheckSquare, Square, UserCheck } from 'lucide-react';
 
-declare global {
-  interface Window {
-    recaptchaVerifier: any;
-  }
+interface AuthPageProps {
+  onLoginSuccess?: () => void;
 }
 
-export default function AuthPage() {
-  const [method, setMethod] = useState<'email' | 'phone'>('email');
+export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
+  // Prioritize Phone + PIN as default method (easier for elderly staff)
+  const [method, setMethod] = useState<'phone_pin' | 'email'>('phone_pin');
+  
+  // Phone + PIN States
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Email / Password States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+
+  // UI States
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [staffList, setStaffList] = useState<StaffMember[]>(initialSettings.staffList || []);
 
+  // Fetch latest staff list from Firestore on mount
   useEffect(() => {
-    // Initialize reCAPTCHA for phone auth
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-      });
-    }
+    const fetchStaffConfig = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'resort_config');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data() as ResortSettings;
+          if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+            setStaffList(data.staffList);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
+      }
+
+      // Check localStorage cached settings
+      const localSettings = localStorage.getItem('swanhill_settings_v1');
+      if (localSettings) {
+        try {
+          const parsed = JSON.parse(localSettings);
+          if (parsed.staffList && Array.isArray(parsed.staffList)) {
+            setStaffList(parsed.staffList);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    fetchStaffConfig();
   }, []);
 
+  // Format phone number input nicely on typing (e.g. 0812345678 -> 081-234-5678)
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    if (val.length <= 3) {
+      setPhone(val);
+    } else if (val.length <= 6) {
+      setPhone(`${val.slice(0, 3)}-${val.slice(3)}`);
+    } else {
+      setPhone(`${val.slice(0, 3)}-${val.slice(3, 6)}-${val.slice(6)}`);
+    }
+  };
+
+  // 1. Handle Phone + PIN Login (Free 100%, No SMS required, Instant & Easy for Elderly)
+  const handlePhonePinLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    const cleanInputPhone = phone.replace(/[^0-9]/g, '');
+    const cleanInputPin = pin.trim();
+
+    if (!cleanInputPhone || cleanInputPhone.length < 9) {
+      setError('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!cleanInputPin || cleanInputPin.length < 4) {
+      setError('กรุณากรอกรหัส PIN อย่างน้อย 4 หลัก');
+      setIsLoading(false);
+      return;
+    }
+
+    // Match against staff list
+    const matchedStaff = staffList.find(s => {
+      const staffCleanPhone = s.phone.replace(/[^0-9]/g, '');
+      return staffCleanPhone === cleanInputPhone && s.pin.trim() === cleanInputPin && s.isActive !== false;
+    });
+
+    if (!matchedStaff) {
+      setError('เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อผู้ดูแลระบบ Swan HILL');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Save persistent staff session to localStorage (Remember Me)
+      const session = {
+        id: matchedStaff.id,
+        name: matchedStaff.name,
+        phone: matchedStaff.phone,
+        role: matchedStaff.role,
+        rememberMe: rememberMe,
+        loggedInAt: new Date().toISOString(),
+      };
+
+      if (rememberMe) {
+        localStorage.setItem('swanhill_staff_session', JSON.stringify(session));
+      } else {
+        sessionStorage.setItem('swanhill_staff_session', JSON.stringify(session));
+      }
+
+      // Also sign in anonymously to Firebase Auth if not already logged in
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (authErr) {
+        console.warn('[AuthPage] Anonymous auth fallback:', authErr);
+      }
+
+      // Notify App of auth state change
+      window.dispatchEvent(new Event('swanhill_auth_changed'));
+
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      } else {
+        window.location.href = '/dashboard';
+      }
+    } catch (err: any) {
+      console.error('[AuthPage] Login error:', err);
+      setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 2. Handle Email + Password Login
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     try {
+      if (rememberMe) {
+        await setPersistence(auth, browserLocalPersistence);
+      }
       await signInWithEmailAndPassword(auth, email, password);
+      localStorage.removeItem('swanhill_staff_session'); // Clear any legacy staff session
+      window.dispatchEvent(new Event('swanhill_auth_changed'));
+      if (onLoginSuccess) onLoginSuccess();
     } catch (err: any) {
-      setError(err.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      console.error('[AuthPage] Email auth error:', err);
+      setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 3. Handle Google Login
   const handleGoogleLogin = async () => {
     setError('');
     setIsLoading(true);
     try {
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithPopup(auth, googleProvider);
+      localStorage.removeItem('swanhill_staff_session');
+      window.dispatchEvent(new Event('swanhill_auth_changed'));
+      if (onLoginSuccess) onLoginSuccess();
     } catch (err: any) {
-      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePhoneLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    try {
-      let formattedPhone = phone.trim().replace(/[-\s]/g, '');
-      if (formattedPhone.startsWith('0')) {
-        formattedPhone = '+66' + formattedPhone.substring(1);
-      }
-      const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-      setConfirmationResult(confirmation);
-    } catch (err: any) {
-      setError(err.message || 'ส่งรหัส OTP ไม่สำเร็จ กรุณาตรวจสอบเบอร์โทรศัพท์');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!confirmationResult) return;
-    setIsLoading(true);
-    try {
-      await confirmationResult.confirm(otp);
-    } catch (err: any) {
-      setError(err.message || 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ');
+      console.error('[AuthPage] Google auth error:', err);
+      setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-4 font-['Prompt'] relative overflow-hidden select-none">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-3 sm:p-4 font-['Prompt'] relative overflow-hidden select-none">
       {/* Ambient Radial Luxury Glows */}
       <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-emerald-600/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-cyan-600/15 blur-3xl pointer-events-none" />
 
-      <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10 animate-in fade-in zoom-in-95 duration-300">
+      <div className="max-w-md w-full bg-slate-900/95 border border-slate-800 backdrop-blur-2xl rounded-3xl shadow-2xl p-5 sm:p-8 relative z-10 animate-in fade-in zoom-in-95 duration-300">
         
         {/* Brand Header with Emblem + Typographic Wordmark */}
-        <div className="text-center mb-7 flex flex-col items-center">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-emerald-500/20 border-2 border-emerald-500/40 bg-slate-950 p-1 mb-3.5 transition-transform hover:scale-105">
+        <div className="text-center mb-6 flex flex-col items-center">
+          <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl shadow-emerald-500/20 border-2 border-emerald-500/40 bg-slate-950 p-1 mb-3 transition-transform hover:scale-105">
             <img 
               src="/pwa-192x192.png" 
               alt="Swan HILL Logo" 
@@ -113,10 +217,10 @@ export default function AuthPage() {
           <img 
             src="/swan-hill-white.png" 
             alt="Swan HILL" 
-            className="h-7 object-contain drop-shadow-md mb-1.5"
+            className="h-6 sm:h-7 object-contain drop-shadow-md mb-1"
           />
 
-          <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-extrabold tracking-widest uppercase">
+          <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] sm:text-[11px] font-extrabold tracking-widest uppercase">
             <Sparkles className="w-3.5 h-3.5" />
             <span>RESORT MANAGEMENT SYSTEM</span>
           </div>
@@ -128,44 +232,139 @@ export default function AuthPage() {
 
         {/* Error Notification */}
         {error && (
-          <div className="bg-red-950/40 border border-red-800/60 text-red-300 p-3 rounded-2xl text-xs mb-5 animate-in fade-in flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+          <div className="bg-red-950/50 border border-red-800/80 text-red-300 p-3 rounded-2xl text-xs mb-5 animate-in fade-in flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Auth Method Tabs */}
-        <div className="flex bg-slate-950/70 p-1 rounded-2xl border border-slate-800 mb-6">
+        {/* Mode Selector Tabs */}
+        <div className="flex bg-slate-950/80 p-1 rounded-2xl border border-slate-800 mb-5">
           <button
+            type="button"
+            onClick={() => {
+              setMethod('phone_pin');
+              setError('');
+            }}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              method === 'phone_pin' 
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>เบอร์โทร + รหัส PIN</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               setMethod('email');
               setError('');
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               method === 'email' 
                 ? 'bg-slate-800 text-white shadow-sm border border-slate-700' 
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            อีเมลผู้ดูแล
-          </button>
-          <button
-            onClick={() => {
-              setMethod('phone');
-              setError('');
-            }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              method === 'phone' 
-                ? 'bg-slate-800 text-white shadow-sm border border-slate-700' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            เบอร์โทรศัพท์ (OTP)
+            <Mail className="w-3.5 h-3.5" />
+            <span>อีเมลผู้ดูแล</span>
           </button>
         </div>
 
-        {/* Email / Password Form */}
-        {method === 'email' ? (
+        {/* 1. Phone Number + PIN Form (Primary & Friendly for Elderly Staff) */}
+        {method === 'phone_pin' ? (
+          <form onSubmit={handlePhonePinLogin} className="space-y-4">
+            {/* Phone Input */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                เบอร์โทรศัพท์พนักงาน
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-base sm:text-lg font-mono font-bold text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-wide"
+                  placeholder="081-234-5678"
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1 pl-1">
+                กรอกเบอร์โทรที่ลงทะเบียนไว้กับรีสอร์ท
+              </p>
+            </div>
+
+            {/* PIN Code Input */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>รหัส PIN (4 - 6 หลัก)</span>
+                <span className="text-[11px] text-emerald-400 font-normal">รหัสประจำตัว</span>
+              </label>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                <input
+                  type={showPin ? "text" : "password"}
+                  inputMode="numeric"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  className="w-full pl-11 pr-12 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-lg sm:text-xl font-mono font-bold text-emerald-300 placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-[0.25em]"
+                  placeholder="••••"
+                  maxLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
+                  title={showPin ? "ซ่อนรหัส PIN" : "แสดงรหัส PIN"}
+                >
+                  {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me Checkbox (Stay Logged In Permanently) */}
+            <div 
+              onClick={() => setRememberMe(!rememberMe)}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer select-none hover:bg-slate-950 transition-colors"
+            >
+              <button
+                type="button"
+                className="text-emerald-400 flex items-center justify-center shrink-0"
+              >
+                {rememberMe ? (
+                  <CheckSquare className="w-5 h-5 fill-emerald-500/20 text-emerald-400 stroke-[2.5]" />
+                ) : (
+                  <Square className="w-5 h-5 text-slate-500" />
+                )}
+              </button>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-200">
+                  จดจำการเข้าสู่ระบบไว้ในเครื่องนี้
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  เปิดแอพรอบต่อไปเข้าใช้งานได้ทันที ไม่ต้องกรอกซ้ำ
+                </span>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-white font-bold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+            >
+              <UserCheck className="w-4 h-4 stroke-[2.5]" />
+              <span>{isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</span>
+            </button>
+          </form>
+        ) : (
+          /* 2. Email + Password Form */
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">อีเมล (Email)</label>
@@ -176,7 +375,7 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                  placeholder="admin@resort.com"
+                  placeholder="admin@swanhill.com"
                   required
                 />
               </div>
@@ -197,6 +396,17 @@ export default function AuthPage() {
               </div>
             </div>
 
+            {/* Remember Me Checkbox */}
+            <div 
+              onClick={() => setRememberMe(!rememberMe)}
+              className="flex items-center gap-2 cursor-pointer select-none py-1"
+            >
+              <button type="button" className="text-emerald-400">
+                {rememberMe ? <CheckSquare className="w-4 h-4 text-emerald-400" /> : <Square className="w-4 h-4 text-slate-500" />}
+              </button>
+              <span className="text-xs text-slate-300 font-medium">จดจำบัญชีไว้ในเครื่องนี้</span>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
@@ -204,105 +414,34 @@ export default function AuthPage() {
             >
               {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ (Sign In)'}
             </button>
-          </form>
-        ) : (
-          <div>
-            {!confirmationResult ? (
-              <form onSubmit={handlePhoneLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">เบอร์โทรศัพท์</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                      placeholder="081 234 5678"
-                      required
-                    />
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isLoading ? 'กำลังส่งรหัส...' : 'ส่งรหัส OTP'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">กรอกรหัส OTP 6 หลัก</label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    className="w-full px-4 py-3 text-center tracking-[0.4em] text-lg font-mono font-bold bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                    placeholder="000000"
-                    maxLength={6}
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isLoading ? 'กำลังยืนยัน...' : 'ยืนยันรหัส OTP'}
-                </button>
-              </form>
-            )}
-          </div>
-        )}
 
-        {/* Or Divider */}
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-800"></div>
+            {/* Google Sign-in */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800/80 active:scale-95 border border-slate-800 text-slate-300 text-xs font-bold py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                <span>เข้าสู่ระบบด้วย Google</span>
+              </button>
             </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="px-3 bg-slate-900 text-slate-500 font-medium">หรือเข้าสู่ระบบด้วย</span>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-            className="mt-4 w-full flex items-center justify-center gap-2.5 bg-slate-950 hover:bg-slate-800/80 active:scale-95 border border-slate-800 text-slate-200 text-xs font-bold py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
-          >
-            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
-            <span>Google Account</span>
-          </button>
-        </div>
+          </form>
+        )}
 
         {/* Security Reassurance Footer */}
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span>ระบบคลาวด์ Swan HILL • ปลอดภัย 100%</span>
+          <span>ระบบคลาวด์ Swan HILL • ปลอดภัย 100% ไม่เสียค่า SMS</span>
         </div>
 
       </div>
-      <div id="recaptcha-container"></div>
     </div>
   );
 }

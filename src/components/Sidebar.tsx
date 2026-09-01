@@ -103,7 +103,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <button
-          onClick={() => auth.signOut()}
+          onClick={async () => {
+            localStorage.removeItem('swanhill_staff_session');
+            sessionStorage.removeItem('swanhill_staff_session');
+            try { await auth.signOut(); } catch {}
+            window.location.href = '/login';
+          }}
           className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-950/50 hover:text-red-300 rounded-lg transition-colors border border-red-900/30 cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />

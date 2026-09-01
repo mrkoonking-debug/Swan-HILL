@@ -131,8 +131,13 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
-            onClick={() => auth.signOut()}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 active:scale-95 transition-all"
+            onClick={async () => {
+              localStorage.removeItem('swanhill_staff_session');
+              sessionStorage.removeItem('swanhill_staff_session');
+              try { await auth.signOut(); } catch {}
+              window.location.href = '/login';
+            }}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 active:scale-95 transition-all cursor-pointer"
             title="ออกจากระบบ"
           >
             <LogOut className="w-3.5 h-3.5" />

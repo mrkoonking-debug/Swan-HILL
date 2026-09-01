@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import AuthPage from './AuthPage';
 import { Sidebar, type ActiveTab } from './components/Sidebar';
@@ -35,8 +35,16 @@ import {
   saveLogToFirestore
 } from './services/firebaseService';
 
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  phone?: string;
+  role?: string;
+}
+
 // Main PMS Dashboard Layout Component
-const MainDashboard = ({ user }: { user: User }) => {
+const MainDashboard = ({ user }: { user: AuthUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -711,17 +719,89 @@ const MainDashboard = ({ user }: { user: User }) => {
   );
 };
 
-// Top-Level App Component with Routing and Firebase Auth Guard
 export function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const checkAuth = () => {
+    // 1. Check persistent staff session in localStorage (Remember Me)
+    const savedStaff = localStorage.getItem('swanhill_staff_session') || sessionStorage.getItem('swanhill_staff_session');
+    if (savedStaff) {
+      try {
+        const staffData = JSON.parse(savedStaff);
+        setUser({
+          uid: staffData.id || `staff-${staffData.phone}`,
+          email: `${staffData.phone} (${staffData.name})`,
+          displayName: staffData.name,
+          phone: staffData.phone,
+          role: staffData.role,
+        });
+        setLoading(false);
+        return;
+      } catch {
+        localStorage.removeItem('swanhill_staff_session');
+      }
+    }
+
+    // 2. Check Firebase Auth user
+    if (auth.currentUser) {
+      setUser({
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email,
+        displayName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'ผู้ดูแลระบบ',
+      });
+      setLoading(false);
+      return;
+    }
+
+    setUser(null);
+    setLoading(false);
+  };
+
   useEffect(() => {
+    checkAuth();
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      const savedStaff = localStorage.getItem('swanhill_staff_session') || sessionStorage.getItem('swanhill_staff_session');
+      if (savedStaff) {
+        try {
+          const staffData = JSON.parse(savedStaff);
+          setUser({
+            uid: staffData.id || `staff-${staffData.phone}`,
+            email: `${staffData.phone} (${staffData.name})`,
+            displayName: staffData.name,
+            phone: staffData.phone,
+            role: staffData.role,
+          });
+          setLoading(false);
+          return;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (currentUser) {
+        setUser({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'ผู้ดูแลระบบ',
+        });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('swanhill_auth_changed', handleAuthChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('swanhill_auth_changed', handleAuthChange);
+    };
   }, []);
 
   if (loading) {
