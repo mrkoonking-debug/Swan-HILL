@@ -621,6 +621,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
               onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
               onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
               onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
+              onUpdateBookingAddOns={handleUpdateBookingAddOns}
             />
           )}
 

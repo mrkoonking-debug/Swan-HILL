@@ -35,6 +35,8 @@ export interface AddOnItem {
   price: number;
   quantity: number;
   createdAt: string;
+  isOrdered?: boolean; // whether staff has already called/ordered this from external supplier
+  orderedAt?: string;
 }
 
 export interface PaymentTransaction {
