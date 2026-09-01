@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Users, 
   Plus, 
@@ -1354,7 +1355,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
 
       {/* Room Detail Modal (For Clicking on Grid View Cards) */}
-      {selectedRoomModal && (
+      {selectedRoomModal && createPortal(
         <div 
           onClick={() => setSelectedRoomModal(null)}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
@@ -1486,7 +1487,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Custom Sleek In-App Confirmation Popup */}

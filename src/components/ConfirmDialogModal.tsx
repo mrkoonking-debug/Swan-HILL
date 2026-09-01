@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Sparkles, 
   AlertTriangle, 
@@ -99,7 +100,7 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div 
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in duration-200 font-['Prompt']"
@@ -111,7 +112,7 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -143,7 +144,7 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs sm:text-sm transition-all border border-slate-200"
+            className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs sm:text-sm transition-all border border-slate-200 cursor-pointer"
           >
             {cancelText}
           </button>
@@ -153,13 +154,14 @@ export const ConfirmDialogModal: React.FC<ConfirmDialogModalProps> = ({
               onConfirm();
               onClose();
             }}
-            className={`py-3 px-4 rounded-2xl active:scale-95 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1.5 ${getConfirmButtonClass()}`}
+            className={`py-3 px-4 rounded-2xl active:scale-95 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer ${getConfirmButtonClass()}`}
           >
             <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
             <span>{confirmText}</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

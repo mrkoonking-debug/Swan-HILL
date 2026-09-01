@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Calendar, 
   Plus, 
@@ -345,16 +346,21 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
       )}
 
       {/* LEVEL 2 MODAL: DAILY DAY OVERVIEW (เมื่อกดที่วันใดวันหนึ่งในปฏิทิน) */}
-      {selectedDateModal && (
+      {selectedDateModal && createPortal(
         <div 
           onClick={() => setSelectedDateModal(null)}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[90vh] flex flex-col overscroll-contain"
+            className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[88dvh] sm:max-h-[90vh] flex flex-col overscroll-contain animate-in slide-in-from-bottom-8 duration-200"
           >
             
+            {/* Mobile Bottom Sheet Handle */}
+            <div className="pt-2.5 pb-1 bg-slate-900 flex justify-center sm:hidden shrink-0">
+              <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
+            </div>
+
             {/* Modal Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -372,7 +378,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               </div>
               <button
                 onClick={() => setSelectedDateModal(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -386,7 +392,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 if (!booking) {
                   return (
                     <div 
-                      key={room.id}
+                      key={room.id} 
                       className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -410,7 +416,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                           }
                           setSelectedDateModal(null);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5 stroke-[3]" />
                         <span>กดจอง</span>
@@ -420,10 +426,6 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 }
 
                 // If Booked / Occupied
-                const isPaid = booking.paidAmount >= booking.totalAmount;
-                const depositPct = booking.totalAmount > 0 ? Math.round((booking.paidAmount / booking.totalAmount) * 100) : 0;
-                const remaining = Math.max(0, booking.totalAmount - booking.paidAmount);
-
                 return (
                   <div
                     key={room.id}
@@ -438,24 +440,26 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         {room.roomNumber}
                       </span>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-xs text-slate-900 truncate">
-                            {booking.guestName}
-                          </span>
-                          <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-md ${
-                            isPaid ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-900'
-                          }`}>
-                            {isPaid ? 'จ่ายครบ' : `มัดจำ ${depositPct}%`}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
-                          ยอดรวม ฿{booking.totalAmount.toLocaleString()} &bull; ค้าง ฿{remaining.toLocaleString()}
-                        </p>
+                        <span className="font-extrabold text-xs text-slate-900 block truncate">
+                          ห้อง {room.roomNumber} - {room.name}
+                        </span>
+                        <span className="text-[10px] text-blue-700 font-semibold truncate block">
+                          🔵 พักโดย: คุณ {booking.guestName}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="w-7 h-7 rounded-xl bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-700 flex items-center justify-center text-slate-400 transition-colors shrink-0">
-                      <ArrowRightIcon className="w-4 h-4" />
+                    <div className="text-right shrink-0 flex items-center gap-2">
+                      <div>
+                        <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          booking.paidAmount >= booking.totalAmount 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-amber-100 text-amber-900'
+                        }`}>
+                          {booking.paidAmount >= booking.totalAmount ? 'จ่ายครบแล้ว' : `ค้าง ฿${(booking.totalAmount - booking.paidAmount).toLocaleString()}`}
+                        </span>
+                      </div>
+                      <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 );
@@ -466,27 +470,33 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
               <button
                 onClick={() => setSelectedDateModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer"
               >
                 ปิดหน้าต่าง
               </button>
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* LEVEL 3 MODAL: FULL BOOKING, PAYMENT & MOOKATA INSPECTOR (เมื่อกดเลือกบ้านพักนั้น) */}
-      {selectedBookingModal && (
+      {selectedBookingModal && createPortal(
         <div 
           onClick={() => setSelectedBookingModal(null)}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90dvh] sm:max-h-[92vh] flex flex-col overscroll-contain"
+            className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[88dvh] sm:max-h-[92vh] flex flex-col overscroll-contain animate-in slide-in-from-bottom-8 duration-200"
           >
             
+            {/* Mobile Bottom Sheet Handle */}
+            <div className="pt-2.5 pb-1 bg-slate-900 flex justify-center sm:hidden shrink-0">
+              <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
+            </div>
+
             {/* Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -650,7 +660,8 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, Plus, CheckCircle, ShieldCheck, UserCheck } from 'lucide-react';
 import type { HousekeepingTask, HousekeepingStatus, HousekeepingPriority, Room } from '../types/pms';
 
@@ -139,12 +140,12 @@ export const HousekeepingView: React.FC<HousekeepingViewProps> = ({
       </div>
 
       {/* Modal Add Task */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
             <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-base">สั่งงานแม่บ้าน / แจ้งซ่อมห้องพัก</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">✕</button>
             </div>
             <form onSubmit={handleCreateTask} className="p-6 space-y-4 text-sm text-slate-700">
               <div>
@@ -213,7 +214,8 @@ export const HousekeepingView: React.FC<HousekeepingViewProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
