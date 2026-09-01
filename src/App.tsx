@@ -532,7 +532,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900 overflow-hidden font-['Prompt'] select-none">
+    <div className="flex h-screen bg-slate-900 text-slate-900 overflow-hidden font-['Prompt'] select-none">
       {/* Desktop Navigation Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
@@ -555,8 +555,12 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         isPWAInstalled={isInstalled}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}
+      <div 
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform relative z-10 ${
+          isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 shadow-2xl rounded-l-2xl' : 'translate-x-0'
+        }`}
+      >
         {/* Top Header */}
         <Header
           activeTab={activeTab}
@@ -662,13 +666,19 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         </main>
       </div>
 
-      {/* Mobile Floating Bottom Navigation (Hidden when modals are open) */}
-      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !isMobileDrawerOpen && (
-        <BottomNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenNewBooking={handleOpenNormalBooking}
-        />
+      {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
+      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
+        <div 
+          className={`fixed bottom-0 inset-x-0 z-20 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+            isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 pointer-events-none' : 'translate-x-0'
+          }`}
+        >
+          <BottomNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onOpenNewBooking={handleOpenNormalBooking}
+          />
+        </div>
       )}
 
       {/* New Booking Modal */}

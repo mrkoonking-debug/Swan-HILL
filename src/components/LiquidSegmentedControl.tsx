@@ -43,7 +43,6 @@ export function LiquidSegmentedControl<T extends string>({
       const containerRect = container.getBoundingClientRect();
       const buttonRect = activeButton.getBoundingClientRect();
       
-      // Calculate relative position within container padding
       const left = buttonRect.left - containerRect.left;
       const width = buttonRect.width;
 
@@ -55,17 +54,13 @@ export function LiquidSegmentedControl<T extends string>({
     }
   };
 
-  // Run layout measurement safely
   useLayoutEffect(() => {
     updatePillPosition();
   }, [value, options]);
 
-  // Window resize observer to keep pill aligned perfectly
   useEffect(() => {
     const handleResize = () => updatePillPosition();
     window.addEventListener('resize', handleResize);
-    
-    // Also re-measure after fonts load or slight layout settles
     const timeout = setTimeout(updatePillPosition, 50);
 
     return () => {
@@ -74,73 +69,68 @@ export function LiquidSegmentedControl<T extends string>({
     };
   }, [value, options]);
 
-  // Styling maps based on size and variant
+  // Clean, flat original styling dimensions
   const sizeClasses = {
-    sm: 'p-0.5 text-[11px]',
+    sm: 'p-1 text-xs',
     md: 'p-1 text-xs',
     lg: 'p-1.5 text-sm',
   }[size];
 
   const buttonPadding = {
-    sm: 'px-2 py-1 gap-1',
+    sm: 'px-2.5 py-1 gap-1',
     md: 'px-3 py-1.5 gap-1.5',
-    lg: 'px-4 py-2 gap-2',
+    lg: 'px-3.5 py-2 gap-2',
   }[size];
 
+  // Flat original container styles (NO 3D glass, NO water droplets)
   const variantTrackClasses = {
-    light: 'bg-slate-200/80 backdrop-blur-md border border-slate-300/70 shadow-inner',
-    glass: 'bg-slate-900/10 backdrop-blur-xl border border-white/40 shadow-inner',
-    emerald: 'bg-emerald-950/15 backdrop-blur-md border border-emerald-600/20 shadow-inner',
-    dark: 'bg-slate-950/80 backdrop-blur-md border border-slate-800 shadow-inner',
+    light: 'bg-slate-100 border border-slate-200 rounded-xl',
+    glass: 'bg-slate-100 border border-slate-200 rounded-xl',
+    emerald: 'bg-slate-100 border border-slate-200 rounded-xl',
+    dark: 'bg-slate-900 border border-slate-800 rounded-xl',
   }[variant];
 
+  // Flat original solid active pill styles
   const variantPillClasses = {
-    light: 'bg-white text-slate-900 shadow-sm border border-slate-200/80 shadow-slate-900/10',
-    glass: 'bg-white/95 backdrop-blur-xl text-slate-900 border border-white shadow-md shadow-slate-900/10',
-    emerald: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-700/30 border border-emerald-400/30',
-    dark: 'bg-slate-800 text-white border border-slate-700 shadow-md shadow-black/40',
+    light: 'bg-white text-slate-900 shadow-xs border border-slate-200/80 rounded-lg',
+    glass: 'bg-white text-slate-900 shadow-xs border border-slate-200/80 rounded-lg',
+    emerald: 'bg-emerald-600 text-white shadow-xs rounded-lg',
+    dark: 'bg-slate-800 text-white shadow-xs border border-slate-700 rounded-lg',
   }[variant];
 
   return (
     <div
       ref={containerRef}
-      className={`relative inline-flex items-center rounded-2xl select-none transition-all ${
+      className={`relative inline-flex items-center select-none transition-all ${
         fullWidth ? 'w-full flex' : ''
       } ${sizeClasses} ${variantTrackClasses} ${className}`}
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      {/* Sliding Active Pill Indicator (Apple Liquid Spring Physics) */}
+      {/* Sliding Active Pill (Flat original styling with smooth horizontal slide) */}
       {pillStyle.ready && (
         <div
-          className={`absolute top-1 bottom-1 rounded-xl pointer-events-none transition-transform duration-350 ease-[cubic-bezier(0.2,0.9,0.2,1.1)] will-change-transform ${variantPillClasses}`}
+          className={`absolute top-1 bottom-1 pointer-events-none transition-transform duration-250 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform ${variantPillClasses}`}
           style={{
             transform: `translateX(${pillStyle.left}px)`,
             width: `${pillStyle.width}px`,
-            // Fallback for initial render to prevent snap from 0
             opacity: pillStyle.width > 0 ? 1 : 0,
           }}
-        >
-          {/* Subtle liquid specular reflection line at top */}
-          <div className="absolute inset-x-2 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent pointer-events-none rounded-full" />
-        </div>
+        />
       )}
 
       {/* Option Buttons */}
       {options.map((option, idx) => {
         const isActive = option.value === value;
 
-        // Dynamic text colors based on variant and active state
-        let textColorClass = 'text-slate-600 hover:text-slate-900';
+        let textColorClass = 'text-slate-600 hover:text-slate-900 font-medium';
         if (isActive) {
           if (variant === 'emerald' || variant === 'dark') {
-            textColorClass = 'text-white font-extrabold';
+            textColorClass = 'text-white font-semibold';
           } else {
-            textColorClass = 'text-slate-900 font-extrabold';
+            textColorClass = 'text-slate-900 font-bold';
           }
         } else if (variant === 'dark') {
-          textColorClass = 'text-slate-400 hover:text-slate-200';
-        } else if (variant === 'emerald') {
-          textColorClass = 'text-emerald-900/80 hover:text-emerald-950 font-semibold';
+          textColorClass = 'text-slate-400 hover:text-slate-200 font-medium';
         }
 
         return (
@@ -151,12 +141,12 @@ export function LiquidSegmentedControl<T extends string>({
             }}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`relative z-10 flex items-center justify-center font-bold transition-colors duration-200 cursor-pointer rounded-xl active:scale-[0.98] ${buttonPadding} ${textColorClass} ${
+            className={`relative z-10 flex items-center justify-center transition-colors duration-150 cursor-pointer rounded-lg active:scale-[0.98] ${buttonPadding} ${textColorClass} ${
               fullWidth ? 'flex-1' : ''
             }`}
           >
             {option.icon && (
-              <span className="shrink-0 transition-transform duration-200">
+              <span className="shrink-0">
                 {option.icon}
               </span>
             )}
@@ -166,9 +156,9 @@ export function LiquidSegmentedControl<T extends string>({
                 className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                   isActive
                     ? variant === 'emerald'
-                      ? 'bg-white/25 text-white'
+                      ? 'bg-white/20 text-white'
                       : 'bg-emerald-100 text-emerald-800'
-                    : 'bg-slate-300/70 text-slate-700'
+                    : 'bg-slate-200 text-slate-600'
                 }`}
               >
                 {option.badge}
