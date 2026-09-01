@@ -241,6 +241,13 @@ export const initialSettings: ResortSettings = {
   // External Mookata Supplier
   mookataSupplierName: 'ร้านหมูกระทะ (ส่งเดลิเวอรี่ประจำ)',
   mookataSupplierPhone: '081-234-5678',
+
+  // Google & Email Whitelist Control
+  allowedEmails: [
+    '67708153@chonburi.spu.ac.th',
+    'admin@swanhill.com',
+  ],
+  allowGoogleLogin: true,
 };
 
 export const initialLogs: ActivityLog[] = [

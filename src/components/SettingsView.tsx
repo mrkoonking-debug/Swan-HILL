@@ -17,7 +17,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  X,
+  Mail
 } from 'lucide-react';
 import type { ResortSettings, StaffMember, StaffRole } from '../types/pms';
 import { initialSettings } from '../data/initialData';
@@ -45,8 +47,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newStaffRole, setNewStaffRole] = useState<StaffRole>('reception');
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
 
+  // Email / Gmail Whitelist
+  const [newAllowedEmail, setNewAllowedEmail] = useState('');
+  const currentAllowedEmails: string[] = formData.allowedEmails || initialSettings.allowedEmails || [];
+
   const handleTogglePin = (id: string) => {
     setShowPins(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleAddAllowedEmail = () => {
+    const clean = newAllowedEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      alert('กรุณากรอกอีเมลให้ถูกต้อง (เช่น yourname@gmail.com)');
+      return;
+    }
+    if (currentAllowedEmails.includes(clean)) {
+      alert('อีเมลนี้มีอยู่ในรายชื่อที่อนุญาตแล้ว');
+      return;
+    }
+    const updated = [...currentAllowedEmails, clean];
+    setFormData(prev => ({ ...prev, allowedEmails: updated }));
+    setNewAllowedEmail('');
+  };
+
+  const handleDeleteAllowedEmail = (emailToRemove: string) => {
+    if (currentAllowedEmails.length <= 1) {
+      if (!confirm('หากลบอีเมลนี้ออกทั้งหมด อาจไม่มีอีเมลใดสามารถล็อกอินด้วย Google ได้ ต้องการลบใช่หรือไม่?')) {
+        return;
+      }
+    }
+    const updated = currentAllowedEmails.filter(e => e.toLowerCase() !== emailToRemove.toLowerCase());
+    setFormData(prev => ({ ...prev, allowedEmails: updated }));
   };
 
   const handleAddStaff = () => {
@@ -717,6 +748,79 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
             <strong>คำแนะนำสำหรับผู้ดูแล:</strong> พนักงานสามารถล็อกอินด้วยเบอร์โทรศัพท์และรหัส PIN ข้างต้นได้ทันที และหากติ๊ก <strong>"จดจำการเข้าสู่ระบบไว้ในเครื่องนี้"</strong> ตัวเครื่องจะจำการเข้าสู่ระบบไว้ตลอด ไม่ต้องเสียเวลากรอกซ้ำทุกวัน
+          </div>
+        </div>
+
+        {/* EMAIL & GMAIL WHITELIST CONFIGURATION */}
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-purple-600" />
+                <span>กำหนดอีเมล Gmail ที่อนุญาตให้เข้าสู่ระบบ (Email Whitelist)</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                  {currentAllowedEmails.length} อีเมล
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                🔒 <strong>ระบบความปลอดภัยขั้นสูง:</strong> เฉพาะ Gmail ที่อยู่ในรายชื่อนี้เท่านั้นที่สามารถล็อกอินได้ หากมีคนอื่นนำ Gmail อื่นมากด จะโดนบล็อกและเตะออกจากระบบทันที!
+              </p>
+            </div>
+
+            {/* Toggle Google Login */}
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.allowGoogleLogin !== false}
+                onChange={(e) => handleChange('allowGoogleLogin', e.target.checked)}
+                className="w-4 h-4 accent-purple-600 cursor-pointer"
+              />
+              <span>เปิดใช้งานล็อกอินด้วย Google</span>
+            </label>
+          </div>
+
+          {/* Add Allowed Email Input */}
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={newAllowedEmail}
+              onChange={(e) => setNewAllowedEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddAllowedEmail();
+                }
+              }}
+              placeholder="กรอก Gmail หรือ Email ที่ต้องการอนุญาต (เช่น owner@gmail.com)"
+              className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:border-purple-500 focus:bg-white outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddAllowedEmail}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs shrink-0"
+            >
+              + เพิ่มอีเมลอนุญาต
+            </button>
+          </div>
+
+          {/* List of Allowed Emails */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {currentAllowedEmails.map((em) => (
+              <div
+                key={em}
+                className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-colors"
+              >
+                <span>{em}</span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAllowedEmail(em)}
+                  className="text-purple-400 hover:text-red-500 p-0.5 cursor-pointer transition-colors"
+                  title="ลบอีเมลนี้ออกจากสิทธิ์เข้าใช้งาน"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>

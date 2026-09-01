@@ -724,6 +724,29 @@ export function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isEmailAuthorized = (emailToCheck?: string | null): boolean => {
+    if (!emailToCheck) return false;
+    const clean = emailToCheck.toLowerCase().trim();
+    let allowed: string[] = initialSettings.allowedEmails || [];
+    let staffList = initialSettings.staffList || [];
+    try {
+      const cached = localStorage.getItem('swanhill_settings_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
+          allowed = parsed.allowedEmails;
+        }
+        if (parsed.staffList && Array.isArray(parsed.staffList)) {
+          staffList = parsed.staffList;
+        }
+      }
+    } catch {}
+
+    if (allowed.some((e: string) => e.toLowerCase().trim() === clean)) return true;
+    if (staffList.some((s: any) => s.email?.toLowerCase().trim() === clean)) return true;
+    return false;
+  };
+
   const checkAuth = () => {
     // 1. Check persistent staff session in localStorage (Remember Me)
     const savedStaff = localStorage.getItem('swanhill_staff_session') || sessionStorage.getItem('swanhill_staff_session');
@@ -744,8 +767,17 @@ export function App() {
       }
     }
 
-    // 2. Check Firebase Auth user
+    // 2. Check Firebase Auth user (Strict Whitelist Check)
     if (auth.currentUser) {
+      if (!auth.currentUser.isAnonymous && auth.currentUser.email) {
+        if (!isEmailAuthorized(auth.currentUser.email)) {
+          auth.signOut();
+          localStorage.removeItem('swanhill_staff_session');
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+      }
       setUser({
         uid: auth.currentUser.uid,
         email: auth.currentUser.email,
@@ -782,6 +814,15 @@ export function App() {
       }
 
       if (currentUser) {
+        if (!currentUser.isAnonymous && currentUser.email) {
+          if (!isEmailAuthorized(currentUser.email)) {
+            auth.signOut();
+            localStorage.removeItem('swanhill_staff_session');
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+        }
         setUser({
           uid: currentUser.uid,
           email: currentUser.email,

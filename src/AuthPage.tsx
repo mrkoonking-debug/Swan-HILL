@@ -34,8 +34,10 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [staffList, setStaffList] = useState<StaffMember[]>(initialSettings.staffList || []);
+  const [allowedEmails, setAllowedEmails] = useState<string[]>(initialSettings.allowedEmails || []);
+  const [allowGoogleLogin, setAllowGoogleLogin] = useState<boolean>(true);
 
-  // Fetch latest staff list from Firestore on mount
+  // Fetch latest staff list & email whitelist from Firestore on mount
   useEffect(() => {
     const fetchStaffConfig = async () => {
       try {
@@ -45,8 +47,14 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
           const data = snap.data() as ResortSettings;
           if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
             setStaffList(data.staffList);
-            return;
           }
+          if (data.allowedEmails && Array.isArray(data.allowedEmails)) {
+            setAllowedEmails(data.allowedEmails);
+          }
+          if (data.allowGoogleLogin !== undefined) {
+            setAllowGoogleLogin(data.allowGoogleLogin);
+          }
+          return;
         }
       } catch (err) {
         console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
@@ -59,6 +67,9 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
           const parsed = JSON.parse(localSettings);
           if (parsed.staffList && Array.isArray(parsed.staffList)) {
             setStaffList(parsed.staffList);
+          }
+          if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
+            setAllowedEmails(parsed.allowedEmails);
           }
         } catch {
           // ignore
@@ -157,11 +168,35 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     }
   };
 
-  // 2. Handle Email + Password Login
+  // 2. Handle Email + Password Login (with Whitelist verification)
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check Whitelist against latest config
+    let currentAllowed = allowedEmails;
+    let currentStaff = staffList;
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'resort_config'));
+      if (snap.exists()) {
+        const cfg = snap.data() as ResortSettings;
+        if (cfg.allowedEmails) currentAllowed = cfg.allowedEmails;
+        if (cfg.staffList) currentStaff = cfg.staffList;
+      }
+    } catch {}
+
+    const isAllowed = currentAllowed.some(e => e.toLowerCase().trim() === cleanEmail) ||
+      currentStaff.some(s => s.email?.toLowerCase().trim() === cleanEmail);
+
+    if (!isAllowed) {
+      setError(`❌ อีเมลนี้ (${cleanEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งาน กรุณาติดต่อผู้ดูแลระบบ Swan HILL`);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (rememberMe) {
         await setPersistence(auth, browserLocalPersistence);
@@ -178,19 +213,59 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     }
   };
 
-  // 3. Handle Google Login
+  // 3. Handle Google Login (STRICT WHITELIST - Block any unauthorized Gmail)
   const handleGoogleLogin = async () => {
     setError('');
     setIsLoading(true);
     try {
+      // 1. Fetch latest whitelist from Firestore to be 100% up-to-date
+      let currentAllowed = allowedEmails;
+      let currentStaff = staffList;
+      let isGoogleEnabled = allowGoogleLogin;
+
+      try {
+        const docRef = doc(db, 'settings', 'resort_config');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data() as ResortSettings;
+          if (data.allowedEmails) currentAllowed = data.allowedEmails;
+          if (data.staffList) currentStaff = data.staffList;
+          if (data.allowGoogleLogin !== undefined) isGoogleEnabled = data.allowGoogleLogin;
+        }
+      } catch (err) {
+        console.warn('Could not refresh whitelist:', err);
+      }
+
+      if (isGoogleEnabled === false) {
+        setError('เจ้าของรีสอร์ทได้ปิดการเข้าสู่ระบบด้วย Google ชั่วคราว กรุณาใช้เบอร์โทร + รหัส PIN');
+        setIsLoading(false);
+        return;
+      }
+
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithPopup(auth, googleProvider);
+      const res = await signInWithPopup(auth, googleProvider);
+      const userEmail = res.user.email?.toLowerCase().trim() || '';
+
+      // Check if userEmail is on the Whitelist
+      const isAllowed = currentAllowed.some(e => e.toLowerCase().trim() === userEmail) ||
+        currentStaff.some(s => s.email?.toLowerCase().trim() === userEmail);
+
+      if (!isAllowed) {
+        // KICK THEM OUT IMMEDIATELY!
+        await auth.signOut();
+        setError(`❌ บัญชี Google (${userEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ Swan HILL เพื่อเพิ่มสิทธิ์ในหน้าตั้งค่า`);
+        setIsLoading(false);
+        return;
+      }
+
       localStorage.removeItem('swanhill_staff_session');
       window.dispatchEvent(new Event('swanhill_auth_changed'));
       if (onLoginSuccess) onLoginSuccess();
     } catch (err: any) {
       console.error('[AuthPage] Google auth error:', err);
-      setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
+      if (!err.message?.includes('popup-closed-by-user')) {
+        setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -3,7 +3,6 @@ import {
   Users, 
   Plus, 
   ArrowRight, 
-  Sparkles, 
   Phone, 
   Calendar, 
   X, 
@@ -18,12 +17,26 @@ import {
   Receipt, 
   CreditCard, 
   AlertTriangle, 
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  DoorOpen
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
-import { formatThaiDate } from '../utils/dateUtils';
+import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
 import { ConfirmDialogModal, type ConfirmType } from './ConfirmDialogModal';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+
+const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+
+const formatThaiFullDate = (dateStr: string): string => {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  const dayName = THAI_DAYS[d.getDay()];
+  const day = d.getDate();
+  const month = THAI_MONTHS_FULL[d.getMonth()];
+  const yearBE = d.getFullYear() + 543;
+  return `${dayName}ที่ ${day} ${month} ${yearBE}`;
+};
 
 interface DashboardViewProps {
   rooms: Room[];
@@ -77,9 +90,67 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   useLockBodyScroll(!!selectedRoomModal || !!confirmDialog);
 
+  // Today's Date String & Selected Date for Room Inspection
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const hasToday = bookings.some(b => b.checkInDate <= todayStr && b.checkOutDate >= todayStr && !b.deletedAt);
+    if (hasToday) return todayStr;
+    const hasSept = bookings.some(b => b.checkInDate <= '2026-09-01' && b.checkOutDate >= '2026-09-01' && !b.deletedAt);
+    if (hasSept) return '2026-09-01';
+    return todayStr;
+  });
+
+  const isViewingToday = selectedDate === todayStr;
+
+  const handleShiftDate = (days: number) => {
+    const current = new Date(selectedDate + 'T00:00:00');
+    current.setDate(current.getDate() + days);
+    setSelectedDate(current.toISOString().split('T')[0]);
+  };
+
+  const handleResetToToday = () => {
+    setSelectedDate(todayStr);
+  };
+
+  // Helper to determine room status on selectedDate
+  const getRoomStatusOnDate = (room: Room) => {
+    if (isViewingToday) {
+      const currentBooking = room.currentGuest?.bookingId 
+        ? bookings.find(b => b.id === room.currentGuest?.bookingId)
+        : bookings.find(b => (b.roomId === room.id || b.roomNumber === room.roomNumber) && b.checkInDate <= todayStr && b.checkOutDate > todayStr && b.status !== 'cancelled' && !b.deletedAt);
+      return {
+        status: room.status,
+        booking: currentBooking,
+      };
+    }
+
+    // For other dates, look for an active booking
+    const booking = bookings.find(b => 
+      (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
+      b.checkInDate <= selectedDate && 
+      b.checkOutDate > selectedDate && 
+      b.status !== 'cancelled' && 
+      !b.deletedAt
+    );
+
+    if (booking) {
+      return { status: 'occupied' as RoomStatus, booking };
+    }
+    return { status: 'available' as RoomStatus, booking: undefined };
+  };
+
   const totalRooms = rooms.length;
-  const availableRooms = rooms.filter(r => r.status === 'available').length;
-  const occupiedRooms = rooms.filter(r => r.status === 'occupied').length;
+
+  // Dynamic status on selectedDate across all rooms
+  const roomsWithDateState = rooms.map(r => ({
+    room: r,
+    state: getRoomStatusOnDate(r),
+  }));
+
+  const availableRooms = roomsWithDateState.filter(item => item.state.status === 'available').length;
+  const occupiedRooms = roomsWithDateState.filter(item => item.state.status === 'occupied').length;
+  const arrivalsOnDate = bookings.filter(b => b.checkInDate === selectedDate && b.status !== 'cancelled' && !b.deletedAt);
+  const departuresOnDate = bookings.filter(b => b.checkOutDate === selectedDate && b.status !== 'cancelled' && !b.deletedAt);
   const totalMonthRevenue = bookings.reduce((sum, b) => sum + b.paidAmount, 0);
 
   // Map room lookup by number
@@ -88,9 +159,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Currently selected room in 3D Map Inspector
   const selectedMapRoom = roomMap[selectedMapRoomNumber] || rooms[0];
-  const selectedMapBooking = selectedMapRoom?.currentGuest?.bookingId
-    ? bookings.find(b => b.id === selectedMapRoom.currentGuest?.bookingId)
-    : bookings.find(b => b.roomId === selectedMapRoom?.id && b.status !== 'cancelled');
+  const selectedMapState = selectedMapRoom ? getRoomStatusOnDate(selectedMapRoom) : undefined;
+  const selectedMapBooking = selectedMapState?.booking || (
+    selectedMapRoom?.currentGuest?.bookingId
+      ? bookings.find(b => b.id === selectedMapRoom.currentGuest?.bookingId)
+      : bookings.find(b => b.roomId === selectedMapRoom?.id && b.status !== 'cancelled')
+  );
 
   // Strictly order rooms sequentially: S1, S2 -> S3, S4 -> S5, S6
   const mediumRooms = [roomMap['S1'], roomMap['S2']].filter((r): r is Room => Boolean(r));
@@ -121,14 +195,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const selectedRoomDays = selectedMapRoom ? getRoomMonthAvailability(selectedMapRoom.id) : [];
 
   const renderRoomCard = (room: Room) => {
-    const isAvailable = room.status === 'available';
-    const isOccupied = room.status === 'occupied';
-    const isCleaning = room.status === 'cleaning';
-    const isMaintenance = room.status === 'maintenance';
+    const roomState = getRoomStatusOnDate(room);
+    const isAvailable = roomState.status === 'available';
+    const isOccupied = roomState.status === 'occupied';
+    const isCleaning = roomState.status === 'cleaning';
+    const isMaintenance = roomState.status === 'maintenance';
 
-    const currentBooking = room.currentGuest?.bookingId 
-      ? bookings.find(b => b.id === room.currentGuest?.bookingId)
-      : undefined;
+    const currentBooking = roomState.booking;
 
     const roomBaseTotal = currentBooking ? currentBooking.roomPrice * currentBooking.totalNights : 0;
     const addOnsTotal = currentBooking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
@@ -363,7 +436,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
       
-      {/* Top Banner: Overview KPI Cards */}
+      {/* DATE SELECTOR & STATUS BAR (ค่าเริ่มต้นคือวันปัจจุบัน พร้อมบอกวันที่ภาษาไทย) */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Date Shift Buttons */}
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => handleShiftDate(-1)}
+            className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+            <span>เมื่อวาน</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetToToday}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-black rounded-xl border transition-all cursor-pointer ${
+              isViewingToday 
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/30' 
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>📌 วันนี้</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleShiftDate(1)}
+            className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+          >
+            <span>พรุ่งนี้</span>
+            <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* Thai Full Date Label + Date Picker */}
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <div className="text-left sm:text-right">
+            <span className="text-[11px] font-bold text-slate-400 block uppercase">
+              {isViewingToday ? '📌 วันนี้ (วันปัจจุบัน)' : '📅 ดูสถานะล่วงหน้า'}
+            </span>
+            <span className="text-sm sm:text-base font-black text-slate-900 block">
+              {formatThaiFullDate(selectedDate)}
+            </span>
+          </div>
+
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+            className="px-3 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
+            title="แตะเพื่อเลือกวันที่ต้องการดูสถานะผังบ้าน"
+          />
+        </div>
+      </div>
+
+      {/* Top Banner: Overview KPI Cards (ตามวันที่เลือก) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-emerald-700/10">
           <div className="flex items-center justify-between">
@@ -377,13 +507,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs text-emerald-200 font-medium">/ {totalRooms} หลัง</span>
           </div>
           <div className="mt-2 text-[10px] text-emerald-200/90 font-medium">
-            เปิดจองได้ทันที
+            {isViewingToday ? 'เปิดรับแขกได้ทันที' : `สถานะว่างวันที่ ${formatThaiDate(selectedDate)}`}
           </div>
         </div>
 
         <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-800 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-blue-700/10">
           <div className="flex items-center justify-between">
-            <span className="text-blue-100 font-bold text-xs">มีผู้เข้าพักอยู่</span>
+            <span className="text-blue-100 font-bold text-xs">มีผู้เข้าพัก / จองแล้ว</span>
             <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
               <Users className="w-4 h-4 text-blue-100" />
             </div>
@@ -399,19 +529,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-700 rounded-3xl p-4 md:p-5 text-white shadow-lg shadow-amber-600/10">
           <div className="flex items-center justify-between">
-            <span className="text-amber-100 font-bold text-xs">รอทำความสะอาด</span>
+            <span className="text-amber-100 font-bold text-xs">เช็คอินเข้าพักวันนี้</span>
             <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
-              <Sparkles className="w-4 h-4 text-amber-100" />
+              <DoorOpen className="w-4 h-4 text-amber-100" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl md:text-3xl font-black">
-              {rooms.filter(r => r.status === 'cleaning').length}
+              {arrivalsOnDate.length}
             </span>
-            <span className="text-xs text-amber-200 font-medium">หลัง</span>
+            <span className="text-xs text-amber-200 font-medium">ห้อง</span>
           </div>
           <div className="mt-2 text-[10px] text-amber-200/90 font-medium">
-            เตรียมพร้อมสำหรับแขกใหม่
+            ออกวันนี้ {departuresOnDate.length} ห้อง
           </div>
         </div>
 
@@ -514,9 +644,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {rooms.map((room) => {
                   const coords = PIN_COORDINATES[room.roomNumber] || { top: '50%', left: '50%' };
                   const isSelected = selectedMapRoomNumber === room.roomNumber;
-                  const isAvailable = room.status === 'available';
-                  const isOccupied = room.status === 'occupied';
-                  const isCleaning = room.status === 'cleaning';
+                  const roomState = getRoomStatusOnDate(room);
+                  const isAvailable = roomState.status === 'available';
+                  const isOccupied = roomState.status === 'occupied';
+                  const isCleaning = roomState.status === 'cleaning';
 
                   return (
                     <button

@@ -122,6 +122,7 @@ export interface StaffMember {
   isActive: boolean;
   notes?: string;
   createdAt: string;
+  email?: string;
 }
 
 export interface ResortSettings {
@@ -156,4 +157,8 @@ export interface ResortSettings {
   // External Mookata Supplier / Delivery Shop
   mookataSupplierName?: string;
   mookataSupplierPhone?: string;
+
+  // Google & Email Whitelist Control
+  allowedEmails?: string[];
+  allowGoogleLogin?: boolean;
 }
