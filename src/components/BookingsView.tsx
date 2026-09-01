@@ -77,9 +77,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   const [viewMode, setViewMode] = useState<'daily' | 'all'>('daily');
   const [copyMookataSuccess, setCopyMookataSuccess] = useState(false);
 
+  // Local Timezone Safe Date Helpers
+  const getLocalDateStr = (d: Date = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayStr = getLocalDateStr(new Date());
+
   // Daily View Date State
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
     const hasToday = bookings.some(b => b.checkInDate <= todayStr && b.checkOutDate >= todayStr && !b.deletedAt);
     if (hasToday) return todayStr;
     const hasSeptDemo = bookings.some(b => b.checkInDate <= '2026-09-01' && b.checkOutDate >= '2026-09-01' && !b.deletedAt);
@@ -92,16 +101,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
   // Date Navigation Handlers
   const handleShiftDate = (days: number) => {
-    const d = new Date(selectedDate + 'T00:00:00');
-    d.setDate(d.getDate() + days);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    setSelectedDate(`${y}-${m}-${day}`);
+    const parts = selectedDate.split('-').map(Number);
+    const y = parts[0] || new Date().getFullYear();
+    const m = parts[1] || (new Date().getMonth() + 1);
+    const d = parts[2] || new Date().getDate();
+    const current = new Date(y, m - 1, d);
+    current.setDate(current.getDate() + days);
+    setSelectedDate(getLocalDateStr(current));
   };
 
   const handleResetToToday = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
     setSelectedDate(todayStr);
   };
 
@@ -389,9 +398,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 type="button"
                 onClick={() => handleShiftDate(-1)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+                title="ย้อนดูวันก่อนหน้า"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>เมื่อวาน</span>
+                <span>{selectedDate === todayStr ? 'เมื่อวาน' : 'วันก่อนหน้า'}</span>
               </button>
 
               {/* Today Reset Button */}
@@ -399,6 +409,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 type="button"
                 onClick={handleResetToToday}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200 transition-all cursor-pointer"
+                title="กลับมาดูสถานะวันปัจจุบัน"
               >
                 <Clock className="w-4 h-4 text-emerald-600" />
                 <span>📌 วันนี้</span>
@@ -409,8 +420,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 type="button"
                 onClick={() => handleShiftDate(1)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+                title="ดูสถานะวันถัดไป"
               >
-                <span>พรุ่งนี้</span>
+                <span>{selectedDate === todayStr ? 'พรุ่งนี้' : 'วันถัดไป'}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

@@ -90,8 +90,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   useLockBodyScroll(!!selectedRoomModal || !!confirmDialog);
 
-  // Today's Date String & Selected Date for Room Inspection
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Today's Date String (local timezone safe)
+  const getLocalDateStr = (d: Date = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayStr = getLocalDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const hasToday = bookings.some(b => b.checkInDate <= todayStr && b.checkOutDate >= todayStr && !b.deletedAt);
     if (hasToday) return todayStr;
@@ -103,9 +110,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const isViewingToday = selectedDate === todayStr;
 
   const handleShiftDate = (days: number) => {
-    const current = new Date(selectedDate + 'T00:00:00');
+    const parts = selectedDate.split('-').map(Number);
+    const y = parts[0] || new Date().getFullYear();
+    const m = parts[1] || (new Date().getMonth() + 1);
+    const d = parts[2] || new Date().getDate();
+    const current = new Date(y, m - 1, d);
     current.setDate(current.getDate() + days);
-    setSelectedDate(current.toISOString().split('T')[0]);
+    setSelectedDate(getLocalDateStr(current));
   };
 
   const handleResetToToday = () => {
@@ -444,9 +455,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             type="button"
             onClick={() => handleShiftDate(-1)}
             className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+            title="ย้อนดูวันก่อนหน้า"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>เมื่อวาน</span>
+            <span>{isViewingToday ? 'เมื่อวาน' : 'วันก่อนหน้า'}</span>
           </button>
 
           <button
@@ -457,6 +469,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
             }`}
+            title="กลับมาดูสถานะวันปัจจุบัน"
           >
             <Clock className="w-4 h-4" />
             <span>📌 วันนี้</span>
@@ -466,8 +479,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             type="button"
             onClick={() => handleShiftDate(1)}
             className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 transition-all cursor-pointer shrink-0"
+            title="ดูสถานะวันถัดไป"
           >
-            <span>พรุ่งนี้</span>
+            <span>{isViewingToday ? 'พรุ่งนี้' : 'วันถัดไป'}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
