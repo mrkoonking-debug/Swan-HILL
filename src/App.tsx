@@ -551,8 +551,6 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         setActiveTab={setActiveTab}
         onOpenNewBooking={handleOpenNormalBooking}
         userEmail={user.email}
-        onOpenInstallPWA={() => setIsInstallModalOpen(true)}
-        isPWAInstalled={isInstalled}
       />
 
       {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}

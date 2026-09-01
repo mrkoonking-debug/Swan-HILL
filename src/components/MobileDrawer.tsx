@@ -7,12 +7,8 @@ import {
   LogOut, 
   Plus,
   User,
-  Sparkles,
-  UtensilsCrossed,
-  ShieldCheck,
   History,
-  Settings,
-  Download
+  Settings
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -25,8 +21,6 @@ interface MobileDrawerProps {
   setActiveTab: (tab: ActiveTab) => void;
   onOpenNewBooking: () => void;
   userEmail: string | null;
-  onOpenInstallPWA?: () => void;
-  isPWAInstalled?: boolean;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -36,8 +30,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   setActiveTab,
   onOpenNewBooking,
   userEmail,
-  onOpenInstallPWA,
-  isPWAInstalled = false,
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', subtitle: 'ตรวจสอบสถานะห้องพักและเช็คอิน', icon: Home },
@@ -121,59 +113,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               );
             })}
           </div>
-
-          {/* Additional Features Section (Ready for future expansion) */}
-          <div className="space-y-1 pt-2 border-t border-slate-800">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2">
-              บริการ & แม่บ้าน
-            </span>
-
-            <div className="p-2.5 rounded-2xl bg-slate-800/50 border border-slate-800 flex items-center gap-2.5 text-xs text-slate-400 font-bold">
-              <UtensilsCrossed className="w-4 h-4 text-amber-400 shrink-0" />
-              <div>
-                <span className="text-white block text-xs">สั่งหมูกระทะ & อาหาร</span>
-                <span className="text-[10px] text-slate-500">จัดการออเดอร์ในห้องพัก</span>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-slate-800/50 border border-slate-800 flex items-center gap-2.5 text-xs text-slate-400 font-bold">
-              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-              <div>
-                <span className="text-white block text-xs">สถานะทำความสะอาด</span>
-                <span className="text-[10px] text-slate-500">เปิด-ปิดสถานะรอแม่บ้าน</span>
-              </div>
-            </div>
-          </div>
-
-          {/* System Info */}
-          <div className="space-y-1 pt-2 border-t border-slate-800">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-2">
-              ระบบ & ความปลอดภัย
-            </span>
-            <div className="p-2.5 rounded-2xl bg-slate-800/30 flex items-center gap-2 text-xs text-slate-400 font-medium">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span className="text-[11px]">ระบบคลาวด์ Firebase ปลอดภัย 100%</span>
-            </div>
-          </div>
-
         </div>
 
         {/* Footer: User & Sign Out */}
         <div className="p-3 bg-slate-950 border-t border-slate-800 shrink-0 space-y-2">
-          {onOpenInstallPWA && !isPWAInstalled && (
-            <button
-              onClick={() => {
-                onOpenInstallPWA();
-                onClose();
-              }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 rounded-xl transition-all border border-emerald-800/40 cursor-pointer active:scale-95 shadow-xs"
-              title="ติดตั้งเป็นแอพลงเครื่อง (PWA)"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>ติดตั้งแอพลงมือถือ (PWA)</span>
-            </button>
-          )}
-
           <div className="flex items-center gap-2 px-1 text-slate-300 text-xs font-medium truncate">
             <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="truncate">{userEmail || 'ผู้ดูแลระบบ Swan HILL'}</span>
