@@ -22,9 +22,11 @@ interface NewBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   rooms: Room[];
+  bookings?: Booking[];
   onAddBooking: (booking: Booking) => void;
   prefillRoomId?: string;
   prefillDate?: string;
+  prefillCheckOutDate?: string;
 }
 
 // Generate auto booking code like BK-20260902-04
@@ -38,9 +40,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   isOpen,
   onClose,
   rooms,
+  bookings = [],
   onAddBooking,
   prefillRoomId,
-  prefillDate
+  prefillDate,
+  prefillCheckOutDate
 }) => {
   useLockBodyScroll(isOpen);
   const defaultCheckIn = formatLocalDate(new Date());
@@ -85,9 +89,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (prefillDate) {
       setCheckInDate(prefillDate);
+    }
+    if (prefillCheckOutDate) {
+      setCheckOutDate(prefillCheckOutDate);
+    } else if (prefillDate) {
       setCheckOutDate(shiftDateStr(prefillDate, 1));
     }
-  }, [prefillRoomId, prefillDate, isOpen, rooms]);
+  }, [prefillRoomId, prefillDate, prefillCheckOutDate, isOpen, rooms]);
 
   // Update default deposit when grandTotal changes
   useEffect(() => {
@@ -103,14 +111,24 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const depositPercent = grandTotal > 0 ? Math.round((effectivePaid / grandTotal) * 100) : 0;
   const remainingAtCheckin = Math.max(0, grandTotal - effectivePaid);
 
-  // Room Dropdown Options
-  const roomOptions: DropdownOption[] = rooms.map(r => ({
-    value: r.id,
-    label: `[${r.roomNumber}] ${r.name}`,
-    sublabel: r.type,
-    badge: `฿${r.pricePerNight.toLocaleString()}/คืน`,
-    icon: <HouseLogo roomNumber={r.roomNumber} size="sm" />
-  }));
+  // Active bookings filter to check room conflicts
+  const activeBookings = (bookings || []).filter(b => !b.deletedAt && b.status !== 'cancelled');
+
+  // Room Dropdown Options with live availability check
+  const roomOptions: DropdownOption[] = rooms.map(r => {
+    const conflict = activeBookings.find(b => 
+      (b.roomId === r.id || b.roomNumber === r.roomNumber) &&
+      b.checkInDate < checkOutDate && b.checkOutDate > checkInDate
+    );
+
+    return {
+      value: r.id,
+      label: conflict ? `[${r.roomNumber}] ${r.name} (ติดจอง)` : `[${r.roomNumber}] ${r.name}`,
+      sublabel: conflict ? `${r.type} • ติดจองโดยคุณ ${conflict.guestName}` : `${r.type} • ว่างพร้อมจอง`,
+      badge: conflict ? '🔴 ติดจองแล้ว' : `🟢 ว่าง ฿${r.pricePerNight.toLocaleString()}/คืน`,
+      icon: <HouseLogo roomNumber={r.roomNumber} size="sm" />
+    };
+  });
 
   // Payment Dropdown Options
   const paymentOptions: DropdownOption[] = [

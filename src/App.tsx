@@ -18,6 +18,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
+import { QuickAvailabilityModal } from './components/QuickAvailabilityModal';
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallModal, PWAUpdateBanner } from './components/PWAInstallModal';
 import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
@@ -72,6 +73,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [isQuickCheckerOpen, setIsQuickCheckerOpen] = useState(false);
   
   // Use IDs for dynamic reactive booking modals
   const [selectedBookingForAddOrderId, setSelectedBookingForAddOrderId] = useState<string | null>(null);
@@ -81,6 +83,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
+  const [prefillCheckOutDate, setPrefillCheckOutDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Resort Settings State (with Firebase Sync + Local fallback)
@@ -217,6 +220,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const handleOpenNormalBooking = () => {
     setPrefillRoomId(undefined);
     setPrefillDate(undefined);
+    setPrefillCheckOutDate(undefined);
     setIsNewBookingOpen(true);
   };
 
@@ -563,6 +567,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
           onOpenInstallPWA={() => setIsInstallModalOpen(true)}
           isPWAInstalled={isInstalled}
+          onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
         />
 
         {/* Dynamic Viewport Container */}
@@ -581,9 +586,17 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
               onOpenNewBookingForRoom={(roomId) => {
                 setPrefillRoomId(roomId);
                 setPrefillDate(undefined);
+                setPrefillCheckOutDate(undefined);
                 setIsNewBookingOpen(true);
               }}
               onOpenNewBooking={handleOpenNormalBooking}
+              onOpenNewBookingWithDates={(roomId, checkIn, checkOut) => {
+                setPrefillRoomId(roomId);
+                setPrefillDate(checkIn);
+                setPrefillCheckOutDate(checkOut);
+                setIsNewBookingOpen(true);
+              }}
+              onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
               onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
               onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
               onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
@@ -659,11 +672,30 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       {/* New Booking Modal */}
       <NewBookingModal
         isOpen={isNewBookingOpen}
-        onClose={() => setIsNewBookingOpen(false)}
+        onClose={() => {
+          setIsNewBookingOpen(false);
+          setPrefillCheckOutDate(undefined);
+        }}
         rooms={rooms}
+        bookings={bookings}
         onAddBooking={handleAddBooking}
         prefillRoomId={prefillRoomId}
         prefillDate={prefillDate}
+        prefillCheckOutDate={prefillCheckOutDate}
+      />
+
+      {/* Quick Room Availability Checker Modal (Access from anywhere) */}
+      <QuickAvailabilityModal
+        isOpen={isQuickCheckerOpen}
+        onClose={() => setIsQuickCheckerOpen(false)}
+        rooms={rooms}
+        bookings={bookings}
+        onSelectRoomForBooking={(roomId, checkIn, checkOut) => {
+          setPrefillRoomId(roomId);
+          setPrefillDate(checkIn);
+          setPrefillCheckOutDate(checkOut);
+          setIsNewBookingOpen(true);
+        }}
       />
 
       {/* In-Stay Add-Ons & Food Ordering Modal */}

@@ -19,12 +19,16 @@ import {
   AlertTriangle, 
   ChevronRight,
   ChevronLeft,
-  DoorOpen
+  DoorOpen,
+  Search,
+  Copy,
+  Check
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
-import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
+import { formatThaiDate, THAI_MONTHS_FULL, shiftDateStr } from '../utils/dateUtils';
 import { ConfirmDialogModal, type ConfirmType } from './ConfirmDialogModal';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { QuickAvailabilityModal } from './QuickAvailabilityModal';
 
 const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
 
@@ -46,6 +50,8 @@ interface DashboardViewProps {
   onCheckOutGuest: (bookingId: string) => void;
   onOpenNewBookingForRoom?: (roomId: string) => void;
   onOpenNewBooking: () => void;
+  onOpenNewBookingWithDates?: (roomId: string, checkIn: string, checkOut: string) => void;
+  onOpenQuickChecker?: () => void;
   onOpenAddOrder?: (booking: Booking) => void;
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
@@ -66,9 +72,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   rooms,
   bookings,
   onUpdateRoomStatus,
+  onCheckInGuest: _onCheckInGuest,
   onCheckOutGuest,
   onOpenNewBookingForRoom,
   onOpenNewBooking,
+  onOpenNewBookingWithDates,
+  onOpenQuickChecker,
   onOpenAddOrder,
   onOpenReceipt,
   onOpenAddPayment,
@@ -77,6 +86,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
   const [selectedMapRoomNumber, setSelectedMapRoomNumber] = useState<string>('S1');
+  const [rightPanelTab, setRightPanelTab] = useState<'all' | 'single'>('all');
+  const [isQuickCheckerOpen, setIsQuickCheckerOpen] = useState(false);
+  const [copiedLineAllSuccess, setCopiedLineAllSuccess] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -148,6 +160,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return { status: 'occupied' as RoomStatus, booking };
     }
     return { status: 'available' as RoomStatus, booking: undefined };
+  };
+
+  const handleCopyAvailableRoomsOnDate = () => {
+    const nextDayStr = shiftDateStr(selectedDate, 1);
+    const availableOnDate = rooms.filter(r => getRoomStatusOnDate(r).status === 'available');
+
+    if (availableOnDate.length === 0) {
+      const text = `🌿 สวอนฮิลล์ รีสอร์ท (Swan HILL)\n📅 ประจำวันที่: ${formatThaiDate(selectedDate)}\nขออภัยครับ วันนี้บ้านพักเต็มทุกหลังแล้วครับ 🙏`;
+      navigator.clipboard.writeText(text);
+      setCopiedLineAllSuccess(true);
+      setTimeout(() => setCopiedLineAllSuccess(false), 2500);
+      return;
+    }
+
+    const houseList = availableOnDate.map((r, i) => 
+      `${i + 1}. บ้าน ${r.roomNumber} (${r.type}) - พักได้ ${r.capacity} ท่าน\n   ราคา: ฿${r.pricePerNight.toLocaleString()} /คืน`
+    ).join('\n');
+
+    const text = `🌿 สวอนฮิลล์ รีสอร์ท (Swan HILL)\nขอแจ้งบ้านพักที่ว่างพร้อมให้บริการครับ ✨\n\n📅 วันที่เข้าพัก: ${formatThaiDate(selectedDate)} ถึง ${formatThaiDate(nextDayStr)} (1 คืน)\n\n🏡 บ้านที่ว่างมีดังนี้ครับ:\n${houseList}\n\n🍲 มีบริการสั่งหมูกระทะส่งตรงถึงหน้าบ้านพัก\nสนใจจองหรือสอบถามเพิ่มเติมแจ้งได้เลยนะครับ 😊`;
+
+    navigator.clipboard.writeText(text);
+    setCopiedLineAllSuccess(true);
+    setTimeout(() => setCopiedLineAllSuccess(false), 2500);
   };
 
   const totalRooms = rooms.length;
@@ -507,6 +542,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
+      {/* Quick Room Availability Glance Bar for selectedDate (All 6 Houses At A Glance) */}
+      <div className="p-3 sm:px-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-white rounded-2xl border border-emerald-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-bold text-emerald-950">
+              บ้านที่ว่าง {isViewingToday ? 'วันนี้' : formatThaiDate(selectedDate)}:
+            </span>
+          </div>
+
+          {rooms.filter(r => getRoomStatusOnDate(r).status === 'available').length > 0 ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {rooms
+                .filter(r => getRoomStatusOnDate(r).status === 'available')
+                .map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      if (onOpenNewBookingForRoom) onOpenNewBookingForRoom(r.id);
+                      else onOpenNewBooking();
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-600 hover:text-white active:scale-95 text-emerald-900 border border-emerald-300 text-xs font-bold shadow-2xs transition-all cursor-pointer group"
+                    title={`กดจองบ้าน ${r.roomNumber}`}
+                  >
+                    <span>บ้าน {r.roomNumber}</span>
+                    <span className="text-[10px] text-emerald-700 group-hover:text-emerald-100 font-normal">
+                      (฿{r.pricePerNight.toLocaleString()})
+                    </span>
+                  </button>
+                ))}
+            </div>
+          ) : (
+            <span className="text-xs text-rose-600 font-semibold">
+              เต็มทุกหลังแล้วในวันที่เลือก
+            </span>
+          )}
+        </div>
+
+        {/* Quick Check Date Range & Line Copy Buttons */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {rooms.filter(r => getRoomStatusOnDate(r).status === 'available').length > 0 && (
+            <button
+              type="button"
+              onClick={handleCopyAvailableRoomsOnDate}
+              className="px-3 py-1.5 bg-white hover:bg-emerald-50 active:scale-95 text-emerald-800 border border-emerald-300 font-semibold text-xs rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all"
+              title="คัดลอกข้อความสรุปบ้านที่ว่างประจำวันนี้ ส่งตอบลูกค้าใน LINE"
+            >
+              {copiedLineAllSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600 stroke-2" />
+                  <span className="text-emerald-700 font-bold">คัดลอกแล้ว!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>คัดลอกตอบ LINE</span>
+                </>
+              )}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenQuickChecker) onOpenQuickChecker();
+              else setIsQuickCheckerOpen(true);
+            }}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+            title="เปิดระบบเช็คห้องว่างด่วนตามช่วงวัน"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>🔍 เช็คห้องว่างตามช่วงวัน</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Banner: Overview KPI Cards (ตามวันที่เลือก) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 rounded-2xl p-3.5 md:p-4 text-white shadow-xs">
@@ -666,7 +778,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   return (
                     <button
                       key={room.id}
-                      onClick={() => setSelectedMapRoomNumber(room.roomNumber)}
+                      onClick={() => {
+                        setSelectedMapRoomNumber(room.roomNumber);
+                        setRightPanelTab('single');
+                      }}
                       style={{ top: coords.top, left: coords.left }}
                       className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 group/pin z-20 ${
                         isSelected ? 'scale-115 z-30' : 'hover:scale-110'
@@ -708,9 +823,170 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            {/* RIGHT: RoomScope-style Inspector & 30-Day Availability Calendar (5 cols on desktop) */}
-            {selectedMapRoom && (
-              <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-xl p-4 md:p-5 space-y-4">
+            {/* RIGHT: RoomScope-style Inspector & Multi-Room Availability Panel (5 cols on desktop) */}
+            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-xl p-4 md:p-5 space-y-4">
+              
+              {/* Tab Switcher: All 6 Rooms vs Single Room Inspector */}
+              <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setRightPanelTab('all')}
+                  className={`flex-1 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rightPanelTab === 'all'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>⚡ สรุปทั้ง 6 หลัง (ว่าง {rooms.filter(r => getRoomStatusOnDate(r).status === 'available').length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRightPanelTab('single')}
+                  className={`flex-1 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rightPanelTab === 'single'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>ปฏิทินบ้าน {selectedMapRoom?.roomNumber || 'S1'}</span>
+                </button>
+              </div>
+
+              {/* TAB 1: ALL 6 HOUSES AVAILABILITY */}
+              {rightPanelTab === 'all' && (
+                <div className="space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 text-xs">
+                    <div>
+                      <span className="text-[11px] text-slate-400 font-medium block">
+                        {isViewingToday ? '📌 สถานะวันนี้' : '📅 สถานะประจำวันที่'}
+                      </span>
+                      <span className="font-bold text-slate-900 text-sm">
+                        {formatThaiDate(selectedDate)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleCopyAvailableRoomsOnDate}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 transition-all cursor-pointer"
+                        title="คัดลอกข้อความสรุปบ้านที่ว่าง ส่งตอบลูกค้าใน LINE"
+                      >
+                        {copiedLineAllSuccess ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600 stroke-2" />
+                            <span>คัดลอกแล้ว!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>คัดลอกส่ง LINE</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenQuickChecker) onOpenQuickChecker();
+                          else setIsQuickCheckerOpen(true);
+                        }}
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 cursor-pointer"
+                        title="เปิดระบบเช็คห้องว่างช่วงวันอื่น"
+                      >
+                        <Search className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List of all 6 Houses */}
+                  <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-0.5">
+                    {rooms.map((room) => {
+                      const roomState = getRoomStatusOnDate(room);
+                      const isAvail = roomState.status === 'available';
+                      const isOcc = roomState.status === 'occupied';
+
+                      return (
+                        <div
+                          key={room.id}
+                          className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 ${
+                            isAvail
+                              ? 'bg-emerald-50/40 border-emerald-300 hover:border-emerald-500 shadow-2xs'
+                              : 'bg-slate-50 border-slate-200/80'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${
+                              isAvail ? 'bg-emerald-600 text-white' : isOcc ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
+                            }`}>
+                              {room.roomNumber}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-900 text-xs">
+                                  บ้าน {room.roomNumber}
+                                </span>
+                                <span className="text-[11px] text-slate-500 truncate">
+                                  ({room.type})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] mt-0.5">
+                                {isAvail ? (
+                                  <span className="text-emerald-700 font-bold">
+                                    ฿{room.pricePerNight.toLocaleString()}/คืน &bull; สูงสุด {room.capacity} ท่าน
+                                  </span>
+                                ) : (
+                                  <span className="text-rose-600 font-medium truncate">
+                                    มีคนพัก: {roomState.booking?.guestName || 'ติดจอง'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isAvail ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (onOpenNewBookingForRoom) onOpenNewBookingForRoom(room.id);
+                                  else onOpenNewBooking();
+                                }}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-2xs flex items-center gap-1 transition-all cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>จอง</span>
+                              </button>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200">
+                                {isOcc ? 'มีคนพัก' : 'รอแม่บ้าน'}
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedMapRoomNumber(room.roomNumber);
+                                setRightPanelTab('single');
+                              }}
+                              className="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-600 text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
+                              title={`ดูปฏิทิน 30 วันของบ้าน ${room.roomNumber}`}
+                            >
+                              ปฏิทิน
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: SINGLE ROOM DETAILS & 30-DAY CALENDAR */}
+              {rightPanelTab === 'single' && selectedMapRoom && (
+                <div className="space-y-4 animate-in fade-in">
                 
                 {/* Header: Room Title & Price */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -920,6 +1196,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -1127,6 +1404,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           type={confirmDialog.type}
         />
       )}
+
+      {/* Quick Room Availability Checker Modal */}
+      <QuickAvailabilityModal
+        isOpen={isQuickCheckerOpen}
+        onClose={() => setIsQuickCheckerOpen(false)}
+        rooms={rooms}
+        bookings={bookings}
+        onSelectRoomForBooking={(roomId, checkIn, checkOut) => {
+          if (onOpenNewBookingWithDates) {
+            onOpenNewBookingWithDates(roomId, checkIn, checkOut);
+          } else if (onOpenNewBookingForRoom) {
+            onOpenNewBookingForRoom(roomId);
+          } else {
+            onOpenNewBooking();
+          }
+        }}
+      />
 
     </div>
   );

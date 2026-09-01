@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenMobileDrawer?: () => void;
   onOpenInstallPWA?: () => void;
   isPWAInstalled?: boolean;
+  onOpenQuickChecker?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileDrawer,
   onOpenInstallPWA,
   isPWAInstalled = false,
+  onOpenQuickChecker,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -109,6 +111,17 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Buttons (Mobile) */}
         <div className="flex items-center gap-1.5">
+          {onOpenQuickChecker && (
+            <button
+              onClick={onOpenQuickChecker}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer"
+              title="เช็คห้องว่างด่วนตามช่วงวัน"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>เช็คห้องว่าง</span>
+            </button>
+          )}
+
           {onOpenInstallPWA && !isPWAInstalled && (
             <button
               onClick={onOpenInstallPWA}
@@ -168,6 +181,18 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
             />
           </div>
+
+          {/* Quick Availability Checker Button */}
+          {onOpenQuickChecker && (
+            <button
+              onClick={onOpenQuickChecker}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs transition-all cursor-pointer"
+              title="เช็คห้องว่างด่วนตามช่วงวัน พร้อมคัดลอกส่งตอบลูกค้าใน LINE"
+            >
+              <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>เช็คห้องว่างด่วน</span>
+            </button>
+          )}
 
           {/* Desktop Install PWA Button */}
           {onOpenInstallPWA && !isPWAInstalled && (
