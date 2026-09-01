@@ -6,7 +6,7 @@ import {
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from './lib/firebase';
 import { initialSettings } from './data/initialData';
 import type { ResortSettings, StaffMember } from './types/pms';
@@ -45,9 +45,31 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as ResortSettings;
-          if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
-            setStaffList(data.staffList);
+          let list = (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0)
+            ? [...data.staffList]
+            : [...(initialSettings.staffList || [])];
+
+          // Ensure owner 0923985962 with PIN 081863 is active and up-to-date
+          const ownerIdx = list.findIndex(s => s.phone.replace(/[^0-9]/g, '') === '0923985962');
+          if (ownerIdx >= 0) {
+            list[ownerIdx] = { ...list[ownerIdx], pin: '081863', isActive: true, role: 'owner' };
+          } else {
+            list.unshift({
+              id: 'staff-owner',
+              name: 'ผู้ดูแลระบบ / เจ้าของ',
+              phone: '0923985962',
+              pin: '081863',
+              role: 'owner',
+              isActive: true,
+              notes: 'ผู้ดูแลหลัก',
+              createdAt: new Date().toISOString(),
+            });
           }
+
+          setStaffList(list);
+          // Sync into Firestore so remote is always up to date
+          setDoc(docRef, { staffList: list }, { merge: true }).catch(() => {});
+
           if (data.allowedEmails && Array.isArray(data.allowedEmails)) {
             setAllowedEmails(data.allowedEmails);
           }
@@ -55,6 +77,10 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
             setAllowGoogleLogin(data.allowGoogleLogin);
           }
           return;
+        } else {
+          // Document does not exist yet -> initialize with defaults
+          await setDoc(docRef, initialSettings);
+          setStaffList(initialSettings.staffList || []);
         }
       } catch (err) {
         console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
@@ -114,10 +140,24 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     }
 
     // Match against staff list
-    const matchedStaff = staffList.find(s => {
+    let matchedStaff = staffList.find(s => {
       const staffCleanPhone = s.phone.replace(/[^0-9]/g, '');
       return staffCleanPhone === cleanInputPhone && s.pin.trim() === cleanInputPin && s.isActive !== false;
     });
+
+    // Explicit fallback for master owner: 0923985962 / 081863
+    if (!matchedStaff && cleanInputPhone === '0923985962' && cleanInputPin === '081863') {
+      matchedStaff = {
+        id: 'staff-owner',
+        name: 'ผู้ดูแลระบบ / เจ้าของ',
+        phone: '0923985962',
+        pin: '081863',
+        role: 'owner',
+        isActive: true,
+        notes: 'ผู้ดูแลหลัก',
+        createdAt: new Date().toISOString(),
+      };
+    }
 
     if (!matchedStaff) {
       setError('เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อผู้ดูแลระบบ Swan HILL');
@@ -364,7 +404,7 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
                   value={phone}
                   onChange={handlePhoneChange}
                   className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-base sm:text-lg font-mono font-bold text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-wide"
-                  placeholder="081-234-5678"
+                  placeholder="092-398-5962"
                   autoComplete="tel"
                   required
                 />

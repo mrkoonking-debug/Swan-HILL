@@ -219,8 +219,8 @@ export const initialSettings: ResortSettings = {
     {
       id: 'staff-1',
       name: 'ผู้ดูแลระบบ / เจ้าของ',
-      phone: '0812345678',
-      pin: '1234',
+      phone: '0923985962',
+      pin: '081863',
       role: 'owner',
       isActive: true,
       notes: 'ผู้ดูแลหลัก',

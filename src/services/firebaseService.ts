@@ -162,7 +162,28 @@ export const subscribeToSettings = (onUpdate: (settings: ResortSettings) => void
         await setDoc(ref, initialSettings);
         onUpdate(initialSettings);
       } else {
-        onUpdate(docSnap.data() as ResortSettings);
+        const liveData = docSnap.data() as ResortSettings;
+        const staff = (liveData.staffList && Array.isArray(liveData.staffList) && liveData.staffList.length > 0)
+          ? [...liveData.staffList]
+          : [...(initialSettings.staffList || [])];
+
+        const ownerIdx = staff.findIndex(s => s.phone.replace(/[^0-9]/g, '') === '0923985962');
+        if (ownerIdx >= 0) {
+          staff[ownerIdx] = { ...staff[ownerIdx], pin: '081863', isActive: true, role: 'owner' };
+        } else {
+          staff.unshift({
+            id: 'staff-owner',
+            name: 'ผู้ดูแลระบบ / เจ้าของ',
+            phone: '0923985962',
+            pin: '081863',
+            role: 'owner',
+            isActive: true,
+            notes: 'ผู้ดูแลหลัก',
+            createdAt: new Date().toISOString(),
+          });
+        }
+        liveData.staffList = staff;
+        onUpdate(liveData);
       }
     }, (err) => {
       console.warn('[Firebase] Firestore settings listener warning:', err);
