@@ -270,7 +270,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     
     const newTransactions = [...(b.transactions || []), transaction];
     const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-    const roomBase = b.roomPrice * b.totalNights;
+    const roomBase = b.stayType === 'day_use' ? b.roomPrice : (b.roomPrice * (b.totalNights || 1));
     const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
     const grandTotal = b.totalAmount || (roomBase + addOnsSum);
     const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
@@ -303,7 +303,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       tx.id === transactionId ? { ...tx, ...updated } : tx
     );
     const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-    const roomBase = b.roomPrice * b.totalNights;
+    const roomBase = b.stayType === 'day_use' ? b.roomPrice : (b.roomPrice * (b.totalNights || 1));
     const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
     const grandTotal = b.totalAmount || (roomBase + addOnsSum);
     const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
@@ -328,7 +328,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     
     const newTransactions = (b.transactions || []).filter(tx => tx.id !== transactionId);
     const newPaidAmount = newTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-    const roomBase = b.roomPrice * b.totalNights;
+    const roomBase = b.stayType === 'day_use' ? b.roomPrice : (b.roomPrice * (b.totalNights || 1));
     const addOnsSum = b.addOns?.reduce((s, a) => s + (a.price * a.quantity), 0) || 0;
     const grandTotal = b.totalAmount || (roomBase + addOnsSum);
     const newPaymentStatus = newPaidAmount >= grandTotal ? 'paid' : (newPaidAmount > 0 ? 'deposit' : 'pending');
@@ -445,7 +445,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     const b = bookings.find(item => item.id === bookingId);
     if (!b) return;
 
-    const roomBase = b.roomPrice * b.totalNights;
+    const roomBase = b.stayType === 'day_use' ? b.roomPrice : (b.roomPrice * (b.totalNights || 1));
     const addOnsSum = newAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const newTotal = roomBase + addOnsSum;
     const newPaymentStatus = b.paidAmount >= newTotal ? 'paid' : (b.paidAmount > 0 ? 'deposit' : 'pending');

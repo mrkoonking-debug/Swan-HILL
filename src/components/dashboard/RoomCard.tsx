@@ -54,7 +54,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({
 
   const currentBooking = roomState.booking;
 
-  const roomBaseTotal = currentBooking ? currentBooking.roomPrice * (currentBooking.totalNights || 1) : 0;
+  const roomBaseTotal = currentBooking ? (currentBooking.stayType === 'day_use' ? currentBooking.roomPrice : currentBooking.roomPrice * (currentBooking.totalNights || 1)) : 0;
   const addOnsTotal = currentBooking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = currentBooking?.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = currentBooking ? Math.max(0, grandTotal - currentBooking.paidAmount) : 0;

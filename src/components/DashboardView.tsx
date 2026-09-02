@@ -288,6 +288,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onOpenCheckoutModal={onOpenCheckoutModal}
           onCheckOutGuest={onCheckOutGuest}
           onTriggerConfirmClean={handleTriggerConfirmClean}
+          onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
         />
       )}
 

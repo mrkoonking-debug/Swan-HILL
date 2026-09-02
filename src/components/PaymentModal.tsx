@@ -92,7 +92,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [editDate, setEditDate] = useState<string>('');
   const [editTime, setEditTime] = useState<string>('');
 
-  const roomBaseTotal = booking ? booking.roomPrice * booking.totalNights : 0;
+  const roomBaseTotal = booking ? (booking.stayType === 'day_use' ? booking.roomPrice : booking.roomPrice * (booking.totalNights || 1)) : 0;
   const addOnsTotal = booking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = booking?.totalAmount || (roomBaseTotal + addOnsTotal);
   const totalPaid = booking?.paidAmount || 0;
@@ -104,7 +104,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   // Initialize amount when modal opens or booking changes
   useEffect(() => {
     if (booking) {
-      const roomBase = booking.roomPrice * booking.totalNights;
+      const roomBase = booking.stayType === 'day_use' ? booking.roomPrice : booking.roomPrice * (booking.totalNights || 1);
       const addOns = booking.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
       const total = booking.totalAmount || (roomBase + addOns);
       const rem = Math.max(0, total - booking.paidAmount);
@@ -318,7 +318,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <span className="text-base sm:text-lg font-black text-slate-900 mt-0.5 block">
                 ฿{grandTotal.toLocaleString()}
               </span>
-              <span className="text-[10px] text-slate-400 font-medium">{booking.totalNights} คืน + บริการเสริม</span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {booking.stayType === 'day_use' ? `ชั่วคราว ${booking.dayUseHours || 3} ชม.` : `${booking.totalNights} คืน`} + บริการเสริม
+              </span>
             </div>
 
             <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
@@ -408,7 +410,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <div className="space-y-1.5 pt-2">
                   <div className="flex items-center justify-between text-slate-700 py-1 border-b border-slate-100">
                     <span className="font-medium">
-                      🛖 ค่าห้องพักห้อง {booking.roomNumber} ({booking.roomType}) &bull; ฿{booking.roomPrice.toLocaleString()} &times; {booking.totalNights} คืน
+                      🛖 ค่าห้องพักห้อง {booking.roomNumber} ({booking.roomType}) &bull; {booking.stayType === 'day_use' ? `฿${booking.roomPrice.toLocaleString()} (ชั่วคราว ${booking.dayUseHours || 3} ชม.)` : `฿${booking.roomPrice.toLocaleString()} \u0026times; ${booking.totalNights} คืน`}
                     </span>
                     <span className="font-bold text-slate-900">฿{roomBaseTotal.toLocaleString()}</span>
                   </div>

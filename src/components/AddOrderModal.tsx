@@ -143,7 +143,7 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
   };
 
   const totalAddOns = calculateAddOnTotal();
-  const roomBaseTotal = booking.roomPrice * booking.totalNights;
+  const roomBaseTotal = booking.stayType === 'day_use' ? booking.roomPrice : booking.roomPrice * (booking.totalNights || 1);
   const grandTotal = roomBaseTotal + totalAddOns;
   const remainingAtCheckout = Math.max(0, grandTotal - booking.paidAmount);
 
@@ -454,7 +454,7 @@ export const AddOrderModal: React.FC<AddOrderModalProps> = ({
           {/* Billing Summary Box */}
           <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs space-y-1.5">
             <div className="flex justify-between text-slate-600 font-normal">
-              <span>ค่าบ้านพัก ({booking.roomNumber} &bull; {booking.totalNights} คืน):</span>
+              <span>ค่าบ้านพัก ({booking.roomNumber} &bull; {booking.stayType === 'day_use' ? `ชั่วคราว ${booking.dayUseHours || 3} ชม.` : `${booking.totalNights} คืน`}):</span>
               <span className="font-medium text-slate-800">฿{roomBaseTotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-slate-600 font-normal">

@@ -51,6 +51,7 @@ export interface ResortMapSectionProps {
   onOpenCheckoutModal?: (booking: Booking) => void;
   onCheckOutGuest: (bookingId: string) => void;
   onTriggerConfirmClean: (room: Room) => void;
+  onTriggerConfirmMaintenance: (room: Room) => void;
 }
 
 export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
@@ -74,6 +75,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
   onOpenCheckoutModal,
   onCheckOutGuest,
   onTriggerConfirmClean,
+  onTriggerConfirmMaintenance,
 }) => {
   const selectedMapRoom = rooms.find(r => r.roomNumber === selectedMapRoomNumber) || rooms[0];
 
@@ -617,6 +619,19 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                       >
                         <Search className="w-3.5 h-3.5 text-slate-600" />
                         <span>ตรวจสอบคิวห้องว่างวันอื่น</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {selectedMapRoom.status === 'maintenance' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onTriggerConfirmMaintenance(selectedMapRoom)}
+                        className="col-span-2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>เปิดใช้งานห้องพัก (เปิดว่าง)</span>
                       </button>
                     </div>
                   )}
