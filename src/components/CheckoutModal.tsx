@@ -28,7 +28,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  const roomBaseTotal = booking.stayType === 'day_use' ? booking.roomPrice : booking.roomPrice * (booking.totalNights || 1);
+  const roomBaseTotal = booking.roomPrice * (booking.totalNights || 1);
   const addOnsTotal = booking.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = booking.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = Math.max(0, grandTotal - booking.paidAmount);

@@ -9,7 +9,8 @@ import {
   AlertTriangle, 
   Clock, 
   Plus, 
-  Sparkles 
+  Sparkles,
+  User 
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../../types/pms';
 import { formatThaiDate } from '../../utils/dateUtils';
@@ -54,7 +55,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({
 
   const currentBooking = roomState.booking;
 
-  const roomBaseTotal = currentBooking ? (currentBooking.stayType === 'day_use' ? currentBooking.roomPrice : currentBooking.roomPrice * (currentBooking.totalNights || 1)) : 0;
+  const roomBaseTotal = currentBooking ? currentBooking.roomPrice * (currentBooking.totalNights || 1) : 0;
   const addOnsTotal = currentBooking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = currentBooking?.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = currentBooking ? Math.max(0, grandTotal - currentBooking.paidAmount) : 0;
@@ -101,39 +102,32 @@ export const RoomCard: React.FC<RoomCardProps> = ({
             </div>
           </div>
 
-          {/* Status Badge */}
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
-            isAvailable ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' :
-            isOccupied ? 'bg-blue-100 text-blue-900 border border-blue-300' :
-            isCleaning ? 'bg-amber-100 text-amber-900 border border-amber-300' :
-            'bg-slate-200 text-slate-700'
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+            isAvailable ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+            isOccupied ? 'bg-blue-600 text-white shadow-xs' :
+            isCleaning ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+            'bg-slate-100 text-slate-600'
           }`}>
-            {isAvailable ? 'ว่าง' : isOccupied ? 'มีคนพัก' : isCleaning ? 'รอแม่บ้าน' : 'ปิดซ่อม'}
+            {isAvailable ? 'ว่าง' : isOccupied ? 'มีคนพัก' : isCleaning ? 'รอทำความสะอาด' : 'ปิดปรับปรุง'}
           </span>
         </div>
 
-        {/* Guest Stay Information */}
+        {/* Occupied Room Details */}
         {isOccupied && room.currentGuest && (
-          <div className="p-2 rounded-xl bg-white/90 border border-blue-200/80 text-[11px] space-y-1 shadow-2xs">
-            <div className="flex items-center justify-between gap-1">
-              <span className="font-medium text-slate-800 flex items-center gap-1 truncate">
-                <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <div className="p-2 rounded-xl bg-blue-100/60 border border-blue-200/80 text-[11px] space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-blue-950 truncate flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-blue-700 shrink-0" />
                 <span className="truncate">{room.currentGuest.name}</span>
               </span>
-              {currentBooking?.stayType === 'day_use' ? (
-                <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded shrink-0">
-                  ⏱️ ชั่วคราว {currentBooking.dayUseHours || 3} ชม.
+              {checkedOutToday && (
+                <span className="text-[9px] bg-blue-200 text-blue-900 font-bold px-1.5 py-0.5 rounded shrink-0">
+                  ✨ แขกใหม่คืนนี้
                 </span>
-              ) : checkedOutToday ? (
-                <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1.5 py-0.5 rounded shrink-0">
-                  ✨ รอบ 2 วันนี้
-                </span>
-              ) : null}
+              )}
             </div>
-            <span className="text-[10px] text-slate-500 block font-normal">
-              {currentBooking?.stayType === 'day_use' 
-                ? `ออกวันนี้ เวลา ${currentBooking.checkOutTime || '17:00'} น.` 
-                : `ออก ${formatThaiDate(room.currentGuest.checkOut)}`}
+            <span className="text-[10px] text-slate-600 block font-normal">
+              ออก {formatThaiDate(room.currentGuest.checkOut)}
             </span>
 
             {/* Payment Alert Banner */}
@@ -182,9 +176,9 @@ export const RoomCard: React.FC<RoomCardProps> = ({
               <div className="px-1.5 py-1 rounded-md bg-emerald-100/90 text-[10px] text-emerald-950 font-bold flex items-center justify-between border border-emerald-200">
                 <span className="flex items-center gap-1 truncate">
                   <Sparkles className="w-3 h-3 text-emerald-700 shrink-0" />
-                  <span>เคลียร์ห้องเสร็จแล้ว ขายรอบ 2 ได้</span>
+                  <span>เคลียร์ห้องเสร็จแล้ว พร้อมรับแขกใหม่คืนนี้</span>
                 </span>
-                <span className="text-[9px] bg-emerald-200 text-emerald-950 px-1 py-0.2 rounded font-black shrink-0">Walk-in</span>
+                <span className="text-[9px] bg-emerald-200 text-emerald-950 px-1.5 py-0.5 rounded font-black shrink-0">Walk-in</span>
               </div>
             )}
 

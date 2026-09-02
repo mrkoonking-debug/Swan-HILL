@@ -94,23 +94,15 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   // Active bookings filter
   const activeBookings = bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
 
-  // Helper: Get bookings active on a specific date (supports overnight and day-use)
+  // Helper: Get bookings active on a specific date (Night stay: dateStr >= checkInDate && dateStr < checkOutDate)
   const getBookingsForDate = (dateStr: string) => {
-    return activeBookings.filter(b => {
-      if (b.stayType === 'day_use' || b.checkInDate === b.checkOutDate) {
-        return b.checkInDate === dateStr;
-      }
-      return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
-    });
+    return activeBookings.filter(b => dateStr >= b.checkInDate && dateStr < b.checkOutDate);
   };
 
-  // Helper: Find all bookings on a date for a specific room (supports multiple bookings per day)
+  // Helper: Find all bookings on a date for a specific room
   const getAllBookingsForRoomAndDate = (roomId: string, dateStr: string) => {
     return activeBookings.filter(b => {
       if (b.roomId !== roomId && b.roomNumber !== roomId) return false;
-      if (b.stayType === 'day_use' || b.checkInDate === b.checkOutDate) {
-        return b.checkInDate === dateStr;
-      }
       return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
     });
   };
@@ -344,7 +336,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                             className={`p-1 rounded-lg border font-bold text-[10px] truncate cursor-pointer hover:scale-105 transition-transform ${
                               booking.status === 'checked_out'
                                 ? 'bg-slate-100 border-slate-300 text-slate-700'
-                                : (booking.stayType === 'day_use' ? 'bg-amber-100 border-amber-300 text-amber-950' : 'bg-emerald-100 border-emerald-300 text-emerald-950')
+                                : 'bg-emerald-100 border-emerald-300 text-emerald-950'
                             }`}
                             title={`คลิกเพื่อดูการจอง: ${booking.guestName} ${roomBookings.length > 1 ? `(มี ${roomBookings.length} รายการจองวันนี้)` : ''}`}
                           >
@@ -523,16 +515,12 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                           <span className="font-extrabold text-xs text-slate-900 block truncate">
                             ห้อง {room.roomNumber} - {room.name}
                           </span>
-                          {booking.stayType === 'day_use' && (
-                            <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1 rounded">ชั่วคราว</span>
-                          )}
                           {checkedOutBooking && activeBooking && (
-                            <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1 rounded">รอบที่ 2</span>
+                            <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1 rounded">แขกใหม่คืนนี้</span>
                           )}
                         </div>
                         <span className="text-[10px] text-blue-700 font-semibold truncate block">
                           🔵 พักโดย: คุณ {booking.guestName}
-                          {booking.stayType === 'day_use' ? ` (${booking.dayUseHours || 3} ชม.)` : ''}
                         </span>
                       </div>
                     </div>

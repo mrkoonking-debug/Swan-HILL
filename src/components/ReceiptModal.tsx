@@ -33,7 +33,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  const roomBaseTotal = booking.stayType === 'day_use' ? booking.roomPrice : (booking.roomPrice * (booking.totalNights || 1));
+  const roomBaseTotal = booking.roomPrice * (booking.totalNights || 1);
   const addOnsTotal = booking.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
   const grandTotal = booking.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = Math.max(0, grandTotal - booking.paidAmount);
@@ -236,9 +236,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   วันเข้าพัก: {formatThaiDate(booking.checkInDate)} {booking.checkInTime ? `(${booking.checkInTime} น.)` : ''}
                 </p>
                 <p className="text-slate-800 font-bold">
-                  {booking.stayType === 'day_use' 
-                    ? `พักชั่วคราว: ${booking.dayUseHours || 3} ชม. (ออก ${booking.checkOutTime || ''} น.)` 
-                    : `วันออก: ${formatThaiDate(booking.checkOutDate)} (${booking.totalNights} คืน)`}
+                  วันออก: {formatThaiDate(booking.checkOutDate)} ({booking.totalNights} คืน)
                 </p>
               </div>
             </div>
@@ -255,18 +253,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="font-black text-slate-900 block">
-                      {booking.stayType === 'day_use'
-                        ? `ค่าที่พักห้อง ${booking.roomNumber} (ชั่วคราว ${booking.dayUseHours || 3} ชม.)`
-                        : `ค่าที่พักห้อง ${booking.roomNumber} (${booking.totalNights} คืน)`}
+                      ค่าที่พักห้อง {booking.roomNumber} ({booking.totalNights} คืน)
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      {booking.stayType === 'day_use' 
-                        ? `ราคา ฿${booking.roomPrice.toLocaleString()} บาท`
-                        : `ราคาคืนละ ฿${booking.roomPrice.toLocaleString()} บาท`}
+                      ราคาคืนละ ฿{booking.roomPrice.toLocaleString()} บาท
                     </span>
                   </div>
                   <span className="font-black text-slate-900">
-                    ฿{(booking.stayType === 'day_use' ? booking.roomPrice : roomBaseTotal).toLocaleString()}
+                    ฿{roomBaseTotal.toLocaleString()}
                   </span>
                 </div>
 

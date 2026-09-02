@@ -17,11 +17,9 @@ import {
   Clock,
   Settings2,
   Phone,
-  User,
-  Moon,
-  Sun
+  User
 } from 'lucide-react';
-import type { Room, Booking, PaymentStatus, AddOnItem, StayType } from '../types/pms';
+import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
 import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
@@ -70,7 +68,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 
   const [channel, setChannel] = useState<'Walk-in' | 'LINE Official' | 'Direct' | 'Phone'>('Walk-in');
-  const [stayType, setStayType] = useState<StayType>('overnight');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
@@ -78,7 +75,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
   const [checkInTime, setCheckInTime] = useState(getCurrentTimeString());
   const [checkOutTime, setCheckOutTime] = useState('12:00');
-  const [dayUseHours, setDayUseHours] = useState<number>(3);
   const [customPrice, setCustomPrice] = useState<string>('');
   const [autoCheckIn, setAutoCheckIn] = useState<boolean>(true);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
@@ -95,7 +91,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   // Calculate nights safely without timezone drift
   const diffNights = () => {
-    if (stayType === 'day_use') return 0;
     const pIn = checkInDate.split('-').map(Number);
     const pOut = checkOutDate.split('-').map(Number);
     const d1 = new Date(pIn[0], pIn[1] - 1, pIn[2]);
@@ -105,14 +100,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   };
   const totalNights = diffNights();
 
-  // Calculate Totals with Day-Use support & custom price override
+  // Calculate Totals with custom price override support
   const baseRoomPricePerNight = selectedRoom?.pricePerNight || 1200;
-  const defaultDayUsePrice = Math.round(baseRoomPricePerNight * 0.5); // e.g. 600 or 750
   const roomPriceUnit = customPrice !== '' 
     ? (Number(customPrice) || 0) 
-    : (stayType === 'day_use' ? defaultDayUsePrice : baseRoomPricePerNight);
+    : baseRoomPricePerNight;
 
-  const roomBaseTotal = stayType === 'day_use' ? roomPriceUnit : roomPriceUnit * totalNights;
+  const roomBaseTotal = roomPriceUnit * totalNights;
   const addOnsTotal = (extraBeds * 300) + (mookataSmall * 350) + (mookataLarge * 500) + (breakfast * 60);
   const grandTotal = roomBaseTotal + addOnsTotal;
 
@@ -122,21 +116,18 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (prefillDate) {
       setCheckInDate(prefillDate);
-      if (stayType === 'day_use') {
-        setCheckOutDate(prefillDate);
+      if (prefillCheckOutDate) {
+        setCheckOutDate(prefillCheckOutDate);
+      } else {
+        setCheckOutDate(shiftDateStr(prefillDate, 1));
       }
-    }
-    if (prefillCheckOutDate && stayType === 'overnight') {
-      setCheckOutDate(prefillCheckOutDate);
-    } else if (prefillDate && stayType === 'overnight') {
-      setCheckOutDate(shiftDateStr(prefillDate, 1));
     }
     if (isOpen) {
       setCurrentStep(1);
       setIsDepositModalOpen(false);
       setCheckInTime(getCurrentTimeString());
     }
-  }, [prefillRoomId, prefillDate, prefillCheckOutDate, isOpen, rooms, stayType]);
+  }, [prefillRoomId, prefillDate, prefillCheckOutDate, isOpen, rooms]);
 
   // Update default deposit / paid amount when grandTotal changes
   useEffect(() => {
@@ -163,17 +154,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   // Room Dropdown Options with live availability check & Turnover detection
   const roomOptions: DropdownOption[] = rooms.map(r => {
-    // Conflict detection
+    // Conflict detection (Standard Hotel Night overlap check)
     const conflict = activeBookings.find(b => {
       if (b.roomId !== r.id && b.roomNumber !== r.roomNumber) return false;
-      // Day-use on same day check
-      if (stayType === 'day_use' || b.stayType === 'day_use') {
-        if (b.checkInDate === checkInDate) {
-          // If active in room right now
-          return b.status === 'checked_in';
-        }
-        return false;
-      }
       return b.checkInDate < checkOutDate && b.checkOutDate > checkInDate;
     });
 
@@ -295,13 +278,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       roomId: selectedRoom.id,
       roomNumber: selectedRoom.roomNumber,
       roomType: selectedRoom.type,
-      stayType,
       checkInDate,
-      checkOutDate: stayType === 'day_use' ? checkInDate : checkOutDate,
+      checkOutDate,
       checkInTime: checkInTime || '14:00',
-      checkOutTime: checkOutTime || (stayType === 'day_use' ? '17:00' : '12:00'),
-      dayUseHours: stayType === 'day_use' ? dayUseHours : undefined,
-      totalNights: stayType === 'day_use' ? 0 : totalNights,
+      checkOutTime: checkOutTime || '12:00',
+      totalNights,
       totalGuests: selectedRoom.capacity || 2,
       roomPrice: roomPriceUnit,
       addOns: addOnsList,
@@ -421,61 +402,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
             </div>
 
-            {/* 2. Stay Type Selector (Overnight vs Day-Use) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-900 mb-1.5 flex items-center justify-between">
-                <span>รูปแบบการเข้าพัก</span>
-                {stayType === 'day_use' && (
-                  <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-medium">
-                    ⏱️ ชั่วคราว ไม่ค้างคืน (ห้องหมุนเวียนรอบใหม่ได้)
-                  </span>
-                )}
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStayType('overnight');
-                    setCheckOutDate(shiftDateStr(checkInDate, 1));
-                    setCheckOutTime('12:00');
-                  }}
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    stayType === 'overnight'
-                      ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 font-bold shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Moon className="w-4 h-4 text-emerald-600" />
-                  <div className="text-left">
-                    <span className="text-xs font-bold block">พักค้างคืน (Overnight)</span>
-                    <span className="text-[10px] text-slate-500 block">คิดราคาตามจำนวนคืน</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStayType('day_use');
-                    setCheckOutDate(checkInDate);
-                    // auto calculate checkOutTime (+dayUseHours)
-                    const [h, m] = checkInTime.split(':').map(Number);
-                    const endH = (h + dayUseHours) % 24;
-                    setCheckOutTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-                  }}
-                  className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    stayType === 'day_use'
-                      ? 'border-amber-500 bg-amber-50/60 text-amber-950 font-bold shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Sun className="w-4 h-4 text-amber-600" />
-                  <div className="text-left">
-                    <span className="text-xs font-bold block">พักชั่วคราว (Day-Use)</span>
-                    <span className="text-[10px] text-slate-500 block">2-4 ชม. / ออกวันเดียวกัน</span>
-                  </div>
-                </button>
-              </div>
-            </div>
 
             {/* 3. Guest Name & Phone */}
             <div className="space-y-3">
@@ -523,172 +449,85 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               />
             </div>
 
-            {/* 5. Check-in & Check-out Dates & Times */}
+            {/* 4. Check-in & Check-out Dates & Times */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-              {stayType === 'overnight' ? (
-                <>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-900 mb-1">
-                        วันเช็คอิน <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          required
-                          value={checkInDate}
-                          onChange={(e) => {
-                            setCheckInDate(e.target.value);
-                            if (e.target.value >= checkOutDate) {
-                              setCheckOutDate(shiftDateStr(e.target.value, 1));
-                            }
-                          }}
-                          className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
-                        />
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-900 mb-1">
-                        วันเช็คเอาท์ <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          required
-                          value={checkOutDate}
-                          min={shiftDateStr(checkInDate, 1)}
-                          onChange={(e) => setCheckOutDate(e.target.value)}
-                          className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
-                        />
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-emerald-600" />
-                        <span>เวลาเข้าพัก</span>
-                      </label>
-                      <input
-                        type="time"
-                        value={checkInTime}
-                        onChange={(e) => setCheckInTime(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        <span>เวลาเช็คเอาท์</span>
-                      </label>
-                      <input
-                        type="time"
-                        value={checkOutTime}
-                        onChange={(e) => setCheckOutTime(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* Day-Use View */
-                <div className="space-y-2.5">
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-900 mb-1">
-                        วันที่เข้าพัก (ชั่วคราว) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          required
-                          value={checkInDate}
-                          onChange={(e) => {
-                            setCheckInDate(e.target.value);
-                            setCheckOutDate(e.target.value);
-                          }}
-                          className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
-                        />
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-900 mb-1">
-                        ระยะเวลาพักผ่อน
-                      </label>
-                      <div className="grid grid-cols-3 gap-1">
-                        {[2, 3, 4].map((hrs) => (
-                          <button
-                            key={hrs}
-                            type="button"
-                            onClick={() => {
-                              setDayUseHours(hrs);
-                              const [h, m] = checkInTime.split(':').map(Number);
-                              const endH = (h + hrs) % 24;
-                              setCheckOutTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-                            }}
-                            className={`py-1.5 text-xs font-bold rounded-lg border cursor-pointer transition-all ${
-                              dayUseHours === hrs
-                                ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                            }`}
-                          >
-                            {hrs} ชม.
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-600" />
-                        <span>เวลาเริ่มเข้า</span>
-                      </label>
-                      <input
-                        type="time"
-                        value={checkInTime}
-                        onChange={(e) => {
-                          setCheckInTime(e.target.value);
-                          const [h, m] = e.target.value.split(':').map(Number);
-                          const endH = (h + dayUseHours) % 24;
-                          setCheckOutTime(`${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        <span>เวลาออก</span>
-                      </label>
-                      <input
-                        type="time"
-                        value={checkOutTime}
-                        onChange={(e) => setCheckOutTime(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
-                      />
-                    </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    วันเช็คอิน <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      value={checkInDate}
+                      onChange={(e) => {
+                        setCheckInDate(e.target.value);
+                        if (e.target.value >= checkOutDate) {
+                          setCheckOutDate(shiftDateStr(e.target.value, 1));
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
+                    />
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
-              )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    วันเช็คเอาท์ <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      value={checkOutDate}
+                      min={shiftDateStr(checkInDate, 1)}
+                      onChange={(e) => setCheckOutDate(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
+                    />
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-emerald-600" />
+                    <span>เวลาเข้าพัก</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={checkInTime}
+                    onChange={(e) => setCheckInTime(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    <span>เวลาเช็คเอาท์</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={checkOutTime}
+                    onChange={(e) => setCheckOutTime(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
+                  />
+                </div>
+              </div>
 
               {/* Price adjustment row */}
               <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-medium text-slate-600">
-                    {stayType === 'day_use' ? 'ราคาพักชั่วคราว:' : 'ราคาห้องต่อคืน:'}
+                    ราคาห้องต่อคืน:
                   </span>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
-                      placeholder={String(stayType === 'day_use' ? defaultDayUsePrice : baseRoomPricePerNight)}
+                      placeholder={String(baseRoomPricePerNight)}
                       value={customPrice}
                       onChange={(e) => setCustomPrice(e.target.value)}
                       className="w-20 px-2 py-0.5 text-xs font-bold border border-slate-300 rounded-md outline-none focus:border-emerald-500 bg-white"
@@ -697,12 +536,17 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                   </div>
                 </div>
 
-                <span className="text-[10px] text-slate-400">
-                  {customPrice !== '' ? '(ปรับราคาพิเศษ)' : `(มาตรฐาน ฿${(stayType === 'day_use' ? defaultDayUsePrice : baseRoomPricePerNight).toLocaleString()})`}
-                </span>
+                <div className="text-right">
+                  <span className="text-xs font-extrabold text-slate-900">
+                    ฿{roomBaseTotal.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-slate-500 ml-1 font-normal">
+                    ({totalNights} คืน)
+                  </span>
+                </div>
               </div>
 
-              {/* Instant Check-in Toggle for Today's arrivals */}
+              {/* Auto Check-in Toggle (Only if check-in is today) */}
               {checkInDate === defaultCheckIn && (
                 <div className="pt-2 border-t border-slate-200/80">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -720,14 +564,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 </div>
               )}
 
-              {/* Nights / Hours Summary Banner */}
+              {/* Nights Summary Banner */}
               <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
                 <span className="text-slate-600">
-                  {stayType === 'day_use' ? (
-                    <>พักชั่วคราว: <strong className="text-amber-800 font-bold">{dayUseHours} ชม.</strong> ({checkInTime} - {checkOutTime} น.)</>
-                  ) : (
-                    <>เข้าพัก: <strong className="text-slate-900">{totalNights} คืน</strong> ({formatThaiDate(checkInDate)} - {formatThaiDate(checkOutDate)})</>
-                  )}
+                  เข้าพัก: <strong className="text-slate-900">{totalNights} คืน</strong> ({formatThaiDate(checkInDate)} - {formatThaiDate(checkOutDate)})
                 </span>
                 <span className="font-bold text-emerald-800">
                   ฿{roomBaseTotal.toLocaleString()} บาท
@@ -768,7 +608,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 <div>
                   <span className="font-bold text-slate-900">บ้าน {selectedRoom.roomNumber} ({selectedRoom.name})</span>
                   <span className="text-[11px] text-slate-500 block">
-                    ลูกค้า: {guestName} &bull; {stayType === 'day_use' ? `ชั่วคราว ${dayUseHours} ชม. (${checkInTime} - ${checkOutTime} น.)` : `${totalNights} คืน`}
+                    ลูกค้า: {guestName} &bull; {totalNights} คืน ({formatThaiDate(checkInDate)} - {formatThaiDate(checkOutDate)})
                   </span>
                 </div>
               </div>
@@ -1051,7 +891,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           depositPercent={depositPercent}
           onSetDepositPercent={handleSetDepositPercent}
           roomPriceUnit={roomPriceUnit}
-          stayType={stayType}
           remainingAtCheckin={remainingAtCheckin}
         />
 

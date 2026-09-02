@@ -1,7 +1,5 @@
 import React from 'react';
 import { Coins, X } from 'lucide-react';
-import type { StayType } from '../../types/pms';
-
 export interface DepositModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,7 +9,6 @@ export interface DepositModalProps {
   depositPercent: number;
   onSetDepositPercent: (percent: number) => void;
   roomPriceUnit: number;
-  stayType?: StayType;
   remainingAtCheckin: number;
 }
 
@@ -24,7 +21,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   depositPercent,
   onSetDepositPercent,
   roomPriceUnit,
-  stayType = 'overnight',
   remainingAtCheckin,
 }) => {
   if (!isOpen) return null;
@@ -102,7 +98,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-amber-50'
             }`}
           >
-            <span className="block">{stayType === 'day_use' ? 'ค่าห้องชั่วคราว' : 'ค่าห้อง 1 คืน'}</span>
+            <span className="block">ค่าห้อง 1 คืน</span>
             <span className="text-[10px] font-normal opacity-90">฿{roomPriceUnit.toLocaleString()}</span>
           </button>
         </div>

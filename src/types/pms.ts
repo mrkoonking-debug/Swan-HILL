@@ -52,8 +52,6 @@ export interface PaymentTransaction {
   cashChange?: number; // Change given to guest
 }
 
-export type StayType = 'overnight' | 'day_use';
-
 export interface Booking {
   id: string;
   bookingCode: string;
@@ -64,12 +62,10 @@ export interface Booking {
   roomId: string;
   roomNumber: string;
   roomType: string;
-  stayType?: StayType; // 'overnight' (default) or 'day_use' (ชั่วคราว/รายชั่วโมง)
   checkInDate: string; // YYYY-MM-DD
   checkOutDate: string; // YYYY-MM-DD
   checkInTime?: string; // e.g. "14:00", "18:00"
-  checkOutTime?: string; // e.g. "12:00", "16:00"
-  dayUseHours?: number; // e.g. 2, 3, 4 hours for day-use
+  checkOutTime?: string; // e.g. "12:00"
   totalNights: number;
   totalGuests: number;
   roomPrice: number; // Base room price

@@ -273,11 +273,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 <span className="text-xs text-slate-500 font-normal">
                   ({b.roomType})
                 </span>
-                {b.stayType === 'day_use' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                    ⏱️ ชั่วคราว {b.dayUseHours || 3} ชม.
-                  </span>
-                )}
+
                 {b.channel && (
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                     {b.channel}
@@ -302,7 +298,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               <span>{b.guestPhone}</span>
             </a>
             <span className="px-2.5 py-1 bg-slate-100 text-slate-600 font-medium text-xs rounded-xl">
-              {b.totalGuests} ท่าน &bull; {b.stayType === 'day_use' ? `ชั่วคราว ${b.dayUseHours || 3} ชม.` : `${b.totalNights} คืน`}
+              {b.totalGuests} ท่าน &bull; {b.totalNights} คืน
             </span>
           </div>
         </div>
@@ -1088,14 +1084,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                               {formatThaiDate(b.checkInDate)} {b.checkInTime ? `(${b.checkInTime} น.)` : ''}
                             </span>
                             <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-200 shrink-0">
-                              {b.stayType === 'day_use' ? `ชั่วคราว ${b.dayUseHours || 3} ชม.` : `${b.totalNights} คืน`}
+                              {b.totalNights} คืน
                             </span>
-                            {b.stayType !== 'day_use' && (
-                              <>
-                                <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
-                                <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkOutDate)}</span>
-                              </>
-                            )}
+                            <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkOutDate)}</span>
                           </div>
 
                           {b.addOns && b.addOns.length > 0 && (
