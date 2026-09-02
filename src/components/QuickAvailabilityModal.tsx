@@ -52,8 +52,8 @@ export const QuickAvailabilityModal: React.FC<QuickAvailabilityModalProps> = ({
     )
   );
 
-  // Active bookings filter
-  const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== 'cancelled');
+  // Active bookings filter (exclude cancelled and checked_out bookings)
+  const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out');
 
   // Check each room's availability for the selected date range [checkInDate, checkOutDate)
   const roomStatusList = rooms.map(room => {
@@ -71,10 +71,27 @@ export const QuickAvailabilityModal: React.FC<QuickAvailabilityModalProps> = ({
       b.checkInDate < checkOutDate && b.checkOutDate > checkInDate
     );
 
+    // Check if this room has a completed checkout today (Same-day Turnover / Re-sell)
+    const checkedOutToday = bookings.find(b =>
+      !b.deletedAt &&
+      (b.roomId === room.id || b.roomNumber === room.roomNumber) &&
+      b.status === 'checked_out' &&
+      (b.checkOutDate === checkInDate || b.checkInDate === checkInDate)
+    );
+
+    let reason = 'ว่างพร้อมจอง';
+    if (conflict) {
+      reason = `ติดจอง: ${conflict.guestName} (${formatThaiDate(conflict.checkInDate)} - ${formatThaiDate(conflict.checkOutDate)})`;
+    } else if (checkedOutToday && room.status === 'available') {
+      reason = '✨ ว่างพร้อมขายรอบใหม่ (เคลียร์ห้องเสร็จแล้ว)';
+    } else if (room.status === 'cleaning') {
+      reason = '🟡 รอแม่บ้านทำความสะอาด (เปิดรับจองได้)';
+    }
+
     return {
       room,
       isAvailable: !conflict,
-      reason: conflict ? `ติดจอง: ${conflict.guestName} (${formatThaiDate(conflict.checkInDate)} - ${formatThaiDate(conflict.checkOutDate)})` : 'ว่างพร้อมจอง',
+      reason,
       conflictBooking: conflict || null
     };
   });

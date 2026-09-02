@@ -23,7 +23,8 @@ import {
   DoorOpen,
   Search,
   Copy,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { formatThaiDate, THAI_MONTHS_FULL, shiftDateStr } from '../utils/dateUtils';
@@ -140,21 +141,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Helper to determine room status on selectedDate
   const getRoomStatusOnDate = (room: Room) => {
     if (isViewingToday) {
+      // If room is available/cleaning/maintenance, do not link to old checked-out guests
       const currentBooking = room.currentGuest?.bookingId 
-        ? bookings.find(b => b.id === room.currentGuest?.bookingId)
-        : bookings.find(b => (b.roomId === room.id || b.roomNumber === room.roomNumber) && b.checkInDate <= todayStr && b.checkOutDate > todayStr && b.status !== 'cancelled' && !b.deletedAt);
+        ? bookings.find(b => b.id === room.currentGuest?.bookingId && !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out')
+        : (room.status === 'occupied' 
+            ? bookings.find(b => (b.roomId === room.id || b.roomNumber === room.roomNumber) && b.checkInDate <= todayStr && b.checkOutDate >= todayStr && (b.status === 'checked_in' || b.status === 'confirmed') && !b.deletedAt)
+            : undefined);
       return {
         status: room.status,
         booking: currentBooking,
       };
     }
 
-    // For other dates, look for an active booking
+    // For other dates, look for an active booking (exclude checked_out and cancelled)
     const booking = bookings.find(b => 
       (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
       b.checkInDate <= selectedDate && 
       b.checkOutDate > selectedDate && 
       b.status !== 'cancelled' && 
+      b.status !== 'checked_out' &&
       !b.deletedAt
     );
 
@@ -210,8 +215,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const selectedMapState = selectedMapRoom ? getRoomStatusOnDate(selectedMapRoom) : undefined;
   const selectedMapBooking = selectedMapState?.booking || (
     selectedMapRoom?.currentGuest?.bookingId
-      ? bookings.find(b => b.id === selectedMapRoom.currentGuest?.bookingId)
-      : bookings.find(b => b.roomId === selectedMapRoom?.id && b.status !== 'cancelled')
+      ? bookings.find(b => b.id === selectedMapRoom.currentGuest?.bookingId && !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out')
+      : (selectedMapState?.status === 'occupied'
+          ? bookings.find(b => b.roomId === selectedMapRoom?.id && b.status !== 'cancelled' && b.status !== 'checked_out')
+          : undefined)
   );
 
   // Strictly order rooms sequentially: S1, S2 -> S3, S4 -> S5, S6
@@ -251,10 +258,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     const currentBooking = roomState.booking;
 
-    const roomBaseTotal = currentBooking ? currentBooking.roomPrice * currentBooking.totalNights : 0;
+    const roomBaseTotal = currentBooking ? currentBooking.roomPrice * (currentBooking.totalNights || 1) : 0;
     const addOnsTotal = currentBooking?.addOns?.reduce((sum, a) => sum + (a.price * a.quantity), 0) || 0;
     const grandTotal = currentBooking?.totalAmount || (roomBaseTotal + addOnsTotal);
     const remainingBalance = currentBooking ? Math.max(0, grandTotal - currentBooking.paidAmount) : 0;
+
+    // Check if this room has a completed checkout today (Same-Day Turnover / Re-sell)
+    const checkedOutToday = bookings.find(b => 
+      (b.roomId === room.id || b.roomNumber === room.roomNumber) &&
+      b.status === 'checked_out' &&
+      (b.checkOutDate === selectedDate || b.checkInDate === selectedDate) &&
+      !b.deletedAt
+    );
 
     return (
       <div 
@@ -305,12 +320,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Guest Stay Information */}
           {isOccupied && room.currentGuest && (
             <div className="p-2 rounded-xl bg-white/90 border border-blue-200/80 text-[11px] space-y-1 shadow-2xs">
-              <span className="font-medium text-slate-800 flex items-center gap-1 truncate">
-                <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="truncate">{room.currentGuest.name}</span>
-              </span>
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-medium text-slate-800 flex items-center gap-1 truncate">
+                  <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate">{room.currentGuest.name}</span>
+                </span>
+                {currentBooking?.stayType === 'day_use' ? (
+                  <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded shrink-0">
+                    ⏱️ ชั่วคราว {currentBooking.dayUseHours || 3} ชม.
+                  </span>
+                ) : checkedOutToday ? (
+                  <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1.5 py-0.5 rounded shrink-0">
+                    ✨ รอบ 2 วันนี้
+                  </span>
+                ) : null}
+              </div>
               <span className="text-[10px] text-slate-500 block font-normal">
-                ออก {formatThaiDate(room.currentGuest.checkOut)}
+                {currentBooking?.stayType === 'day_use' 
+                  ? `ออกวันนี้ เวลา ${currentBooking.checkOutTime || '17:00'} น.` 
+                  : `ออก ${formatThaiDate(room.currentGuest.checkOut)}`}
               </span>
 
               {/* Payment Alert Banner */}
@@ -354,8 +382,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   พร้อมเข้าพัก
                 </span>
               </div>
+
+              {checkedOutToday && (
+                <div className="px-1.5 py-1 rounded-md bg-emerald-100/90 text-[10px] text-emerald-950 font-bold flex items-center justify-between border border-emerald-200">
+                  <span className="flex items-center gap-1 truncate">
+                    <Sparkles className="w-3 h-3 text-emerald-700 shrink-0" />
+                    <span>เคลียร์ห้องเสร็จแล้ว ขายรอบ 2 ได้</span>
+                  </span>
+                  <span className="text-[9px] bg-emerald-200 text-emerald-950 px-1 py-0.2 rounded font-black shrink-0">Walk-in</span>
+                </div>
+              )}
+
               <span className="text-[10px] text-slate-500 block font-normal truncate">
-                {room.type} &bull; เช็คอิน 14:00 น.
+                {room.type} &bull; เช็คอิน 14:00 น. หรือ Walk-in ทันที
               </span>
               <div className="p-1 rounded-lg bg-white/80 border border-emerald-100 text-[10px] flex items-center justify-between">
                 <span className="font-bold text-emerald-900">฿{room.pricePerNight.toLocaleString()} บาท/คืน</span>
@@ -399,7 +438,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>กดจองห้อง {room.roomNumber}</span>
+              <span>{checkedOutToday ? `กดจองรอบใหม่ห้อง ${room.roomNumber}` : `กดจองห้อง ${room.roomNumber}`}</span>
             </button>
           )}
 

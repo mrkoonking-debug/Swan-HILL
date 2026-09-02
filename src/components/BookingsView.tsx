@@ -266,17 +266,28 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           <div className="flex items-center gap-3">
             <HouseLogo roomNumber={b.roomNumber} size="md" />
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm sm:text-base font-bold text-slate-900">
                   บ้าน {b.roomNumber}
                 </span>
                 <span className="text-xs text-slate-500 font-normal">
                   ({b.roomType})
                 </span>
+                {b.stayType === 'day_use' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    ⏱️ ชั่วคราว {b.dayUseHours || 3} ชม.
+                  </span>
+                )}
+                {b.channel && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    {b.channel}
+                  </span>
+                )}
                 {getStatusBadge(b.status)}
               </div>
               <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
                 {b.guestName}
+                {b.checkInTime && <span className="ml-2 text-[11px] font-normal text-slate-500">({b.checkInTime} - {b.checkOutTime || ''} น.)</span>}
               </h3>
             </div>
           </div>
@@ -291,7 +302,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               <span>{b.guestPhone}</span>
             </a>
             <span className="px-2.5 py-1 bg-slate-100 text-slate-600 font-medium text-xs rounded-xl">
-              {b.totalGuests} ท่าน &bull; {b.totalNights} คืน
+              {b.totalGuests} ท่าน &bull; {b.stayType === 'day_use' ? `ชั่วคราว ${b.dayUseHours || 3} ชม.` : `${b.totalNights} คืน`}
             </span>
           </div>
         </div>
@@ -1072,13 +1083,19 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                             {getStatusBadge(b.status)}
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-normal">
-                            <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkInDate)}</span>
-                            <span className="text-[9px] font-medium text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-200 shrink-0">
-                              {b.totalNights} คืน
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-normal flex-wrap">
+                            <span className="font-medium text-slate-800 truncate">
+                              {formatThaiDate(b.checkInDate)} {b.checkInTime ? `(${b.checkInTime} น.)` : ''}
                             </span>
-                            <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkOutDate)}</span>
+                            <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-200 shrink-0">
+                              {b.stayType === 'day_use' ? `ชั่วคราว ${b.dayUseHours || 3} ชม.` : `${b.totalNights} คืน`}
+                            </span>
+                            {b.stayType !== 'day_use' && (
+                              <>
+                                <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="font-medium text-slate-800 truncate">{formatThaiDate(b.checkOutDate)}</span>
+                              </>
+                            )}
                           </div>
 
                           {b.addOns && b.addOns.length > 0 && (

@@ -94,14 +94,33 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   // Active bookings filter
   const activeBookings = bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
 
-  // Helper: Get bookings active on a specific date
+  // Helper: Get bookings active on a specific date (supports overnight and day-use)
   const getBookingsForDate = (dateStr: string) => {
-    return activeBookings.filter(b => dateStr >= b.checkInDate && dateStr < b.checkOutDate);
+    return activeBookings.filter(b => {
+      if (b.stayType === 'day_use' || b.checkInDate === b.checkOutDate) {
+        return b.checkInDate === dateStr;
+      }
+      return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
+    });
   };
 
-  // Helper: Find booking on a date for a specific room
+  // Helper: Find all bookings on a date for a specific room (supports multiple bookings per day)
+  const getAllBookingsForRoomAndDate = (roomId: string, dateStr: string) => {
+    return activeBookings.filter(b => {
+      if (b.roomId !== roomId && b.roomNumber !== roomId) return false;
+      if (b.stayType === 'day_use' || b.checkInDate === b.checkOutDate) {
+        return b.checkInDate === dateStr;
+      }
+      return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
+    });
+  };
+
+  // Helper: Find primary booking on a date for a specific room (prioritize active over completed checkout)
   const getBookingForRoomAndDate = (roomId: string, dateStr: string) => {
-    return activeBookings.find(b => (b.roomId === roomId || b.roomNumber === roomId) && dateStr >= b.checkInDate && dateStr < b.checkOutDate);
+    const list = getAllBookingsForRoomAndDate(roomId, dateStr);
+    if (list.length === 0) return undefined;
+    if (list.length === 1) return list[0];
+    return list.find(b => b.status === 'checked_in') || list.find(b => b.status === 'confirmed') || list[0];
   };
 
   // Timeline days for this month (up to 31 days)
@@ -314,6 +333,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     </div>
                   </td>
                   {timelineDays.map((dStr) => {
+                    const roomBookings = getAllBookingsForRoomAndDate(room.id, dStr);
                     const booking = getBookingForRoomAndDate(room.id, dStr);
 
                     return (
@@ -321,10 +341,17 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         {booking ? (
                           <div
                             onClick={() => setSelectedBookingModal(booking)}
-                            className="p-1 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-950 font-bold text-[10px] truncate cursor-pointer hover:scale-105 transition-transform"
-                            title={`คลิกเพื่อดูการจอง: ${booking.guestName}`}
+                            className={`p-1 rounded-lg border font-bold text-[10px] truncate cursor-pointer hover:scale-105 transition-transform ${
+                              booking.status === 'checked_out'
+                                ? 'bg-slate-100 border-slate-300 text-slate-700'
+                                : (booking.stayType === 'day_use' ? 'bg-amber-100 border-amber-300 text-amber-950' : 'bg-emerald-100 border-emerald-300 text-emerald-950')
+                            }`}
+                            title={`คลิกเพื่อดูการจอง: ${booking.guestName} ${roomBookings.length > 1 ? `(มี ${roomBookings.length} รายการจองวันนี้)` : ''}`}
                           >
-                            <span className="truncate block font-black">{booking.guestName}</span>
+                            <span className="truncate block font-black">
+                              {booking.guestName}
+                              {roomBookings.length > 1 && <span className="text-[8px] ml-0.5 text-blue-700 font-extrabold">(+{roomBookings.length - 1})</span>}
+                            </span>
                           </div>
                         ) : (
                           <button
@@ -387,9 +414,12 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             {/* List of All 6 Rooms on this Date */}
             <div className="p-4 overflow-y-auto no-scrollbar space-y-2.5 flex-1 overscroll-contain">
               {orderedRooms.map((room) => {
-                const booking = getBookingForRoomAndDate(room.id, selectedDateModal);
+                const roomBookings = getAllBookingsForRoomAndDate(room.id, selectedDateModal);
+                const activeBooking = roomBookings.find(b => b.status === 'checked_in' || b.status === 'confirmed');
+                const checkedOutBooking = roomBookings.find(b => b.status === 'checked_out');
 
-                if (!booking) {
+                // Case 1: No bookings at all
+                if (roomBookings.length === 0) {
                   return (
                     <div 
                       key={room.id} 
@@ -425,7 +455,56 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   );
                 }
 
-                // If Booked / Occupied
+                // Case 2: Room was checked out earlier today, but currently vacant for round 2
+                if (!activeBooking && checkedOutBooking) {
+                  return (
+                    <div 
+                      key={room.id} 
+                      className="p-3 bg-emerald-50/40 hover:bg-emerald-50 rounded-2xl border border-emerald-200 transition-all flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0">
+                          {room.roomNumber}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-xs text-slate-900 block truncate">
+                            ห้อง {room.roomNumber} - {room.name}
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] text-emerald-700 font-bold">
+                              ✨ เคลียร์ห้องเสร็จแล้ว พร้อมรับรอบ 2 (Walk-in)
+                            </span>
+                            <span 
+                              onClick={() => {
+                                setSelectedBookingModal(checkedOutBooking);
+                                setSelectedDateModal(null);
+                              }}
+                              className="text-[9px] text-slate-500 underline hover:text-slate-800 cursor-pointer"
+                            >
+                              (ดูบิลเดิม: คุณ {checkedOutBooking.guestName})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (onOpenNewBookingWithPrefill && selectedDateModal) {
+                            onOpenNewBookingWithPrefill(room.id, selectedDateModal);
+                          }
+                          setSelectedDateModal(null);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>จองรอบใหม่</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Case 3: Active booking (possibly with previous checkout today as well)
+                const booking = activeBooking || checkedOutBooking || roomBookings[0];
                 return (
                   <div
                     key={room.id}
@@ -440,11 +519,20 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         {room.roomNumber}
                       </span>
                       <div className="min-w-0">
-                        <span className="font-extrabold text-xs text-slate-900 block truncate">
-                          ห้อง {room.roomNumber} - {room.name}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-xs text-slate-900 block truncate">
+                            ห้อง {room.roomNumber} - {room.name}
+                          </span>
+                          {booking.stayType === 'day_use' && (
+                            <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1 rounded">ชั่วคราว</span>
+                          )}
+                          {checkedOutBooking && activeBooking && (
+                            <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1 rounded">รอบที่ 2</span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-blue-700 font-semibold truncate block">
                           🔵 พักโดย: คุณ {booking.guestName}
+                          {booking.stayType === 'day_use' ? ` (${booking.dayUseHours || 3} ชม.)` : ''}
                         </span>
                       </div>
                     </div>
