@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, CalendarDays, ListOrdered, DollarSign, Plus } from 'lucide-react';
+import { Home, CalendarDays, ClipboardCheck, CreditCard, Plus } from 'lucide-react';
 import type { ActiveTab } from './Sidebar';
 
 interface BottomNavProps {
@@ -13,7 +13,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   setActiveTab,
   onOpenNewBooking,
 }) => {
-  // 5-Column Navigation Index Mapping (matching kwe spring slide physics)
+  // 5-Column Navigation Index Mapping (matching spring slide physics)
   const getActiveColumnIndex = (tab: ActiveTab): number => {
     switch (tab) {
       case 'dashboard': return 0;
@@ -28,20 +28,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <div className="md:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-0 z-40 px-3 pointer-events-none flex justify-center">
-      {/* Dark Luxury Liquid Glass Floating Capsule */}
-      <div className="pointer-events-auto w-full max-w-[365px] bg-slate-950/95 backdrop-blur-2xl border border-slate-800/80 shadow-[0_12px_45px_rgba(0,0,0,0.6),0_0_20px_rgba(14,165,233,0.12)] rounded-full p-1.5 relative select-none">
+      {/* Light Frosted Glass Floating Capsule matching user screenshot */}
+      <div className="pointer-events-auto w-full max-w-[365px] bg-white/95 backdrop-blur-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.1),0_2px_8px_rgba(0,0,0,0.04)] rounded-full p-1.5 relative select-none">
         
-        {/* Subtle Liquid Glow Accent in Background */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/10 via-transparent to-amber-500/10 pointer-events-none" />
-
-        {/* --- Single Sliding Spring Active Indicator (from kwe physics) --- */}
+        {/* --- Sliding Spring Active Capsule Indicator --- */}
         <div 
           className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc((100%-12px)/5)] flex items-center justify-center pointer-events-none z-10 transition-transform duration-350 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform"
           style={{ transform: `translateX(${activeColIndex * 100}%)` }}
         >
-          <div className="w-[90%] h-[90%] rounded-2xl bg-slate-800/90 shadow-inner border border-slate-700/80 flex flex-col items-center justify-end pb-1">
-            <span className="w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee] animate-pulse" />
-          </div>
+          <div className="w-[92%] h-[90%] rounded-full bg-slate-100/95 border border-slate-200/90 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03),0_1px_2px_rgba(0,0,0,0.04)]" />
         </div>
 
         {/* 5-Column Interactive Grid */}
@@ -50,12 +45,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           {/* Col 0: หน้าหลัก (Dashboard) */}
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 active:scale-90 ${
-              activeTab === 'dashboard' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
+              activeTab === 'dashboard' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <Home className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'dashboard' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
-            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'dashboard' ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
+            <Home className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'dashboard' ? 'stroke-[2.5] text-slate-900 scale-110' : 'stroke-2 text-slate-400'}`} />
+            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'dashboard' ? 'font-black text-slate-900' : 'font-bold text-slate-400'}`}>
               หน้าหลัก
             </span>
           </button>
@@ -63,21 +58,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           {/* Col 1: ปฏิทิน (Timeline) */}
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 active:scale-90 ${
-              activeTab === 'timeline' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
+              activeTab === 'timeline' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <CalendarDays className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'timeline' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
-            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'timeline' ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
+            <CalendarDays className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'timeline' ? 'stroke-[2.5] text-slate-900 scale-110' : 'stroke-2 text-slate-400'}`} />
+            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'timeline' ? 'font-black text-slate-900' : 'font-bold text-slate-400'}`}>
               ปฏิทิน
             </span>
           </button>
 
           {/* Col 2: Center Floating Glowing Cyan FAB (+) */}
-          <div className="flex items-center justify-center relative -top-3.5">
+          <div className="flex items-center justify-center relative -top-3">
             <button
               onClick={onOpenNewBooking}
-              className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_6px_22px_rgba(14,165,233,0.55)] border-4 border-slate-950 active:scale-90 transition-transform duration-200"
+              className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_8px_22px_rgba(14,165,233,0.42)] border-4 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer"
               title="เพิ่มการจองใหม่"
               aria-label="สร้างการจองใหม่"
             >
@@ -88,25 +83,25 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           {/* Col 3: รายการจอง (Bookings) */}
           <button
             onClick={() => setActiveTab('bookings')}
-            className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 active:scale-90 ${
-              activeTab === 'bookings' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
+              activeTab === 'bookings' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <ListOrdered className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'bookings' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
-            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'bookings' ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
+            <ClipboardCheck className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'bookings' ? 'stroke-[2.5] text-slate-900 scale-110' : 'stroke-2 text-slate-400'}`} />
+            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'bookings' ? 'font-black text-slate-900' : 'font-bold text-slate-400'}`}>
               รายการจอง
             </span>
           </button>
 
-          {/* Col 4: สรุปยอดเงิน (Finance) */}
+          {/* Col 4: ยอดเงิน (Finance) */}
           <button
             onClick={() => setActiveTab('finance')}
-            className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-200 active:scale-90 ${
-              activeTab === 'finance' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-full transition-all duration-200 active:scale-90 cursor-pointer ${
+              activeTab === 'finance' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <DollarSign className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'finance' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2 text-slate-400'}`} />
-            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'finance' ? 'font-black text-white' : 'font-bold text-slate-400'}`}>
+            <CreditCard className={`w-4 h-4 transition-transform duration-300 ${activeTab === 'finance' ? 'stroke-[2.5] text-slate-900 scale-110' : 'stroke-2 text-slate-400'}`} />
+            <span className={`text-[10px] mt-0.5 tracking-tight transition-colors duration-300 ${activeTab === 'finance' ? 'font-black text-slate-900' : 'font-bold text-slate-400'}`}>
               ยอดเงิน
             </span>
           </button>

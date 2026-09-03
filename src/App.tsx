@@ -714,8 +714,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
       {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
         <div 
-          className={`fixed bottom-0 inset-x-0 z-20 transition-transform duration-220 ease-out will-change-transform ${
-            isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0 pointer-events-none' : 'translate-x-0'
+          className={`fixed bottom-0 inset-x-0 z-30 pointer-events-none transition-transform duration-220 ease-out will-change-transform ${
+            isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0' : 'translate-x-0'
           }`}
         >
           <BottomNav
