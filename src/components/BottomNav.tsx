@@ -68,15 +68,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             </span>
           </button>
 
-          {/* Col 2: Center Floating Glowing Cyan FAB (+) */}
-          <div className="flex items-center justify-center relative -top-3">
+          {/* Col 2: Center Cyan Action Button (+) - FLUSH INSIDE PILL */}
+          <div className="flex items-center justify-center">
             <button
               onClick={onOpenNewBooking}
-              className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_8px_22px_rgba(14,165,233,0.42)] border-4 border-white active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(14,165,233,0.38)] active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer"
               title="เพิ่มการจองใหม่"
               aria-label="สร้างการจองใหม่"
             >
-              <Plus className="w-6 h-6 stroke-[3]" />
+              <Plus className="w-5 h-5 stroke-[2.8]" />
             </button>
           </div>
 
