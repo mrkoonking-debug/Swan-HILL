@@ -104,21 +104,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Helper to determine room status on selectedDate
   const getRoomStatusOnDate = (room: Room) => {
-    if (isViewingToday) {
-      // If room is available/cleaning/maintenance, do not link to old checked-out guests
-      const currentBooking = room.currentGuest?.bookingId 
-        ? bookings.find(b => b.id === room.currentGuest?.bookingId && !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out')
-        : (room.status === 'occupied' 
-            ? bookings.find(b => (b.roomId === room.id || b.roomNumber === room.roomNumber) && b.checkInDate <= todayStr && b.checkOutDate >= todayStr && (b.status === 'checked_in' || b.status === 'confirmed') && !b.deletedAt)
-            : undefined);
-      return {
-        status: room.status,
-        booking: currentBooking,
-      };
-    }
-
-    // For other dates, look for an active booking (exclude checked_out and cancelled)
-    const booking = bookings.find(b => 
+    // 1. Look for active booking staying during selectedDate night (checkIn <= selectedDate < checkOut)
+    const stayingBooking = bookings.find(b => 
       (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
       b.checkInDate <= selectedDate && 
       b.checkOutDate > selectedDate && 
@@ -127,9 +114,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       !b.deletedAt
     );
 
-    if (booking) {
-      return { status: 'occupied' as RoomStatus, booking };
+    if (stayingBooking) {
+      return { status: 'occupied' as RoomStatus, booking: stayingBooking };
     }
+
+    // 2. Look for booking checking out on selectedDate (checkOut === selectedDate -> Waiting for Cleaning)
+    const checkoutBooking = bookings.find(b =>
+      (b.roomId === room.id || b.roomNumber === room.roomNumber) &&
+      b.status !== 'cancelled' &&
+      b.checkOutDate === selectedDate &&
+      !b.deletedAt
+    );
+
+    if (checkoutBooking) {
+      // If viewing today, check if room status was manually marked available after cleaning
+      if (isViewingToday && room.status === 'available') {
+        return { status: 'available' as RoomStatus, booking: undefined };
+      }
+      return { status: 'cleaning' as RoomStatus, booking: checkoutBooking };
+    }
+
+    // 3. If viewing today, respect manual room status (cleaning or maintenance or occupied)
+    if (isViewingToday) {
+      if (room.status === 'cleaning') {
+        return { status: 'cleaning' as RoomStatus, booking: undefined };
+      }
+      if (room.status === 'maintenance') {
+        return { status: 'maintenance' as RoomStatus, booking: undefined };
+      }
+      if (room.status === 'occupied') {
+        const todayBooking = bookings.find(b => 
+          (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
+          b.checkInDate <= todayStr && 
+          b.checkOutDate >= todayStr && 
+          (b.status === 'checked_in' || b.status === 'confirmed') && 
+          !b.deletedAt
+        );
+        return { status: 'occupied' as RoomStatus, booking: todayBooking };
+      }
+    }
+
     return { status: 'available' as RoomStatus, booking: undefined };
   };
 
@@ -278,6 +302,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           getRoomStatusOnDate={getRoomStatusOnDate}
           onOpenNewBookingForRoom={onOpenNewBookingForRoom}
           onOpenNewBooking={onOpenNewBooking}
+          onOpenNewBookingWithDates={onOpenNewBookingWithDates}
+          onSelectDate={(newDate) => setSelectedDate(newDate)}
+          onShiftDate={handleShiftDate}
           onOpenQuickChecker={() => {
             if (onOpenQuickChecker) onOpenQuickChecker();
             else setIsQuickCheckerOpen(true);

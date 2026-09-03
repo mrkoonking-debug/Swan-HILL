@@ -14,10 +14,11 @@ import {
   CreditCard, 
   UtensilsCrossed, 
   Receipt, 
-  ChevronRight 
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../../types/pms';
-import { formatThaiDate } from '../../utils/dateUtils';
+import { formatThaiDate, shiftDateStr } from '../../utils/dateUtils';
 import { LiquidSegmentedControl } from '../LiquidSegmentedControl';
 
 // 3D Masterplan Coordinate Pin Locations (Strictly accurate to real Swan HILL architecture)
@@ -44,6 +45,9 @@ export interface ResortMapSectionProps {
   getRoomStatusOnDate: (room: Room) => { status: RoomStatus; booking?: Booking };
   onOpenNewBookingForRoom?: (roomId: string) => void;
   onOpenNewBooking: () => void;
+  onOpenNewBookingWithDates?: (roomId: string, checkIn: string, checkOut: string) => void;
+  onSelectDate?: (date: string) => void;
+  onShiftDate?: (days: number) => void;
   onOpenQuickChecker?: () => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenAddOrder?: (booking: Booking) => void;
@@ -68,6 +72,9 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
   getRoomStatusOnDate,
   onOpenNewBookingForRoom,
   onOpenNewBooking,
+  onOpenNewBookingWithDates,
+  onSelectDate,
+  onShiftDate,
   onOpenQuickChecker,
   onOpenAddPayment,
   onOpenAddOrder,
@@ -78,6 +85,10 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
   onTriggerConfirmMaintenance,
 }) => {
   const selectedMapRoom = rooms.find(r => r.roomNumber === selectedMapRoomNumber) || rooms[0];
+  const selectedMapRoomState = selectedMapRoom 
+    ? getRoomStatusOnDate(selectedMapRoom) 
+    : { status: 'available' as RoomStatus, booking: undefined };
+  const selectedMapBooking = selectedMapRoomState.booking;
 
   // Helper for single room 30-day availability
   const getRoomMonthAvailability = (roomId: string) => {
@@ -103,13 +114,6 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
 
   const selectedRoomDays = selectedMapRoom ? getRoomMonthAvailability(selectedMapRoom.id) : [];
 
-  const selectedMapBooking = selectedMapRoom ? bookings.find(b => {
-    const isThisRoom = b.roomId === selectedMapRoom.id || b.roomNumber === selectedMapRoom.roomNumber;
-    const isWithinStay = b.checkInDate <= selectedDate && b.checkOutDate > selectedDate;
-    const isActive = b.status === 'checked_in' || b.status === 'confirmed';
-    return isThisRoom && isWithinStay && isActive && !b.deletedAt;
-  }) : undefined;
-
   return (
     <div className="space-y-4 animate-view-transition">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -117,13 +121,39 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
         {/* LEFT / TOP: 3D Interactive Masterplan Map (7 cols on desktop) */}
         <div className="lg:col-span-7 bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden shadow-xl flex flex-col">
           
-          {/* Map Header Bar */}
-          <div className="p-3.5 bg-slate-900/90 text-white flex items-center justify-between border-b border-slate-800 text-xs flex-wrap gap-2">
+          {/* Map Header Bar with Date Navigator */}
+          <div className="p-3 bg-slate-900/95 text-white flex items-center justify-between border-b border-slate-800 text-xs flex-wrap gap-2">
             <div className="flex items-center gap-2 font-bold">
               <Trees className="w-4 h-4 text-emerald-400" />
-              <span>แผนที่ผัง 3D Swan HILL Resort</span>
+              <span>แผนผัง 3D:</span>
+              <div className="flex items-center gap-1">
+                {onShiftDate && (
+                  <button
+                    type="button"
+                    onClick={() => onShiftDate(-1)}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    title="ดูวันก่อนหน้า"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <span className="text-emerald-300 font-extrabold px-2 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-[11px] sm:text-xs">
+                  {formatThaiDate(selectedDate)} {isViewingToday ? '(วันนี้)' : ''}
+                </span>
+                {onShiftDate && (
+                  <button
+                    type="button"
+                    onClick={() => onShiftDate(1)}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    title="ดูวันถัดไป"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-[11px]">
+
+            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px]">
               <span className="flex items-center gap-1 font-bold text-emerald-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> ว่าง
               </span>
@@ -147,7 +177,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
             {/* Ambient dark gradient overlay at top/bottom for crispness */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
 
-            {/* Interactive Room Hotspot Pins */}
+            {/* Interactive Room Hotspot Pins with Explicit Status on the 3D Map */}
             {rooms.map((room) => {
               const coords = PIN_COORDINATES[room.roomNumber] || { top: '50%', left: '50%' };
               const isSelected = selectedMapRoomNumber === room.roomNumber;
@@ -155,6 +185,20 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
               const isAvailable = roomState.status === 'available';
               const isOccupied = roomState.status === 'occupied';
               const isCleaning = roomState.status === 'cleaning';
+              const isMaintenance = roomState.status === 'maintenance';
+
+              // Text status on pin
+              let statusText = 'ว่าง';
+              if (isOccupied) {
+                const guestFirstName = roomState.booking?.guestName?.split(' ')[0] || '';
+                statusText = guestFirstName ? `มีคนพัก (${guestFirstName})` : 'มีคนพัก';
+              } else if (isCleaning) {
+                statusText = 'รอทำความสะอาด';
+              } else if (isMaintenance) {
+                statusText = 'ปิดซ่อม';
+              } else {
+                statusText = `ว่าง ฿${room.pricePerNight.toLocaleString()}`;
+              }
 
               return (
                 <button
@@ -165,41 +209,51 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                   }}
                   style={{ top: coords.top, left: coords.left }}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 group/pin z-20 ${
-                    isSelected ? 'scale-115 z-30' : 'hover:scale-110'
+                    isSelected ? 'scale-110 sm:scale-115 z-30' : 'hover:scale-105'
                   }`}
+                  title={`บ้าน ${room.roomNumber}: ${statusText}`}
                 >
                   {/* Outer Glowing Pulse */}
-                  <span className={`absolute -inset-1 rounded-full opacity-75 blur-xs ${
-                    isAvailable ? 'bg-emerald-400 animate-ping' :
-                    isOccupied ? 'bg-rose-500 animate-pulse' :
-                    isCleaning ? 'bg-amber-400 animate-pulse' : 'bg-slate-400'
+                  <span className={`absolute -inset-1.5 rounded-2xl opacity-75 blur-xs ${
+                    isAvailable ? 'bg-emerald-400/80 animate-ping' :
+                    isOccupied ? 'bg-rose-500/80 animate-pulse' :
+                    isCleaning ? 'bg-amber-400/90 animate-pulse' : 'bg-slate-400/80'
                   }`} />
 
                   {/* Main Room Pin Badge */}
-                  <div className={`relative px-2 py-1 rounded-xl shadow-2xl flex items-center gap-1.5 border-2 transition-all ${
+                  <div className={`relative px-2 sm:px-2.5 py-1 rounded-xl shadow-2xl flex items-center gap-1.5 border-2 transition-all backdrop-blur-md ${
                     isSelected
-                      ? 'ring-4 ring-white bg-slate-950 text-white border-emerald-400 shadow-emerald-500/50'
+                      ? 'ring-3 ring-white bg-slate-950 text-white border-emerald-400 shadow-emerald-500/60'
                       : isAvailable
-                      ? 'bg-emerald-600 text-white border-emerald-300'
+                      ? 'bg-emerald-600/95 text-white border-emerald-300 shadow-emerald-950/50'
                       : isOccupied
-                      ? 'bg-rose-600 text-white border-rose-300'
+                      ? 'bg-rose-600/95 text-white border-rose-300 shadow-rose-950/50'
                       : isCleaning
-                      ? 'bg-amber-500 text-white border-amber-200'
-                      : 'bg-slate-700 text-white border-slate-500'
+                      ? 'bg-amber-500/95 text-white border-amber-200 shadow-amber-950/50'
+                      : 'bg-slate-700/95 text-white border-slate-500'
                   }`}>
-                    <span className="w-2 h-2 rounded-full bg-white shrink-0" />
-                    <span className="font-black text-xs tracking-wide">{room.roomNumber}</span>
-                    <span className="text-[10px] font-bold opacity-90 hidden sm:inline">
-                      ฿{room.pricePerNight}
+                    {/* Room Number Circle Pill */}
+                    <span className="w-5 h-5 rounded-lg bg-black/35 flex items-center justify-center font-black text-[11px] text-white shrink-0 border border-white/20">
+                      {room.roomNumber}
+                    </span>
+
+                    {/* Status Text on 3D Map */}
+                    <span className="text-[10px] sm:text-[11px] font-bold tracking-tight whitespace-nowrap">
+                      {statusText}
                     </span>
                   </div>
+
+                  {/* Locator Arrow Indicator when selected */}
+                  {isSelected && (
+                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-white drop-shadow-md" />
+                  )}
                 </button>
               );
             })}
 
             {/* Bottom Watermark Tag */}
             <div className="absolute bottom-2 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-slate-300 font-medium pointer-events-none">
-              แตะที่ป้ายห้องพักเพื่อดูตารางว่าง & ยอดชำระเงิน
+              แตะที่ป้ายบ้านพักบนแผนที่ 3D เพื่อดูรายละเอียดสถานะประจำวันที่ {formatThaiDate(selectedDate)}
             </div>
           </div>
         </div>
@@ -217,7 +271,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
               },
               { 
                 value: 'single', 
-                label: `ปฏิทินบ้าน ${selectedMapRoom?.roomNumber || 'S1'}`,
+                label: `บ้าน ${selectedMapRoom?.roomNumber || 'S1'} (${formatThaiDate(selectedDate)})`,
                 icon: <Calendar className="w-3.5 h-3.5" />
               },
             ]}
@@ -278,6 +332,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                   const roomState = getRoomStatusOnDate(room);
                   const isAvail = roomState.status === 'available';
                   const isOcc = roomState.status === 'occupied';
+                  const isClean = roomState.status === 'cleaning';
 
                   return (
                     <div
@@ -285,6 +340,8 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                       className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2.5 ${
                         isAvail
                           ? 'bg-emerald-50/40 border-emerald-300 hover:border-emerald-500 shadow-2xs'
+                          : isClean
+                          ? 'bg-amber-50/40 border-amber-300/80 shadow-2xs'
                           : 'bg-slate-50 border-slate-200/80'
                       }`}
                     >
@@ -306,11 +363,15 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                           <div className="flex items-center gap-2 text-[11px] mt-0.5">
                             {isAvail ? (
                               <span className="text-emerald-700 font-bold">
-                                ฿{room.pricePerNight.toLocaleString()}/คืน &bull; สูงสุด {room.capacity} ท่าน
+                                ฿{room.pricePerNight.toLocaleString()}/คืน &bull; ว่างพร้อมจอง
+                              </span>
+                            ) : isClean ? (
+                              <span className="text-amber-800 font-bold truncate">
+                                🟡 รอทำความสะอาด {roomState.booking ? `(เพิ่งเช็คเอาท์: ${roomState.booking.guestName})` : ''}
                               </span>
                             ) : (
                               <span className="text-rose-600 font-medium truncate">
-                                มีคนพัก: {roomState.booking?.guestName || 'ติดจอง'}
+                                🔴 มีคนพัก: {roomState.booking?.guestName || 'ติดจอง'}
                               </span>
                             )}
                           </div>
@@ -322,17 +383,32 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              if (onOpenNewBookingForRoom) onOpenNewBookingForRoom(room.id);
-                              else onOpenNewBooking();
+                              if (onOpenNewBookingWithDates) {
+                                const nextDay = shiftDateStr(selectedDate, 1);
+                                onOpenNewBookingWithDates(room.id, selectedDate, nextDay);
+                              } else if (onOpenNewBookingForRoom) {
+                                onOpenNewBookingForRoom(room.id);
+                              } else {
+                                onOpenNewBooking();
+                              }
                             }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-2xs flex items-center gap-1 transition-all cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             <span>จอง</span>
                           </button>
+                        ) : isClean ? (
+                          <button
+                            type="button"
+                            onClick={() => onTriggerConfirmClean(room)}
+                            className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold rounded-lg border border-amber-300 transition-all cursor-pointer"
+                            title="กดเมื่อทำความสะอาดเสร็จแล้ว"
+                          >
+                            เปิดห้องว่าง
+                          </button>
                         ) : (
                           <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200">
-                            {isOcc ? 'มีคนพัก' : 'รอแม่บ้าน'}
+                            มีคนพัก
                           </span>
                         )}
 
@@ -343,7 +419,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                             onRightPanelTabChange('single');
                           }}
                           className="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-600 text-xs rounded-xl border border-slate-200 transition-all cursor-pointer"
-                          title={`ดูปฏิทิน 30 วันของบ้าน ${room.roomNumber}`}
+                          title={`ดูปฏิทินของบ้าน ${room.roomNumber}`}
                         >
                           ปฏิทิน
                         </button>
@@ -359,13 +435,13 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
           {rightPanelTab === 'single' && selectedMapRoom && (
             <div className="flex-1 flex flex-col justify-between space-y-3 animate-in fade-in mt-3">
               <div className="space-y-3">
-                {/* Header: Room Title & Price */}
+                {/* Header: Room Title & Price (Reflecting selectedDate status) */}
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-base shadow-sm ${
-                      selectedMapRoom.status === 'available' ? 'bg-emerald-600 text-white' :
-                      selectedMapRoom.status === 'occupied' ? 'bg-rose-600 text-white' :
-                      selectedMapRoom.status === 'cleaning' ? 'bg-amber-500 text-white' : 'bg-slate-700 text-white'
+                      selectedMapRoomState.status === 'available' ? 'bg-emerald-600 text-white' :
+                      selectedMapRoomState.status === 'occupied' ? 'bg-rose-600 text-white' :
+                      selectedMapRoomState.status === 'cleaning' ? 'bg-amber-500 text-white' : 'bg-slate-700 text-white'
                     }`}>
                       {selectedMapRoom.roomNumber}
                     </div>
@@ -381,23 +457,23 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                   </div>
 
                   <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${
-                    selectedMapRoom.status === 'available' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' :
-                    selectedMapRoom.status === 'occupied' ? 'bg-rose-100 text-rose-900 border-rose-300' :
-                    selectedMapRoom.status === 'cleaning' ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                    selectedMapRoomState.status === 'available' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' :
+                    selectedMapRoomState.status === 'occupied' ? 'bg-rose-100 text-rose-900 border-rose-300' :
+                    selectedMapRoomState.status === 'cleaning' ? 'bg-amber-100 text-amber-900 border-amber-300' :
                     'bg-slate-100 text-slate-800 border-slate-300'
                   }`}>
-                    {selectedMapRoom.status === 'available' ? '🟢 ว่างพร้อมขาย' :
-                     selectedMapRoom.status === 'occupied' ? '🔴 มีคนพัก' :
-                     selectedMapRoom.status === 'cleaning' ? '🟡 รอแม่บ้าน' : '⚪ ปิดปรับปรุง'}
+                    {selectedMapRoomState.status === 'available' ? '🟢 ว่างพร้อมขาย' :
+                     selectedMapRoomState.status === 'occupied' ? '🔴 มีคนพัก' :
+                     selectedMapRoomState.status === 'cleaning' ? '🟡 รอทำความสะอาด' : '⚪ ปิดปรับปรุง'}
                   </span>
                 </div>
 
-                {/* 30-Day Monthly Availability Calendar for this Room (กันยายน 2569) */}
+                {/* 30-Day Monthly Availability Calendar for this Room */}
                 <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-900">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                      สถานะห้องว่าง (กันยายน 2569)
+                      สถานะห้องว่าง (แตะวันที่เพื่อดูบนผัง 3D)
                     </span>
                     <div className="flex items-center gap-2 text-[10px] font-bold">
                       <span className="flex items-center gap-1 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> ว่าง</span>
@@ -415,27 +491,36 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     <div className="p-1"></div>
                     <div className="p-1"></div>
 
-                    {selectedRoomDays.map((d) => (
-                      <div
-                        key={d.day}
-                        title={d.isOccupied ? `วันที่ ${d.day} ก.ย. 69: มีคนพัก (${d.booking?.guestName})` : `วันที่ ${d.day} ก.ย. 69: ว่างพร้อมจอง`}
-                        className={`p-1 rounded-lg text-[10px] font-black transition-all flex flex-col items-center justify-center ${
-                          d.isOccupied
-                            ? 'bg-rose-500 text-white shadow-2xs font-black ring-1 ring-rose-300'
-                            : 'bg-emerald-500 text-white shadow-2xs font-bold'
-                        }`}
-                      >
-                        <span>{d.day}</span>
-                      </div>
-                    ))}
+                    {selectedRoomDays.map((d) => {
+                      const isThisSelectedDate = d.dateStr === selectedDate;
+                      return (
+                        <button
+                          key={d.day}
+                          type="button"
+                          onClick={() => onSelectDate && onSelectDate(d.dateStr)}
+                          title={`วันที่ ${d.day}: ${d.isOccupied ? `มีคนพัก (${d.booking?.guestName})` : 'ว่างพร้อมจอง'} (แตะเพื่อดูบนแผนที่ 3D)`}
+                          className={`p-1 rounded-lg text-[10px] font-black transition-all flex flex-col items-center justify-center cursor-pointer active:scale-90 ${
+                            isThisSelectedDate
+                              ? 'ring-2 ring-slate-900 scale-110 shadow-md z-10'
+                              : ''
+                          } ${
+                            d.isOccupied
+                              ? 'bg-rose-500 text-white shadow-2xs font-black'
+                              : 'bg-emerald-500 text-white shadow-2xs font-bold'
+                          }`}
+                        >
+                          <span>{d.day}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Equalized Lower Details & Actions Section (Standardized Height across all room states) */}
+              {/* Equalized Lower Details & Actions Section (Reflecting selectedDate status) */}
               <div className="space-y-2 pt-2 border-t border-slate-100 min-h-[220px] flex flex-col justify-between">
                 {/* Guest & Financial Details Section */}
-                {selectedMapRoom.status === 'occupied' && selectedMapBooking ? (
+                {selectedMapRoomState.status === 'occupied' && selectedMapBooking ? (
                   <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900 flex items-center gap-1">
@@ -477,7 +562,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                       </div>
                     </div>
                   </div>
-                ) : selectedMapRoom.status === 'cleaning' ? (
+                ) : selectedMapRoomState.status === 'cleaning' ? (
                   <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-amber-950 flex items-center gap-1.5">
@@ -485,9 +570,14 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                         <span>กำลังทำความสะอาด (รอส่งมอบห้อง)</span>
                       </span>
                       <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
-                        รอแม่บ้าน
+                        รอทำความสะอาด
                       </span>
                     </div>
+                    {selectedMapBooking && (
+                      <p className="text-[11px] text-amber-900 font-medium bg-white/70 p-2 rounded-xl border border-amber-200/60">
+                        🚪 แขกเพิ่งเช็คเอาท์: <strong>คุณ {selectedMapBooking.guestName}</strong> ({formatThaiDate(selectedMapBooking.checkInDate)} - {formatThaiDate(selectedMapBooking.checkOutDate)})
+                      </p>
+                    )}
                     <p className="text-[11px] text-slate-600">
                       แม่บ้านกำลังตรวจเช็คอุปกรณ์ จัดเก็บขยะ และเปลี่ยนชุดเครื่องนอนสำหรับผู้เข้าพักรอบถัดไป
                     </p>
@@ -502,7 +592,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-emerald-950 flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>บ้านพักว่างพร้อมเปิดรับจองทันที</span>
+                        <span>บ้านพักว่างพร้อมเปิดรับจอง ประจำวันที่ {formatThaiDate(selectedDate)}</span>
                       </span>
                       <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">
                         พร้อมเข้าพัก
@@ -521,18 +611,24 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
 
                 {/* Actions for Selected Map Room */}
                 <div className="space-y-1.5">
-                  {selectedMapRoom.status === 'available' && (
+                  {selectedMapRoomState.status === 'available' && (
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => {
-                          if (onOpenNewBookingForRoom) onOpenNewBookingForRoom(selectedMapRoom.id);
-                          else onOpenNewBooking();
+                          if (onOpenNewBookingWithDates) {
+                            const nextDay = shiftDateStr(selectedDate, 1);
+                            onOpenNewBookingWithDates(selectedMapRoom.id, selectedDate, nextDay);
+                          } else if (onOpenNewBookingForRoom) {
+                            onOpenNewBookingForRoom(selectedMapRoom.id);
+                          } else {
+                            onOpenNewBooking();
+                          }
                         }}
                         className="col-span-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                       >
                         <Plus className="w-4 h-4 stroke-[3]" />
-                        <span>บันทึกการจองห้อง {selectedMapRoom.roomNumber}</span>
+                        <span>บันทึกการจองห้อง {selectedMapRoom.roomNumber} ({formatThaiDate(selectedDate)})</span>
                       </button>
                       <button
                         type="button"
@@ -553,7 +649,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     </div>
                   )}
 
-                  {selectedMapRoom.status === 'occupied' && selectedMapBooking && (
+                  {selectedMapRoomState.status === 'occupied' && selectedMapBooking && (
                     <div className="grid grid-cols-2 gap-2">
                       {onOpenAddPayment && (
                         <button
@@ -581,7 +677,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                         <button
                           type="button"
                           onClick={() => onOpenReceipt(selectedMapBooking)}
-                          className="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1 border border-slate-200 transition-all cursor-pointer"
+                          className="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1 border border-slate-200 transition-all cursor-pointer"
                         >
                           <Receipt className="w-3.5 h-3.5 text-emerald-600" />
                           <span>พิมพ์ใบเสร็จ</span>
@@ -602,7 +698,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     </div>
                   )}
 
-                  {selectedMapRoom.status === 'cleaning' && (
+                  {selectedMapRoomState.status === 'cleaning' && (
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -623,7 +719,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     </div>
                   )}
 
-                  {selectedMapRoom.status === 'maintenance' && (
+                  {selectedMapRoomState.status === 'maintenance' && (
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
