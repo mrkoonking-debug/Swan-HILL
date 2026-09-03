@@ -15,8 +15,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
-  Settings2,
-  Phone,
   User
 } from 'lucide-react';
 import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
@@ -24,7 +22,6 @@ import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { formatLocalDate, shiftDateStr, formatThaiDate } from '../utils/dateUtils';
-import { DepositModal } from './booking/DepositModal';
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -65,7 +62,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   // Guided Stepper (1 = Customer & Room, 2 = Add-ons & Payment)
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -123,16 +119,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (isOpen) {
       setCurrentStep(1);
-      setIsDepositModalOpen(false);
       setCheckInTime(getCurrentTimeString());
     }
   }, [prefillRoomId, prefillDate, prefillCheckOutDate, isOpen, rooms]);
 
-  // Update default deposit / paid amount when grandTotal changes
+  // Update default deposit (default to 50% instead of 100%)
   useEffect(() => {
     if (grandTotal > 0) {
-      if (depositAmount === 0) {
-        setDepositAmount(grandTotal);
+      if (depositAmount === 0 || depositAmount > grandTotal) {
+        setDepositAmount(Math.round(grandTotal * 0.5));
       }
     }
   }, [grandTotal]);
@@ -145,47 +140,22 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const remainingAtCheckin = Math.max(0, grandTotal - effectivePaid);
 
   // Active bookings filter to check room conflicts (EXCLUDE checked_out and cancelled!)
-  // Once a guest has checked out, the room is released and available for turnover/re-sell!
   const activeBookings = (bookings || []).filter(b => !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out');
 
-  // Room Dropdown Options with live availability check & Turnover detection
-  const roomOptions: DropdownOption[] = rooms.map(r => {
-    // Conflict detection (Standard Hotel Night overlap check)
-    const conflict = activeBookings.find(b => {
-      if (b.roomId !== r.id && b.roomNumber !== r.roomNumber) return false;
-      return b.checkInDate < checkOutDate && b.checkOutDate > checkInDate;
+  // Helper: check if a room is occupied during the selected date range
+  const isRoomOccupied = (roomId: string, rNum: string) => {
+    return activeBookings.some(b => {
+      if (b.roomId !== roomId && b.roomNumber !== rNum) return false;
+      return checkInDate < b.checkOutDate && checkOutDate > b.checkInDate;
     });
+  };
 
-    // Check if this room has a completed checkout today (Same-Day Turnover / Re-sell)
-    const checkedOutToday = (bookings || []).find(b =>
-      !b.deletedAt &&
-      (b.roomId === r.id || b.roomNumber === r.roomNumber) &&
-      b.status === 'checked_out' &&
-      (b.checkOutDate === checkInDate || b.checkInDate === checkInDate)
-    );
-
-    let badge = `🟢 ว่าง ฿${r.pricePerNight.toLocaleString()}/คืน`;
-    let sublabel = `${r.type} • ว่างพร้อมจอง`;
-
-    if (conflict) {
-      badge = '🔴 ติดจองแล้ว';
-      sublabel = `${r.type} • ติดจองโดยคุณ ${conflict.guestName}`;
-    } else if (checkedOutToday && r.status === 'available') {
-      badge = '✨ ว่างพร้อมขาย (เคลียร์ห้องเสร็จแล้ว)';
-      sublabel = `${r.type} • เช็คเอาท์ก่อนหน้าแล้ว พร้อมรับรอบใหม่วันนี้`;
-    } else if (r.status === 'cleaning') {
-      badge = '🟡 รอทำความสะอาด';
-      sublabel = `${r.type} • แม่บ้านกำลังเก็บห้อง (เปิดจองได้)`;
-    } else if (r.status === 'maintenance') {
-      badge = '⚪ ปิดปรับปรุง';
-      sublabel = `${r.type} • ปิดซ่อมบำรุง`;
-    }
-
+  // Convert rooms to Dropdown options with occupied tag
+  const roomOptions: DropdownOption[] = rooms.map(r => {
+    const occupied = isRoomOccupied(r.id, r.roomNumber);
     return {
       value: r.id,
-      label: conflict ? `[${r.roomNumber}] ${r.name} (ติดจอง)` : `[${r.roomNumber}] ${r.name}`,
-      sublabel,
-      badge,
+      label: `ห้อง ${r.roomNumber} - ${r.name} (฿${r.pricePerNight.toLocaleString()}/คืน)${occupied ? ' [❌ ไม่ว่างช่วงนี้]' : ' [🟢 ว่าง]'}`,
       icon: <HouseLogo roomNumber={r.roomNumber} size="sm" />
     };
   });
@@ -194,32 +164,28 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     return val.replace(/[^0-9,\s-]/g, '');
   };
 
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim()) {
+      setGuestName('รอลูกค้าแจ้ง');
+      setGuestPhone('-');
+    }
+    setCurrentStep(2);
+  };
+
   const handleSetDepositPercent = (percent: number) => {
     const calculated = Math.round(grandTotal * (percent / 100));
     setDepositAmount(calculated);
   };
 
-  const handleNextStep = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!guestName.trim()) {
-      alert('กรุณาระบุชื่อลูกค้า');
-      return;
-    }
-    if (!guestPhone.trim()) {
-      alert('กรุณาระบุเบอร์โทรศัพท์ลูกค้า');
-      return;
-    }
-    setCurrentStep(2);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestName.trim() || !guestPhone.trim() || !selectedRoom) return;
+    if (!selectedRoom) return;
 
     const addOnsList: AddOnItem[] = [];
     if (extraBeds > 0) {
       addOnsList.push({
-        id: 'bed-' + Date.now(),
+        id: 'eb-' + Date.now(),
         name: `ที่นอนเสริม (${extraBeds} ท่าน)`,
         category: 'bed',
         price: 300,
@@ -229,7 +195,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (mookataSmall > 0) {
       addOnsList.push({
-        id: 'mks-' + Date.now(),
+        id: 'ms-' + Date.now(),
         name: `หมูกระทะชุดเล็ก (${mookataSmall} ชุด)`,
         category: 'mookata_small',
         price: 350,
@@ -239,7 +205,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     }
     if (mookataLarge > 0) {
       addOnsList.push({
-        id: 'mkl-' + Date.now(),
+        id: 'ml-' + Date.now(),
         name: `หมูกระทะชุดใหญ่ (${mookataLarge} ชุด)`,
         category: 'mookata_large',
         price: 500,
@@ -263,13 +229,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       : (paymentStatus === 'deposit' ? (depositAmount > 0 ? depositAmount : Math.round(grandTotal * 0.5)) : 0);
 
     const isToday = checkInDate === defaultCheckIn;
-    const bookingStatus = (autoCheckIn && isToday) ? 'checked_in' : 'confirmed';
+    const bookingStatus = (autoCheckIn && isToday) ? 'checked_in' : (autoCheckIn ? 'checked_in' : 'confirmed');
 
     const newBooking: Booking = {
       id: 'b-' + Date.now(),
       bookingCode: generateBookingCode(checkInDate),
-      guestName: guestName.trim(),
-      guestPhone: guestPhone.trim(),
+      guestName: guestName.trim() || 'รอลูกค้าแจ้ง',
+      guestPhone: guestPhone.trim() || '-',
       roomId: selectedRoom.id,
       roomNumber: selectedRoom.roomNumber,
       roomType: selectedRoom.type,
@@ -354,9 +320,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (guestName.trim() && guestPhone.trim()) {
-                setCurrentStep(2);
+              if (!guestName.trim()) {
+                setGuestName('รอลูกค้าแจ้ง');
+                setGuestPhone('-');
               }
+              setCurrentStep(2);
             }}
             className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               currentStep === 2
@@ -375,45 +343,70 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         {/* STEP 1: ลูกค้า & ห้องพัก (Who & Where)                                    */}
         {/* ========================================================================= */}
         {currentStep === 1 && (
-          <form onSubmit={handleNextStep} className="p-4 overflow-y-auto no-scrollbar space-y-3.5 text-slate-800 flex-1">
+          <form onSubmit={handleNextStep} className="p-4 overflow-y-auto no-scrollbar space-y-3 text-slate-800 flex-1">
 
-            {/* 3. Guest Name & Phone */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-900 mb-1 flex items-center gap-1">
+            {/* 1. Guest Name & Phone with Quick Hold Button */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-900 flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>ชื่อลูกค้า <span className="text-red-500">*</span></span>
+                  <span>ข้อมูลลูกค้า</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="เช่น คุณสมชาย เจริญพร"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
-                />
+                
+                {/* Quick Hold button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (guestName === 'รอลูกค้าแจ้ง') {
+                      setGuestName('');
+                      setGuestPhone('');
+                    } else {
+                      setGuestName('รอลูกค้าแจ้ง');
+                      setGuestPhone('-');
+                    }
+                  }}
+                  className={`text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+                    guestName === 'รอลูกค้าแจ้ง'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'bg-amber-100/90 hover:bg-amber-200 text-amber-900 border border-amber-300'
+                  }`}
+                  title="คลิกเพื่อล็อคห้องไว้ก่อน โดยยังไม่ต้องกรอกชื่อและเบอร์โทร"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{guestName === 'รอลูกค้าแจ้ง' ? '✓ รอลูกค้าแจ้ง (ล็อคห้อง)' : '⚡ ยังไม่ระบุ (ค่อยใส่ทีหลัง)'}</span>
+                </button>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-900 flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>เบอร์โทรศัพท์ <span className="text-red-500">*</span></span>
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-normal">คั่นด้วย , ได้ถ้ามี 2 เบอร์</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ชื่อลูกค้า (เช่น คุณสมชาย)"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
+                  />
                 </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="เช่น 081-234-5678"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(sanitizePhoneInput(e.target.value))}
-                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:border-emerald-500 outline-none font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
-                />
+                <div>
+                  <input
+                    type="text"
+                    placeholder="เบอร์โทรศัพท์ (ถ้ามี)"
+                    value={guestPhone === '-' ? '' : guestPhone}
+                    onChange={(e) => setGuestPhone(sanitizePhoneInput(e.target.value))}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
+                  />
+                </div>
               </div>
+
+              {guestName === 'รอลูกค้าแจ้ง' && (
+                <p className="text-[10px] text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                  ℹ️ ล็อคห้องไว้ก่อนเรียบร้อยแล้ว สามารถกดถัดไปได้ทันที และกลับมาใส่ชื่อจริงทีหลังได้
+                </p>
+              )}
             </div>
 
-            {/* 4. Choose Room */}
+            {/* 2. Choose Room */}
             <div>
               <CustomDropdown
                 label="เลือกบ้านพัก / ขนาดห้อง *"
@@ -423,128 +416,248 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               />
             </div>
 
-            {/* 4. Check-in & Check-out Dates & Times */}
+            {/* 3. Check-in & Check-out Dates & Times (Resort-tailored Mobile Experience) */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-900 mb-1">
-                    วันเช็คอิน <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      required
-                      value={checkInDate}
-                      onChange={(e) => {
-                        setCheckInDate(e.target.value);
-                        if (e.target.value >= checkOutDate) {
-                          setCheckOutDate(shiftDateStr(e.target.value, 1));
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>วันเข้าพัก & จำนวนคืน</span>
+                </span>
+                
+                {/* Fast Date Preset Chips */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckInDate(defaultCheckIn);
+                      setCheckOutDate(shiftDateStr(defaultCheckIn, totalNights));
+                    }}
+                    className={`text-[10px] px-2 py-0.5 rounded-lg font-bold border transition-all cursor-pointer ${
+                      checkInDate === defaultCheckIn
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    วันนี้
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tom = shiftDateStr(defaultCheckIn, 1);
+                      setCheckInDate(tom);
+                      setCheckOutDate(shiftDateStr(tom, totalNights));
+                    }}
+                    className={`text-[10px] px-2 py-0.5 rounded-lg font-bold border transition-all cursor-pointer ${
+                      checkInDate === shiftDateStr(defaultCheckIn, 1)
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    พรุ่งนี้
+                  </button>
+                </div>
+              </div>
+
+              {/* Check-in / Nights Stepper / Check-out Grid */}
+              <div className="grid grid-cols-5 gap-2 items-center">
+                {/* Check-in Col (2 cols) */}
+                <div className="col-span-2 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 block mb-0.5">วันเช็คอิน (In)</span>
+                  <input
+                    type="date"
+                    required
+                    value={checkInDate}
+                    onChange={(e) => {
+                      setCheckInDate(e.target.value);
+                      if (e.target.value >= checkOutDate) {
+                        setCheckOutDate(shiftDateStr(e.target.value, totalNights));
+                      }
+                    }}
+                    className="w-full text-xs font-extrabold text-slate-900 bg-transparent outline-none cursor-pointer"
+                  />
+                  <span className="text-[10px] text-emerald-700 font-bold block mt-0.5 truncate">
+                    {formatThaiDate(checkInDate)}
+                  </span>
+                </div>
+
+                {/* Nights Pill Col (1 col) */}
+                <div className="col-span-1 flex flex-col items-center justify-center bg-emerald-50/80 border border-emerald-200/80 rounded-xl py-1 px-0.5">
+                  <span className="text-[9px] text-emerald-800 font-bold leading-none">พัก</span>
+                  <div className="flex items-center gap-1 my-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (totalNights > 1) {
+                          setCheckOutDate(shiftDateStr(checkInDate, totalNights - 1));
                         }
                       }}
-                      className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
-                    />
-                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      className="w-4 h-4 rounded bg-white text-emerald-800 flex items-center justify-center text-[10px] font-black border border-emerald-300 active:scale-90 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="text-xs font-black text-emerald-950 leading-none">{totalNights}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCheckOutDate(shiftDateStr(checkInDate, totalNights + 1))}
+                      className="w-4 h-4 rounded bg-white text-emerald-800 flex items-center justify-center text-[10px] font-black border border-emerald-300 active:scale-90 cursor-pointer"
+                    >
+                      +
+                    </button>
                   </div>
+                  <span className="text-[9px] text-emerald-800 font-bold leading-none">คืน</span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-900 mb-1">
-                    วันเช็คเอาท์ <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      required
-                      value={checkOutDate}
-                      min={shiftDateStr(checkInDate, 1)}
-                      onChange={(e) => setCheckOutDate(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:border-emerald-500 outline-none bg-white transition-all shadow-xs"
-                    />
-                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-emerald-600" />
-                    <span>เวลาเข้าพัก</span>
-                  </label>
+                {/* Check-out Col (2 cols) */}
+                <div className="col-span-2 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 block mb-0.5">วันเช็คเอาท์ (Out)</span>
                   <input
-                    type="time"
-                    value={checkInTime}
-                    onChange={(e) => setCheckInTime(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
+                    type="date"
+                    required
+                    value={checkOutDate}
+                    min={shiftDateStr(checkInDate, 1)}
+                    onChange={(e) => setCheckOutDate(e.target.value)}
+                    className="w-full text-xs font-extrabold text-slate-900 bg-transparent outline-none cursor-pointer"
                   />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    <span>เวลาเช็คเอาท์</span>
-                  </label>
-                  <input
-                    type="time"
-                    value={checkOutTime}
-                    onChange={(e) => setCheckOutTime(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none"
-                  />
+                  <span className="text-[10px] text-slate-600 font-bold block mt-0.5 truncate">
+                    {formatThaiDate(checkOutDate)}
+                  </span>
                 </div>
               </div>
 
-              {/* Price adjustment row */}
-              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-slate-600">
-                    ราคาห้องต่อคืน:
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      placeholder={String(baseRoomPricePerNight)}
-                      value={customPrice}
-                      onChange={(e) => setCustomPrice(e.target.value)}
-                      className="w-20 px-2 py-0.5 text-xs font-bold border border-slate-300 rounded-md outline-none focus:border-emerald-500 bg-white"
-                    />
-                    <span className="text-[10px] text-slate-500">฿</span>
+              {/* Resort Time Presets (Replacing Android Native Time Wheels) */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80">
+                {/* Check-in Time */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-emerald-600" />
+                      <span>เวลาเข้าพัก</span>
+                    </span>
+                    <span className="text-[10px] font-black text-emerald-800">{checkInTime} น.</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {['14:00', '13:00', '15:00'].map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setCheckInTime(t)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                          checkInTime === t
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {t}{t === '14:00' ? ' (ปกติ)' : ''}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCheckInTime(getCurrentTimeString())}
+                      className="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
+                      title="เวลาตอนนี้"
+                    >
+                      ตอนนี้
+                    </button>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-xs font-extrabold text-slate-900">
-                    ฿{roomBaseTotal.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] text-slate-500 ml-1 font-normal">
-                    ({totalNights} คืน)
-                  </span>
+                {/* Check-out Time */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-500" />
+                      <span>เวลาออก</span>
+                    </span>
+                    <span className="text-[10px] font-black text-slate-900">{checkOutTime} น.</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {['12:00', '11:00', '13:00'].map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setCheckOutTime(t)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                          checkOutTime === t
+                            ? 'bg-slate-800 text-white'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {t}{t === '12:00' ? ' (ปกติ)' : ''}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Auto Check-in Toggle (Only if check-in is today) */}
-              {checkInDate === defaultCheckIn && (
-                <div className="pt-2 border-t border-slate-200/80">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={autoCheckIn}
-                      onChange={(e) => setAutoCheckIn(e.target.checked)}
-                      className="w-4 h-4 rounded text-emerald-600 accent-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <span className="font-bold text-slate-900">เช็คอินเข้าห้องพักทันที</span>
-                      <span className="text-slate-500 ml-1">(ลูกค้าถึงรีสอร์ทแล้ว สถานะจะเปลี่ยนเป็น "เข้าพักแล้ว")</span>
-                    </div>
-                  </label>
-                </div>
-              )}
+            {/* 4. Booking Mode Selector (Replacing ugly Checkbox) */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+              <label className="block text-xs font-bold text-slate-900">
+                สถานะการเข้าพัก <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAutoCheckIn(false)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                    !autoCheckIn
+                      ? 'bg-white border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
+                      : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${!autoCheckIn ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-500'}`}>
+                    📅
+                  </div>
+                  <div className="min-w-0">
+                    <span className={`text-xs font-extrabold block truncate ${!autoCheckIn ? 'text-slate-900' : 'text-slate-600'}`}>จองล่วงหน้า</span>
+                    <span className="text-[10px] text-slate-500 block truncate">รอลูกค้ามาเช็คอิน</span>
+                  </div>
+                </button>
 
-              {/* Nights Summary Banner */}
-              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                <span className="text-slate-600">
-                  เข้าพัก: <strong className="text-slate-900">{totalNights} คืน</strong> ({formatThaiDate(checkInDate)} - {formatThaiDate(checkOutDate)})
+                <button
+                  type="button"
+                  onClick={() => setAutoCheckIn(true)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                    autoCheckIn
+                      ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${autoCheckIn ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-100 text-slate-500'}`}>
+                    🔑
+                  </div>
+                  <div className="min-w-0">
+                    <span className={`text-xs font-extrabold block truncate ${autoCheckIn ? 'text-emerald-950' : 'text-slate-600'}`}>เช็คอินทันที</span>
+                    <span className="text-[10px] text-emerald-700 font-bold block truncate">ลูกค้าถึงแล้ว (เข้าพักเลย)</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 5. Price adjustment row */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-600">
+                  ราคาห้องต่อคืน:
                 </span>
-                <span className="font-bold text-emerald-800">
-                  ฿{roomBaseTotal.toLocaleString()} บาท
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    placeholder={String(baseRoomPricePerNight)}
+                    value={customPrice}
+                    onChange={(e) => setCustomPrice(e.target.value)}
+                    className="w-20 px-2 py-1 text-xs font-bold border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white"
+                  />
+                  <span className="text-xs text-slate-500">฿</span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-xs font-extrabold text-slate-900">
+                  ฿{roomBaseTotal.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-slate-500 ml-1 font-normal">
+                  ({totalNights} คืน)
                 </span>
               </div>
             </div>
@@ -573,7 +686,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         {/* STEP 2: อาหาร & ชำระเงิน (Add-ons & Payment)                              */}
         {/* ========================================================================= */}
         {currentStep === 2 && (
-          <form onSubmit={handleSubmit} className="p-4 overflow-y-auto no-scrollbar space-y-3.5 text-slate-800 flex-1">
+          <form onSubmit={handleSubmit} className="p-4 overflow-y-auto no-scrollbar space-y-3 text-slate-800 flex-1">
             
             {/* Summary Tag Header */}
             <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
@@ -732,90 +845,159 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               </div>
             </div>
 
-            {/* 3. Payment Status: 3 Large Touchable Cards (No Dropdown required) */}
+            {/* 3. Payment Status (STABLE FIXED LAYOUT - ZERO LAYOUT SHIFT) */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-900">
-                เลือกการชำระเงินของลูกค้า <span className="text-red-500">*</span>
+                การชำระเงิน <span className="text-red-500">*</span>
               </label>
 
+              {/* 3 Payment Options Grid */}
               <div className="grid grid-cols-3 gap-2">
                 {/* Option 1: จ่ายมัดจำ */}
-                <div
+                <button
+                  type="button"
                   onClick={() => {
                     setPaymentStatus('deposit');
-                    if (depositAmount === 0) setDepositAmount(Math.round(grandTotal * 0.5));
+                    if (depositAmount === 0 || depositAmount >= grandTotal) {
+                      setDepositAmount(Math.round(grandTotal * 0.5));
+                    }
                   }}
                   className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer relative ${
                     paymentStatus === 'deposit'
-                      ? 'bg-amber-50 border-amber-500 shadow-xs ring-1 ring-amber-500 text-amber-950'
+                      ? 'bg-amber-50 border-amber-500 shadow-xs ring-2 ring-amber-500/30 text-amber-950'
                       : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
                   <Coins className={`w-5 h-5 mx-auto mb-1 ${paymentStatus === 'deposit' ? 'text-amber-600' : 'text-slate-400'}`} />
                   <span className="text-xs font-bold block">จ่ายมัดจำ</span>
-                  <span className="text-[10px] text-amber-800 font-semibold block mt-0.5">
+                  <span className="text-[10px] text-amber-800 font-bold block mt-0.5">
                     ฿{depositAmount.toLocaleString()} ({depositPercent}%)
                   </span>
-
-                  {paymentStatus === 'deposit' && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsDepositModalOpen(true);
-                      }}
-                      className="mt-1.5 px-2 py-0.5 bg-amber-200/80 hover:bg-amber-300 text-amber-900 rounded-md text-[9px] font-bold flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
-                    >
-                      <Settings2 className="w-2.5 h-2.5" />
-                      <span>ปรับยอด</span>
-                    </button>
-                  )}
-                </div>
+                </button>
 
                 {/* Option 2: ชำระครบ 100% */}
-                <div
+                <button
+                  type="button"
                   onClick={() => setPaymentStatus('paid')}
                   className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                     paymentStatus === 'paid'
-                      ? 'bg-emerald-50 border-emerald-500 shadow-xs ring-1 ring-emerald-500 text-emerald-950'
+                      ? 'bg-emerald-50 border-emerald-500 shadow-xs ring-2 ring-emerald-500/30 text-emerald-950'
                       : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
                   <CreditCard className={`w-5 h-5 mx-auto mb-1 ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-slate-400'}`} />
                   <span className="text-xs font-bold block">ชำระครบ 100%</span>
-                  <span className="text-[10px] text-emerald-800 font-semibold block mt-0.5">
+                  <span className="text-[10px] text-emerald-800 font-bold block mt-0.5">
                     ฿{grandTotal.toLocaleString()}
                   </span>
-                </div>
+                </button>
 
                 {/* Option 3: รอเก็บเงิน */}
-                <div
+                <button
+                  type="button"
                   onClick={() => setPaymentStatus('pending')}
                   className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                     paymentStatus === 'pending'
-                      ? 'bg-slate-100 border-slate-500 shadow-xs ring-1 ring-slate-500 text-slate-900'
+                      ? 'bg-slate-100 border-slate-500 shadow-xs ring-2 ring-slate-500/30 text-slate-900'
                       : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
                   <Clock className={`w-5 h-5 mx-auto mb-1 ${paymentStatus === 'pending' ? 'text-slate-700' : 'text-slate-400'}`} />
                   <span className="text-xs font-bold block">รอเก็บเงิน</span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                  <span className="text-[10px] text-slate-500 font-bold block mt-0.5">
                     เก็บวันเข้าพัก
                   </span>
-                </div>
+                </button>
               </div>
 
-              {/* Deposit Active Summary Line */}
-              {paymentStatus === 'deposit' && (
-                <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs">
-                  <span className="text-amber-950 font-medium">
-                    รับเงินมัดจำ: <strong className="text-amber-900 font-bold">฿{depositAmount.toLocaleString()}</strong>
-                  </span>
-                  <span className="text-slate-600 text-[11px]">
-                    เหลือเก็บวันพัก: <strong className="text-slate-900 font-bold">฿{remainingAtCheckin.toLocaleString()}</strong>
-                  </span>
-                </div>
-              )}
+              {/* Permanent Fixed-Height Payment Detail Container (Zero Layout Shift!) */}
+              <div className="p-3 rounded-2xl border bg-slate-50/90 border-slate-200 min-h-[96px] flex flex-col justify-center transition-all">
+                {paymentStatus === 'deposit' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                        <span>ยอดมัดจำ:</span>
+                        <span className="text-amber-800 font-extrabold">฿{depositAmount.toLocaleString()}</span>
+                        <span className="text-[11px] text-slate-500 font-normal">({depositPercent}%)</span>
+                      </span>
+
+                      {/* 30%, 50% quick chips */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSetDepositPercent(30)}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                            depositPercent === 30
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'bg-white text-slate-700 border border-slate-300 hover:bg-amber-50'
+                          }`}
+                        >
+                          30% (฿{Math.round(grandTotal * 0.3).toLocaleString()})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetDepositPercent(50)}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                            depositPercent === 50
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'bg-white text-slate-700 border border-slate-300 hover:bg-amber-50'
+                          }`}
+                        >
+                          50% (฿{Math.round(grandTotal * 0.5).toLocaleString()})
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/60">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                        <span className="text-[11px] font-medium">ระบุยอดเอง:</span>
+                        <div className="flex items-center bg-white border border-slate-300 rounded-lg px-2 py-0.5 shadow-xs">
+                          <span className="text-slate-400 text-xs mr-1">฿</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={grandTotal}
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(Math.min(grandTotal, Math.max(0, Number(e.target.value) || 0)))}
+                            className="w-20 text-xs font-black text-amber-900 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-slate-600 font-medium">
+                        เหลือเก็บวันเข้าพัก: <strong className="text-slate-900 font-bold">฿{remainingAtCheckin.toLocaleString()}</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {paymentStatus === 'paid' && (
+                  <div className="flex items-center gap-2.5 text-xs text-emerald-900 py-1">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black shrink-0">
+                      ✓
+                    </div>
+                    <div>
+                      <span className="font-extrabold block text-emerald-950">ชำระเต็มจำนวนแล้ว 100%</span>
+                      <span className="text-[11px] text-emerald-700 font-medium">
+                        รับชำระวันนี้ ฿{grandTotal.toLocaleString()} &bull; ไม่มียอดค้างชำระในวันเช็คอิน
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {paymentStatus === 'pending' && (
+                  <div className="flex items-center gap-2.5 text-xs text-slate-800 py-1">
+                    <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-black shrink-0">
+                      ⏳
+                    </div>
+                    <div>
+                      <span className="font-extrabold block text-slate-900">รอชำระเงินในวันเข้าพัก</span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        ยังไม่มีการรับเงินมัดจำล่วงหน้า &bull; จะเรียกเก็บยอดรวม ฿{grandTotal.toLocaleString()} ในวันเช็คอิน
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 4. Notes (Optional) */}
@@ -852,21 +1034,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             </div>
           </form>
         )}
-
-        {/* ========================================================================= */}
-        {/* POP-UP: กำหนดยอดเงินมัดจำล่วงหน้า (Deposit Customizer Modal)                  */}
-        {/* ========================================================================= */}
-        <DepositModal
-          isOpen={isDepositModalOpen}
-          onClose={() => setIsDepositModalOpen(false)}
-          grandTotal={grandTotal}
-          depositAmount={depositAmount}
-          setDepositAmount={setDepositAmount}
-          depositPercent={depositPercent}
-          onSetDepositPercent={handleSetDepositPercent}
-          roomPriceUnit={roomPriceUnit}
-          remainingAtCheckin={remainingAtCheckin}
-        />
 
       </div>
     </div>
