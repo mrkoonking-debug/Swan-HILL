@@ -9,8 +9,6 @@ import {
   CheckCircle2, 
   Check
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import type { Booking } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
@@ -38,11 +36,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const grandTotal = booking.totalAmount || (roomBaseTotal + addOnsTotal);
   const remainingBalance = Math.max(0, grandTotal - booking.paidAmount);
 
-  // 1. Download as Image (PNG)
+  // 1. Download as Image (PNG) - Lazy load html2canvas
   const handleDownloadImage = async () => {
     if (!receiptRef.current) return;
     try {
       setIsExporting(true);
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(receiptRef.current, {
         scale: 3, // Ultra high-res crisp rendering
         useCORS: true,
@@ -65,11 +64,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   };
 
-  // 2. Download as PDF
+  // 2. Download as PDF - Lazy load html2canvas & jsPDF
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;
     try {
       setIsExporting(true);
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       const canvas = await html2canvas(receiptRef.current, {
         scale: 3,
         useCORS: true,
@@ -104,13 +107,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     window.print();
   };
 
-  // Channel Thai Translator
-  const getChannelThai = (ch?: string) => {
-    if (ch === 'LINE Official') return 'ไลน์ (LINE Official)';
-    if (ch === 'Phone') return 'โทรศัพท์';
-    if (ch === 'Direct') return 'ติดต่อโดยตรง';
-    return ch || 'ไลน์ (LINE Official)';
-  };
 
   return (
     <div 
@@ -224,7 +220,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span className="text-[11px] text-slate-500 font-bold block">ข้อมูลลูกค้าผู้เข้าพัก</span>
                 <p className="font-black text-slate-900 text-sm mt-0.5">{booking.guestName}</p>
                 <p className="text-slate-700 font-bold mt-0.5">{booking.guestPhone}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">ช่องทางการจอง: {getChannelThai(booking.channel)}</p>
               </div>
 
               <div className="text-right">

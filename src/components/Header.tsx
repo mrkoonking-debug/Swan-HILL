@@ -33,6 +33,24 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
+  const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+
+  // Sync external reset during render without cascading effect
+  if (searchTerm !== prevSearchTerm) {
+    setPrevSearchTerm(searchTerm);
+    setLocalSearchTerm(searchTerm);
+  }
+
+  // Debounce search term update to parent (200ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearchTerm !== searchTerm) {
+        setSearchTerm(localSearchTerm);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [localSearchTerm, searchTerm, setSearchTerm]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -188,8 +206,8 @@ export const Header: React.FC<HeaderProps> = ({
             <input
               type="text"
               placeholder="ค้นหาชื่อลูกค้า, เบอร์โทร..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={localSearchTerm}
+              onChange={(e) => setLocalSearchTerm(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
             />
           </div>

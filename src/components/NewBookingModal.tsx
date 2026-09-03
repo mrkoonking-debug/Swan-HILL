@@ -67,7 +67,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 
-  const [channel, setChannel] = useState<'Walk-in' | 'LINE Official' | 'Direct' | 'Phone'>('Walk-in');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
@@ -132,14 +131,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   // Update default deposit / paid amount when grandTotal changes
   useEffect(() => {
     if (grandTotal > 0) {
-      if (channel === 'Walk-in') {
-        setPaymentStatus('paid');
+      if (depositAmount === 0) {
         setDepositAmount(grandTotal);
-      } else if (depositAmount === 0) {
-        setDepositAmount(Math.round(grandTotal * 0.5));
       }
     }
-  }, [grandTotal, channel]);
+  }, [grandTotal]);
 
   if (!isOpen) return null;
 
@@ -274,7 +270,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       bookingCode: generateBookingCode(checkInDate),
       guestName: guestName.trim(),
       guestPhone: guestPhone.trim(),
-      channel,
       roomId: selectedRoom.id,
       roomNumber: selectedRoom.roomNumber,
       roomType: selectedRoom.type,
@@ -381,27 +376,6 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         {/* ========================================================================= */}
         {currentStep === 1 && (
           <form onSubmit={handleNextStep} className="p-4 overflow-y-auto no-scrollbar space-y-3.5 text-slate-800 flex-1">
-            {/* 1. Channel Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-900 mb-1.5">ช่องทางการจอง</label>
-              <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-xl">
-                {(['Walk-in', 'LINE Official', 'Direct', 'Phone'] as const).map((ch) => (
-                  <button
-                    key={ch}
-                    type="button"
-                    onClick={() => setChannel(ch)}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      channel === ch 
-                        ? 'bg-emerald-600 text-white shadow-xs' 
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {ch === 'Walk-in' ? 'Walk-in' : (ch === 'LINE Official' ? 'LINE' : (ch === 'Direct' ? 'จองตรง' : 'โทรศัพท์'))}
-                  </button>
-                ))}
-              </div>
-            </div>
-
 
             {/* 3. Guest Name & Phone */}
             <div className="space-y-3">

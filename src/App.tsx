@@ -45,6 +45,16 @@ export interface AuthUser {
   role?: string;
 }
 
+// Safe non-blocking localStorage writer (prevents main thread jank and handles storage quota safely)
+const safeSetLocalStorage = (key: string, data: unknown) => {
+  try {
+    const serialized = JSON.stringify(data);
+    localStorage.setItem(key, serialized);
+  } catch (err) {
+    console.warn(`[LocalStorage] Failed to cache ${key}:`, err);
+  }
+};
+
 // Main PMS Dashboard Layout Component
 const MainDashboard = ({ user }: { user: AuthUser }) => {
   const location = useLocation();
@@ -143,27 +153,38 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   // FIREBASE REALTIME SUBSCRIPTIONS
   useEffect(() => {
+    let bookingsTimer: ReturnType<typeof setTimeout> | undefined;
+    let logsTimer: ReturnType<typeof setTimeout> | undefined;
+
     const unsubBookings = subscribeToBookings((liveBookings) => {
       setBookings(liveBookings);
-      localStorage.setItem('swanhill_bookings_v3', JSON.stringify(liveBookings));
+      if (bookingsTimer) clearTimeout(bookingsTimer);
+      bookingsTimer = setTimeout(() => {
+        safeSetLocalStorage('swanhill_bookings_v3', liveBookings);
+      }, 500);
     });
 
     const unsubRooms = subscribeToRooms((liveRooms) => {
       setRooms(liveRooms);
-      localStorage.setItem('swanhill_rooms_v3', JSON.stringify(liveRooms));
+      safeSetLocalStorage('swanhill_rooms_v3', liveRooms);
     });
 
     const unsubSettings = subscribeToSettings((liveSettings) => {
       setSettings(liveSettings);
-      localStorage.setItem('swanhill_settings_v1', JSON.stringify(liveSettings));
+      safeSetLocalStorage('swanhill_settings_v1', liveSettings);
     });
 
     const unsubLogs = subscribeToLogs((liveLogs) => {
       setLogs(liveLogs);
-      localStorage.setItem('swanhill_logs_v1', JSON.stringify(liveLogs));
+      if (logsTimer) clearTimeout(logsTimer);
+      logsTimer = setTimeout(() => {
+        safeSetLocalStorage('swanhill_logs_v1', liveLogs);
+      }, 500);
     });
 
     return () => {
+      if (bookingsTimer) clearTimeout(bookingsTimer);
+      if (logsTimer) clearTimeout(logsTimer);
       unsubBookings();
       unsubRooms();
       unsubSettings();

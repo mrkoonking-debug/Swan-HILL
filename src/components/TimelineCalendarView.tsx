@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Calendar, 
@@ -44,11 +44,11 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
   useLockBodyScroll(!!selectedDateModal || !!selectedBookingModal);
 
-  // Strictly order rooms: S1, S2 -> S3, S4 -> S5, S6
-  const orderedRooms = [...rooms].sort((a, b) => {
+  // Strictly order rooms: S1, S2 -> S3, S4 -> S5, S6 (Memoized)
+  const orderedRooms = useMemo(() => {
     const order = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
-    return order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber);
-  });
+    return [...rooms].sort((a, b) => order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber));
+  }, [rooms]);
 
   // Dynamic viewing month/year state (Default to Sept 2026 if bookings exist there, else current month)
   const [viewDate, setViewDate] = useState<Date>(() => {
@@ -73,53 +73,88 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
-  // Day of week of 1st day (0=Sun, 1=Mon, ..., 6=Sat)
-  const startDayOfWeek = new Date(year, month, 1).getDay();
-  // Total days in this month
-  const totalDays = new Date(year, month + 1, 0).getDate();
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, []);
 
-  // Build grid cells with offset
-  const calendarCells = [];
-  for (let i = 0; i < startDayOfWeek; i++) {
-    calendarCells.push(null);
-  }
-  for (let d = 1; d <= totalDays; d++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    calendarCells.push({
-      day: d,
-      dateStr,
+  // Memoize Month Grid Cells & Timeline Days calculation
+  const { calendarCells, timelineDays } = useMemo(() => {
+    const startDayOfWeek = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells: ({ day: number; dateStr: string } | null)[] = [];
+    for (let i = 0; i < startDayOfWeek; i++) {
+      cells.push(null);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ day: d, dateStr });
+    }
+
+    const tDays = Array.from({ length: daysInMonth }, (_, i) => {
+      const d = i + 1;
+      return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     });
-  }
 
-  // Active bookings filter
-  const activeBookings = bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
+    return { calendarCells: cells, timelineDays: tDays };
+  }, [year, month]);
 
-  // Helper: Get bookings active on a specific date (Night stay: dateStr >= checkInDate && dateStr < checkOutDate)
-  const getBookingsForDate = (dateStr: string) => {
-    return activeBookings.filter(b => dateStr >= b.checkInDate && dateStr < b.checkOutDate);
-  };
+  // Active bookings filter (Memoized)
+  const activeBookings = useMemo(() => {
+    return bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
+  }, [bookings]);
 
-  // Helper: Find all bookings on a date for a specific room
-  const getAllBookingsForRoomAndDate = (roomId: string, dateStr: string) => {
-    return activeBookings.filter(b => {
-      if (b.roomId !== roomId && b.roomNumber !== roomId) return false;
-      return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
+  // Precomputed Date Lookup Maps: O(1) Instant Access instead of 370+ iterations per render
+  const { bookingsByDate, bookingsByRoomAndDate } = useMemo(() => {
+    const byDate = new Map<string, Booking[]>();
+    const byRoomAndDate = new Map<string, Booking[]>();
+
+    activeBookings.forEach((b) => {
+      const checkIn = new Date(b.checkInDate + 'T00:00:00');
+      const checkOut = new Date(b.checkOutDate + 'T00:00:00');
+
+      const cur = new Date(checkIn);
+      while (cur < checkOut) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        const dStr = `${y}-${m}-${d}`;
+
+        if (!byDate.has(dStr)) byDate.set(dStr, []);
+        byDate.get(dStr)!.push(b);
+
+        const rKey1 = `${b.roomId}_${dStr}`;
+        const rKey2 = `${b.roomNumber}_${dStr}`;
+        if (!byRoomAndDate.has(rKey1)) byRoomAndDate.set(rKey1, []);
+        byRoomAndDate.get(rKey1)!.push(b);
+        if (rKey1 !== rKey2) {
+          if (!byRoomAndDate.has(rKey2)) byRoomAndDate.set(rKey2, []);
+          byRoomAndDate.get(rKey2)!.push(b);
+        }
+
+        cur.setDate(cur.getDate() + 1);
+      }
     });
-  };
 
-  // Helper: Find primary booking on a date for a specific room (prioritize active over completed checkout)
-  const getBookingForRoomAndDate = (roomId: string, dateStr: string) => {
+    return { bookingsByDate: byDate, bookingsByRoomAndDate: byRoomAndDate };
+  }, [activeBookings]);
+
+  // Fast O(1) Helpers
+  const getBookingsForDate = useCallback((dateStr: string): Booking[] => {
+    return bookingsByDate.get(dateStr) || [];
+  }, [bookingsByDate]);
+
+  const getAllBookingsForRoomAndDate = useCallback((roomId: string, dateStr: string): Booking[] => {
+    return bookingsByRoomAndDate.get(`${roomId}_${dateStr}`) || [];
+  }, [bookingsByRoomAndDate]);
+
+  const getBookingForRoomAndDate = useCallback((roomId: string, dateStr: string): Booking | undefined => {
     const list = getAllBookingsForRoomAndDate(roomId, dateStr);
     if (list.length === 0) return undefined;
     if (list.length === 1) return list[0];
     return list.find(b => b.status === 'checked_in') || list.find(b => b.status === 'confirmed') || list[0];
-  };
-
-  // Timeline days for this month (up to 31 days)
-  const timelineDays = Array.from({ length: totalDays }, (_, i) => {
-    const d = i + 1;
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  });
+  }, [getAllBookingsForRoomAndDate]);
 
   return (
     <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
@@ -194,13 +229,13 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
       {/* VIEW 1: CLEAN & COMPACT FULL MONTH CALENDAR GRID */}
       {viewMode === 'month' && (
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 p-3 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/90 p-1.5 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           {/* Day of Week Headers */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-1.5 sm:mb-2 text-center">
             {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
               <div 
                 key={dayName} 
-                className={`py-1.5 text-xs font-black rounded-lg ${
+                className={`py-1 sm:py-1.5 text-[11px] sm:text-xs font-black rounded-lg ${
                   idx === 0 || idx === 6 ? 'text-amber-800 bg-amber-50/50' : 'text-slate-700 bg-slate-50'
                 }`}
               >
@@ -217,7 +252,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 return (
                   <div 
                     key={`empty-${idx}`} 
-                    className="h-16 sm:h-20 bg-slate-50/40 rounded-2xl border border-dashed border-slate-200/60"
+                    className="h-16 sm:h-20 bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200/60"
                   />
                 );
               }
@@ -226,59 +261,71 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               const bookedRoomsCount = dayBookings.length;
               const availableRoomsCount = Math.max(0, rooms.length - bookedRoomsCount);
               const isFull = availableRoomsCount === 0;
+              const isToday = cell.dateStr === todayStr;
 
               return (
                 <div
                   key={cell.dateStr}
                   onClick={() => setSelectedDateModal(cell.dateStr)}
-                  className={`h-16 sm:h-20 p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-500 select-none group ${
+                  className={`h-16 sm:h-20 p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-500 select-none group relative ${
+                    isToday ? 'ring-2 ring-emerald-500 ring-offset-1' : ''
+                  } ${
                     isFull 
                       ? 'bg-rose-50/40 border-rose-200 hover:bg-rose-50' 
                       : (bookedRoomsCount > 0 ? 'bg-slate-50/90 border-slate-200 hover:bg-white' : 'bg-white border-slate-200/90 hover:bg-emerald-50/30')
                   }`}
                 >
                   {/* Top Bar: Day Number & Status Indicator */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  <div className="flex items-center justify-between gap-0.5 leading-none">
+                    <span className={`text-xs sm:text-sm font-black transition-colors shrink-0 leading-none ${
+                      isToday ? 'text-emerald-700 font-black' : 'text-slate-900 group-hover:text-emerald-700'
+                    }`}>
                       {cell.day}
                     </span>
-                    <span className={`text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                    <span className={`text-[8px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap leading-none ${
                       isFull 
                         ? 'bg-rose-100 text-rose-800' 
                         : (bookedRoomsCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')
                     }`}>
-                      {isFull ? 'เต็ม 6/6' : `ว่าง ${availableRoomsCount}/${rooms.length}`}
+                      <span className="sm:hidden">
+                        {isFull ? 'เต็ม' : (bookedRoomsCount > 0 ? `ว่าง ${availableRoomsCount}` : `ว่าง 6`)}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {isFull ? 'เต็ม 6/6' : `ว่าง ${availableRoomsCount}/${rooms.length}`}
+                      </span>
                     </span>
                   </div>
 
                   {/* Compact Color-coded Room Pills (Clean & Simple, No Huge Cards) */}
-                  <div className="flex items-center gap-1 flex-wrap overflow-hidden">
+                  <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-hidden leading-none">
                     {bookedRoomsCount === 0 ? (
-                      <span className="text-[9px] font-bold text-slate-400 opacity-60 hidden sm:inline">
+                      <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 opacity-60 hidden sm:inline">
                         ว่างทุกหลัง
                       </span>
                     ) : (
-                      dayBookings.slice(0, 4).map((b) => {
-                        const isPaid = b.paidAmount >= b.totalAmount;
-                        return (
-                          <span
-                            key={b.id}
-                            title={`${b.roomNumber}: ${b.guestName} (${isPaid ? 'จ่ายครบ' : 'มัดจำ'})`}
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
-                              isPaid 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-amber-500 text-white'
-                            }`}
-                          >
-                            {b.roomNumber}
+                      <>
+                        {dayBookings.slice(0, 3).map((b) => {
+                          const isPaid = b.paidAmount >= b.totalAmount;
+                          return (
+                            <span
+                              key={b.id}
+                              title={`${b.roomNumber}: ${b.guestName} (${isPaid ? 'จ่ายครบ' : 'มัดจำ'})`}
+                              className={`px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-black leading-none whitespace-nowrap ${
+                                isPaid 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-amber-500 text-white'
+                              }`}
+                            >
+                              {b.roomNumber}
+                            </span>
+                          );
+                        })}
+                        {bookedRoomsCount > 3 && (
+                          <span className="text-[8px] sm:text-[9px] font-black text-slate-500 leading-none">
+                            +{bookedRoomsCount - 3}
                           </span>
-                        );
-                      })
-                    )}
-                    {bookedRoomsCount > 4 && (
-                      <span className="text-[9px] font-black text-slate-500">
-                        +{bookedRoomsCount - 4}
-                      </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -290,19 +337,24 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
       {/* VIEW 2: 6-ROOM TIMELINE MATRIX */}
       {viewMode === 'timeline' && (
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/90 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-x-auto no-scrollbar">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/90 p-3 sm:p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[700px] text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="py-2.5 px-3 text-xs font-black text-slate-900 w-44">บ้านพัก</th>
+                <th className="sticky left-0 bg-white z-20 py-2.5 px-3 text-xs font-black text-slate-900 w-36 sm:w-44 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                  บ้านพัก
+                </th>
                 {timelineDays.map((dStr) => {
                   const date = new Date(dStr);
+                  const isTimelineToday = dStr === todayStr;
                   return (
-                    <th key={dStr} className="py-2 px-1 text-center text-xs font-bold text-slate-600">
+                    <th key={dStr} className={`py-2 px-1 text-center text-xs font-bold ${isTimelineToday ? 'bg-emerald-50/80 text-emerald-800' : 'text-slate-600'}`}>
                       <span className="block text-[10px] text-slate-400">
                         {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][date.getDay()]}
                       </span>
-                      <span className="font-black text-slate-800">{date.getDate()}</span>
+                      <span className={`font-black ${isTimelineToday ? 'text-emerald-700 underline decoration-2' : 'text-slate-800'}`}>
+                        {date.getDate()}
+                      </span>
                     </th>
                   );
                 })}
@@ -311,7 +363,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             <tbody className="divide-y divide-slate-100">
               {orderedRooms.map((room) => (
                 <tr key={room.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3 px-3">
+                  <td className="sticky left-0 bg-white z-10 py-3 px-3 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center gap-2">
                       <HouseLogo roomNumber={room.roomNumber} size="sm" />
                       <div>

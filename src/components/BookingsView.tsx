@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Plus, 
   ArrowRight, 
@@ -152,32 +152,41 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   };
 
-  // Active bookings filter
-  const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== 'cancelled');
+  // Active bookings filter (Memoized)
+  const activeBookings = useMemo(() => {
+    return bookings.filter(b => !b.deletedAt && b.status !== 'cancelled');
+  }, [bookings]);
 
-  // Daily View Filters for selectedDate
-  const arrivalsToday = activeBookings.filter(b => b.checkInDate === selectedDate);
-  const departuresToday = activeBookings.filter(b => b.checkOutDate === selectedDate);
-  const stayoverToday = activeBookings.filter(b => b.checkInDate < selectedDate && b.checkOutDate > selectedDate);
-  
-  // All active stays overlapping selectedDate (for kitchen & supplies totals)
-  const activeOnDate = activeBookings.filter(b => b.checkInDate <= selectedDate && b.checkOutDate >= selectedDate);
+  // Daily View Filters & Kitchen prep summary for selectedDate (Memoized)
+  const { arrivalsToday, departuresToday, stayoverToday, activeOnDate, kitchenSummary, housesWithMookata } = useMemo(() => {
+    const arrivals = activeBookings.filter(b => b.checkInDate === selectedDate);
+    const departures = activeBookings.filter(b => b.checkOutDate === selectedDate);
+    const stayover = activeBookings.filter(b => b.checkInDate < selectedDate && b.checkOutDate > selectedDate);
+    const activeOnDate = activeBookings.filter(b => b.checkInDate <= selectedDate && b.checkOutDate >= selectedDate);
 
-  // Kitchen Prep Summary for selectedDate
-  const kitchenSummary = activeOnDate.reduce((acc, b) => {
-    b.addOns?.forEach(item => {
-      if (item.category === 'mookata_large') acc.mookataLarge += item.quantity;
-      else if (item.category === 'mookata_small') acc.mookataSmall += item.quantity;
-      else if (item.category === 'breakfast') acc.breakfast += item.quantity;
-      else if (item.category === 'bed') acc.extraBeds += item.quantity;
-    });
-    return acc;
-  }, { mookataLarge: 0, mookataSmall: 0, breakfast: 0, extraBeds: 0 });
+    const kSummary = activeOnDate.reduce((acc, b) => {
+      b.addOns?.forEach(item => {
+        if (item.category === 'mookata_large') acc.mookataLarge += item.quantity;
+        else if (item.category === 'mookata_small') acc.mookataSmall += item.quantity;
+        else if (item.category === 'breakfast') acc.breakfast += item.quantity;
+        else if (item.category === 'bed') acc.extraBeds += item.quantity;
+      });
+      return acc;
+    }, { mookataLarge: 0, mookataSmall: 0, breakfast: 0, extraBeds: 0 });
 
-  // Houses ordering Mookata on selectedDate
-  const housesWithMookata = activeOnDate.filter(b => 
-    b.addOns?.some(a => (a.category === 'mookata_large' || a.category === 'mookata_small') && a.quantity > 0)
-  );
+    const mookataHouses = activeOnDate.filter(b => 
+      b.addOns?.some(a => (a.category === 'mookata_large' || a.category === 'mookata_small') && a.quantity > 0)
+    );
+
+    return {
+      arrivalsToday: arrivals,
+      departuresToday: departures,
+      stayoverToday: stayover,
+      activeOnDate,
+      kitchenSummary: kSummary,
+      housesWithMookata: mookataHouses,
+    };
+  }, [activeBookings, selectedDate]);
 
   const handleToggleMookataOrdered = (b: Booking) => {
     const isAlreadyOrdered = b.addOns?.some(
@@ -222,33 +231,49 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     setTimeout(() => setCopiedHouseId(null), 2500);
   };
 
-  // All Bookings View Filters
-  const displayedAllBookings = bookings.filter((b) => {
-    const isDeleted = !!b.deletedAt || b.status === 'cancelled';
-    if (statusFilter === 'trash') {
-      if (!isDeleted) return false;
-    } else {
-      if (isDeleted) return false;
-      if (statusFilter === 'confirmed' && b.status !== 'confirmed') return false;
-      if (statusFilter === 'checked_in' && b.status !== 'checked_in') return false;
-      if (statusFilter === 'checked_out' && b.status !== 'checked_out') return false;
-    }
+  // All Bookings View Filters (Memoized)
+  const displayedAllBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      const isDeleted = !!b.deletedAt || b.status === 'cancelled';
+      if (statusFilter === 'trash') {
+        if (!isDeleted) return false;
+      } else {
+        if (isDeleted) return false;
+        if (statusFilter === 'confirmed' && b.status !== 'confirmed') return false;
+        if (statusFilter === 'checked_in' && b.status !== 'checked_in') return false;
+        if (statusFilter === 'checked_out' && b.status !== 'checked_out') return false;
+      }
 
-    if (!searchTerm) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      b.guestName.toLowerCase().includes(q) ||
-      b.guestPhone.includes(q) ||
-      b.bookingCode.toLowerCase().includes(q) ||
-      b.roomNumber.toLowerCase().includes(q)
-    );
-  });
+      if (!searchTerm) return true;
+      const q = searchTerm.toLowerCase();
+      return (
+        b.guestName.toLowerCase().includes(q) ||
+        b.guestPhone.includes(q) ||
+        b.bookingCode.toLowerCase().includes(q) ||
+        b.roomNumber.toLowerCase().includes(q)
+      );
+    });
+  }, [bookings, statusFilter, searchTerm]);
 
-  const countTotal = activeBookings.length;
-  const countCheckedIn = activeBookings.filter(b => b.status === 'checked_in').length;
-  const countConfirmed = activeBookings.filter(b => b.status === 'confirmed').length;
-  const countFullyPaid = activeBookings.filter(b => b.paidAmount >= b.totalAmount).length;
-  const countTrash = bookings.filter(b => !!b.deletedAt || b.status === 'cancelled').length;
+  // Tab Badge Counts in a single optimized pass (Memoized)
+  const { countTotal, countCheckedIn, countConfirmed, countFullyPaid, countTrash } = useMemo(() => {
+    let checkedIn = 0;
+    let confirmed = 0;
+    let fullyPaid = 0;
+    activeBookings.forEach(b => {
+      if (b.status === 'checked_in') checkedIn++;
+      if (b.status === 'confirmed') confirmed++;
+      if (b.paidAmount >= b.totalAmount) fullyPaid++;
+    });
+    const trash = bookings.filter(b => !!b.deletedAt || b.status === 'cancelled').length;
+    return {
+      countTotal: activeBookings.length,
+      countCheckedIn: checkedIn,
+      countConfirmed: confirmed,
+      countFullyPaid: fullyPaid,
+      countTrash: trash,
+    };
+  }, [activeBookings, bookings]);
 
   // Render a Single Room Card in Daily View (Clean, Proportional & Friendly)
   const renderDailyRoomCard = (b: Booking, _category: 'arrival' | 'stayover' | 'departure') => {
@@ -274,11 +299,6 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   ({b.roomType})
                 </span>
 
-                {b.channel && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                    {b.channel}
-                  </span>
-                )}
                 {getStatusBadge(b.status)}
               </div>
               <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">

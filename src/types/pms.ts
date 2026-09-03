@@ -58,7 +58,7 @@ export interface Booking {
   guestName: string;
   guestPhone: string;
   guestIdCard?: string;
-  channel: 'Direct' | 'Walk-in' | 'LINE Official' | 'Phone';
+  channel?: 'Direct' | 'Walk-in' | 'LINE Official' | 'Phone';
   roomId: string;
   roomNumber: string;
   roomType: string;

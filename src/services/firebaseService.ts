@@ -7,6 +7,7 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
+  limit,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -188,7 +189,7 @@ export const saveSettingsToFirestore = async (settings: ResortSettings): Promise
  */
 export const subscribeToLogs = (onUpdate: (logs: ActivityLog[]) => void) => {
   try {
-    const q = query(collection(db, LOGS_COL), orderBy('timestamp', 'desc'));
+    const q = query(collection(db, LOGS_COL), orderBy('timestamp', 'desc'), limit(100));
     return onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
         onUpdate(initialLogs);
