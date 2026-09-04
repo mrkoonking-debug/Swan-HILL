@@ -658,7 +658,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         />
 
         {/* Dynamic Viewport Container */}
-        <main className="flex-1 p-3 md:p-6 overflow-y-auto max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-2 sm:p-4 md:p-6 overflow-y-auto overflow-x-hidden max-w-7xl mx-auto w-full">
           <div key={activeTab} className="animate-view-transition">
             {activeTab === 'dashboard' && (
               <DashboardView

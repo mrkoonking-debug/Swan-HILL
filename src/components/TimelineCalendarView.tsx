@@ -159,35 +159,35 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   }, [getAllBookingsForRoomAndDate]);
 
   return (
-    <div className="space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt']">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt'] w-full max-w-full overflow-hidden">
       
       {/* Top Header & View Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-emerald-600" />
+          <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
             <span>ปฏิทินห้องพัก Swan HILL Resort</span>
           </h1>
-          <p className="text-xs text-slate-500 font-normal mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5">
             {currentMonthYear} &bull; แตะที่วันเพื่อดูสรุปและสถานะห้องพัก 6 หลัง
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
           {/* Month Shift Navigation Buttons */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center gap-0.5 sm:gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs shrink-0">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+              className="p-1 sm:p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
               title="เดือนก่อนหน้า"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
             <button
               type="button"
               onClick={handleResetToCurrentMonth}
-              className="px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+              className="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
               title="กลับมาดูเดือนปัจจุบัน"
             >
               {currentMonthYear}
@@ -195,14 +195,14 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+              className="p-1 sm:p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
               title="เดือนถัดไป"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
 
-          {/* Legend */}
+          {/* Legend (Desktop) */}
           <div className="hidden lg:flex items-center gap-2.5 text-[11px] font-medium px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
             <span className="flex items-center gap-1.5 text-emerald-800">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ว่างพร้อมจอง
@@ -218,8 +218,8 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
           {/* Toggle View Mode (Apple Liquid Glass Sliding Capsule) */}
           <LiquidSegmentedControl<'month' | 'timeline'>
             options={[
-              { value: 'month', label: 'ปฏิทินรายเดือน', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-              { value: 'timeline', label: 'ผัง 6 ห้องพัก', icon: <ListFilter className="w-3.5 h-3.5" /> },
+              { value: 'month', label: 'รายเดือน', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+              { value: 'timeline', label: 'ผัง 6 ห้อง', icon: <ListFilter className="w-3.5 h-3.5" /> },
             ]}
             value={viewMode}
             onChange={(val) => setViewMode(val)}
@@ -229,15 +229,15 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* VIEW 1: CLEAN & COMPACT FULL MONTH CALENDAR GRID */}
+      {/* VIEW 1: CLEAN & COMPACT FULL MONTH CALENDAR GRID (Mobile Zero-Overflow) */}
       {viewMode === 'month' && (
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/90 p-1.5 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-3xl border border-slate-200/90 p-1 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] w-full max-w-full overflow-hidden">
           {/* Day of Week Headers */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-1.5 sm:mb-2 text-center">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-2 mb-1 sm:mb-2 text-center">
             {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
               <div 
                 key={dayName} 
-                className={`py-1 sm:py-1.5 text-[11px] sm:text-xs font-black rounded-lg ${
+                className={`py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-md sm:rounded-lg ${
                   idx === 0 || idx === 6 ? 'text-amber-800 bg-amber-50/50' : 'text-slate-700 bg-slate-50'
                 }`}
               >
@@ -247,14 +247,14 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             ))}
           </div>
 
-          {/* Days Cells Grid (Clean & Compact) */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          {/* Days Cells Grid (Clean & Compact with Zero Horizontal Overflow) */}
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
             {calendarCells.map((cell, idx) => {
               if (!cell) {
                 return (
                   <div 
                     key={`empty-${idx}`} 
-                    className="h-16 sm:h-20 bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200/60"
+                    className="min-w-0 h-14 sm:h-20 bg-slate-50/40 rounded-lg sm:rounded-2xl border border-dashed border-slate-200/60"
                   />
                 );
               }
@@ -269,7 +269,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 <div
                   key={cell.dateStr}
                   onClick={() => setSelectedDateModal(cell.dateStr)}
-                  className={`h-16 sm:h-20 p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-500 select-none group relative ${
+                  className={`min-w-0 h-14 sm:h-20 p-1 sm:p-2 rounded-lg sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md hover:border-emerald-500 select-none group relative overflow-hidden ${
                     isToday ? 'ring-2 ring-emerald-500 ring-offset-1' : ''
                   } ${
                     isFull 
@@ -279,18 +279,18 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 >
                   {/* Top Bar: Day Number & Status Indicator */}
                   <div className="flex items-center justify-between gap-0.5 leading-none">
-                    <span className={`text-xs sm:text-sm font-black transition-colors shrink-0 leading-none ${
+                    <span className={`text-[11px] sm:text-sm font-black transition-colors shrink-0 leading-none ${
                       isToday ? 'text-emerald-700 font-black' : 'text-slate-900 group-hover:text-emerald-700'
                     }`}>
                       {cell.day}
                     </span>
-                    <span className={`text-[8px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap leading-none ${
+                    <span className={`text-[7px] sm:text-[10px] font-black px-0.5 sm:px-1.5 py-0.2 sm:py-0.5 rounded shrink-0 whitespace-nowrap leading-none ${
                       isFull 
                         ? 'bg-rose-100 text-rose-800' 
                         : (bookedRoomsCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')
                     }`}>
                       <span className="sm:hidden">
-                        {isFull ? 'เต็ม' : (bookedRoomsCount > 0 ? `ว่าง ${availableRoomsCount}` : `ว่าง 6`)}
+                        {isFull ? 'เต็ม' : (bookedRoomsCount > 0 ? `ว่าง ${availableRoomsCount}` : 'ว่าง')}
                       </span>
                       <span className="hidden sm:inline">
                         {isFull ? 'เต็ม 6/6' : `ว่าง ${availableRoomsCount}/${rooms.length}`}
@@ -298,10 +298,37 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Compact Color-coded Room Pills (Clean & Simple, No Huge Cards) */}
-                  <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-hidden leading-none">
+                  {/* Room Indicators: Mobile (Micro Badges) */}
+                  <div className="flex sm:hidden items-center gap-0.5 flex-wrap overflow-hidden leading-none mt-auto">
                     {bookedRoomsCount === 0 ? (
-                      <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 opacity-60 hidden sm:inline">
+                      <span className="text-[6.5px] text-slate-400 font-medium truncate block">
+                        ว่าง 6 หลัง
+                      </span>
+                    ) : (
+                      <>
+                        {dayBookings.slice(0, 2).map((b) => (
+                          <span
+                            key={b.id}
+                            className={`px-0.5 py-0.2 rounded text-[6.5px] font-black leading-none text-white ${
+                              b.paidAmount >= b.totalAmount ? 'bg-blue-600' : 'bg-amber-500'
+                            }`}
+                          >
+                            {b.roomNumber}
+                          </span>
+                        ))}
+                        {bookedRoomsCount > 2 && (
+                          <span className="text-[6.5px] font-black text-slate-500 leading-none">
+                            +{bookedRoomsCount - 2}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Room Indicators: Desktop (Standard Pills) */}
+                  <div className="hidden sm:flex items-center gap-1 flex-wrap overflow-hidden leading-none">
+                    {bookedRoomsCount === 0 ? (
+                      <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 opacity-60">
                         ว่างทุกหลัง
                       </span>
                     ) : (
@@ -339,45 +366,57 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
       {/* VIEW 2: 6-ROOM TIMELINE MATRIX */}
       {viewMode === 'timeline' && (
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/90 p-3 sm:p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-x-auto no-scrollbar">
-          <table className="w-full min-w-[700px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="sticky left-0 bg-white z-20 py-2.5 px-3 text-xs font-black text-slate-900 w-36 sm:w-44 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                  บ้านพัก
-                </th>
-                {timelineDays.map((dStr) => {
-                  const date = new Date(dStr);
-                  const isTimelineToday = dStr === todayStr;
-                  return (
-                    <th key={dStr} className={`py-2 px-1 text-center text-xs font-bold ${isTimelineToday ? 'bg-emerald-50/80 text-emerald-800' : 'text-slate-600'}`}>
-                      <span className="block text-[10px] text-slate-400">
-                        {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][date.getDay()]}
-                      </span>
-                      <span className={`font-black ${isTimelineToday ? 'text-emerald-700 underline decoration-2' : 'text-slate-800'}`}>
-                        {date.getDate()}
-                      </span>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {orderedRooms.map((room) => (
-                <tr key={room.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="sticky left-0 bg-white z-10 py-3 px-3 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                    <div className="flex items-center gap-2">
-                      <HouseLogo roomNumber={room.roomNumber} size="sm" />
-                      <div>
-                        <span className="font-black text-xs text-slate-900 block">
-                          ห้อง {room.roomNumber}
+        <div className="space-y-2 w-full max-w-full">
+          {/* Mobile Swipe Guidance Banner */}
+          <div className="sm:hidden flex items-center justify-between px-2.5 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200">
+            <span className="flex items-center gap-1.5">
+              <span className="text-sm">👆</span>
+              <span>เลื่อนซ้าย-ขวา เพื่อดูผังห้องและวันที่ทั้งหมด</span>
+            </span>
+            <span className="text-[10px] bg-white text-emerald-700 px-1.5 py-0.5 rounded-md border border-emerald-200 font-bold">
+              30 วัน
+            </span>
+          </div>
+
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-3xl border border-slate-200/90 p-2 sm:p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-x-auto no-scrollbar touch-pan-x w-full max-w-full">
+            <table className="w-full min-w-[650px] sm:min-w-[700px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="sticky left-0 bg-white z-20 py-2 sm:py-2.5 px-2 sm:px-3 text-xs font-black text-slate-900 w-28 sm:w-44 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                    บ้านพัก
+                  </th>
+                  {timelineDays.map((dStr) => {
+                    const date = new Date(dStr);
+                    const isTimelineToday = dStr === todayStr;
+                    return (
+                      <th key={dStr} className={`py-2 px-1 text-center text-xs font-bold ${isTimelineToday ? 'bg-emerald-50/80 text-emerald-800' : 'text-slate-600'}`}>
+                        <span className="block text-[10px] text-slate-400">
+                          {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][date.getDay()]}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-medium block">
-                          ฿{room.pricePerNight.toLocaleString()}/คืน
+                        <span className={`font-black ${isTimelineToday ? 'text-emerald-700 underline decoration-2' : 'text-slate-800'}`}>
+                          {date.getDate()}
                         </span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {orderedRooms.map((room) => (
+                  <tr key={room.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="sticky left-0 bg-white z-10 py-2 sm:py-3 px-2 sm:px-3 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <HouseLogo roomNumber={room.roomNumber} size="sm" />
+                        <div>
+                          <span className="font-black text-xs text-slate-900 block">
+                            ห้อง {room.roomNumber}
+                          </span>
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium block">
+                            ฿{room.pricePerNight.toLocaleString()}/คืน
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
                   {timelineDays.map((dStr) => {
                     const roomBookings = getAllBookingsForRoomAndDate(room.id, dStr);
                     const booking = getBookingForRoomAndDate(room.id, dStr);
@@ -415,6 +454,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
