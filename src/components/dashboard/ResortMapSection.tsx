@@ -168,6 +168,54 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
             </div>
           </div>
 
+          {/* Top Room Status Explanation Strip (คำอธิบายสถานะด้านบนของแผนผัง) */}
+          <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-900 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-[10px] sm:text-[11px] font-black text-slate-400 shrink-0 mr-1 hidden sm:inline">
+              สถานะบ้านพัก:
+            </span>
+            {rooms.map((room) => {
+              const roomState = getRoomStatusOnDate(room);
+              const isSelected = selectedMapRoomNumber === room.roomNumber;
+              const isOccupied = roomState.status === 'occupied';
+              const isCleaning = roomState.status === 'cleaning';
+
+              const statusLabel = isOccupied
+                ? (roomState.booking?.guestName ? `มีคนพัก (${roomState.booking.guestName})` : 'มีคนพัก')
+                : isCleaning
+                ? 'รอทำความสะอาด'
+                : roomState.status === 'maintenance'
+                ? 'ปิดซ่อม'
+                : `ว่าง (฿${room.pricePerNight.toLocaleString()})`;
+
+              return (
+                <button
+                  key={room.id}
+                  type="button"
+                  onClick={() => {
+                    onSelectMapRoomNumber(room.roomNumber);
+                    onRightPanelTabChange('single');
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                    isSelected
+                      ? 'ring-2 ring-emerald-400 bg-slate-800 text-white border-white/40 shadow-xs'
+                      : isOccupied
+                      ? 'bg-rose-950/70 text-rose-200 border-rose-800/80 hover:bg-rose-900/60'
+                      : isCleaning
+                      ? 'bg-amber-950/70 text-amber-200 border-amber-800/80 hover:bg-amber-900/60'
+                      : 'bg-emerald-950/70 text-emerald-200 border-emerald-800/80 hover:bg-emerald-900/60'
+                  }`}
+                  title={`คลิกเพื่อดูรายละเอียดบ้าน ${room.roomNumber}`}
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    isOccupied ? 'bg-rose-500' : isCleaning ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`} />
+                  <span className="font-black text-white">{room.roomNumber}:</span>
+                  <span className="truncate max-w-[120px] sm:max-w-[140px]">{statusLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Masterplan Image with Interactive Overlay Pins */}
           <div className="relative w-full aspect-video bg-slate-900 select-none overflow-hidden group">
             <img 
@@ -179,7 +227,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
             {/* Ambient dark gradient overlay at top/bottom for crispness */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
 
-            {/* Interactive Room Hotspot Pins with Explicit Status on the 3D Map */}
+            {/* Interactive Room Hotspot Pins: ONLY S1 - S6 (Clean, Circular, Unobstructed) */}
             {rooms.map((room) => {
               const coords = PIN_COORDINATES[room.roomNumber] || { top: '50%', left: '50%' };
               const isSelected = selectedMapRoomNumber === room.roomNumber;
@@ -187,20 +235,6 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
               const isAvailable = roomState.status === 'available';
               const isOccupied = roomState.status === 'occupied';
               const isCleaning = roomState.status === 'cleaning';
-              const isMaintenance = roomState.status === 'maintenance';
-
-              // Text status on pin
-              let statusText = 'ว่าง';
-              if (isOccupied) {
-                const guestFirstName = roomState.booking?.guestName?.split(' ')[0] || '';
-                statusText = guestFirstName ? `มีคนพัก (${guestFirstName})` : 'มีคนพัก';
-              } else if (isCleaning) {
-                statusText = 'รอทำความสะอาด';
-              } else if (isMaintenance) {
-                statusText = 'ปิดซ่อม';
-              } else {
-                statusText = `ว่าง ฿${room.pricePerNight.toLocaleString()}`;
-              }
 
               return (
                 <button
@@ -211,37 +245,31 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                   }}
                   style={{ top: coords.top, left: coords.left }}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 group/pin z-20 ${
-                    isSelected ? 'scale-110 sm:scale-115 z-30' : 'hover:scale-105'
+                    isSelected ? 'scale-125 z-30' : 'hover:scale-110'
                   }`}
-                  title={`บ้าน ${room.roomNumber}: ${statusText}`}
+                  title={`บ้าน ${room.roomNumber}`}
                 >
                   {/* Outer Glowing Pulse */}
-                  <span className={`absolute -inset-1.5 rounded-2xl opacity-75 blur-xs ${
+                  <span className={`absolute -inset-1 rounded-full opacity-75 blur-xs ${
                     isAvailable ? 'bg-emerald-400/80 animate-ping' :
                     isOccupied ? 'bg-rose-500/80 animate-pulse' :
                     isCleaning ? 'bg-amber-400/90 animate-pulse' : 'bg-slate-400/80'
                   }`} />
 
-                  {/* Main Room Pin Badge */}
-                  <div className={`relative px-2 sm:px-2.5 py-1 rounded-xl shadow-2xl flex items-center gap-1.5 border-2 transition-all backdrop-blur-md ${
+                  {/* Clean, Compact Circular Room Pin Badge - ONLY S1, S2, S3... */}
+                  <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full shadow-2xl flex items-center justify-center border-2 transition-all backdrop-blur-md ${
                     isSelected
-                      ? 'ring-3 ring-white bg-slate-950 text-white border-emerald-400 shadow-emerald-500/60'
+                      ? 'ring-4 ring-white bg-slate-950 text-white border-emerald-400 shadow-emerald-500/80'
                       : isAvailable
-                      ? 'bg-emerald-600/95 text-white border-emerald-300 shadow-emerald-950/50'
+                      ? 'bg-emerald-600/95 text-white border-emerald-200 shadow-emerald-950/60'
                       : isOccupied
-                      ? 'bg-rose-600/95 text-white border-rose-300 shadow-rose-950/50'
+                      ? 'bg-rose-600/95 text-white border-rose-200 shadow-rose-950/60'
                       : isCleaning
-                      ? 'bg-amber-500/95 text-white border-amber-200 shadow-amber-950/50'
-                      : 'bg-slate-700/95 text-white border-slate-500'
+                      ? 'bg-amber-500/95 text-white border-amber-200 shadow-amber-950/60'
+                      : 'bg-slate-700/95 text-white border-slate-400 shadow-slate-950/60'
                   }`}>
-                    {/* Room Number Circle Pill */}
-                    <span className="w-5 h-5 rounded-lg bg-black/35 flex items-center justify-center font-black text-[11px] text-white shrink-0 border border-white/20">
+                    <span className="font-black text-xs sm:text-sm tracking-tight text-white drop-shadow-sm">
                       {room.roomNumber}
-                    </span>
-
-                    {/* Status Text on 3D Map */}
-                    <span className="text-[10px] sm:text-[11px] font-bold tracking-tight whitespace-nowrap">
-                      {statusText}
                     </span>
                   </div>
 
