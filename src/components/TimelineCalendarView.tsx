@@ -25,6 +25,7 @@ interface TimelineCalendarViewProps {
   rooms: Room[];
   bookings: Booking[];
   onOpenNewBookingWithPrefill?: (roomId: string, date: string) => void;
+  onOpenCloneBooking?: (booking: Booking) => void;
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenAddOrder?: (booking: Booking) => void;
@@ -34,6 +35,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   rooms,
   bookings,
   onOpenNewBookingWithPrefill,
+  onOpenCloneBooking,
   onOpenReceipt,
   onOpenAddPayment,
   onOpenAddOrder,
@@ -677,6 +679,28 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 </div>
               </div>
 
+              {/* Group Booking Badge / Indicator */}
+              {selectedBookingModal.groupId && (
+                <div className="p-2.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-700 font-bold block">การจองแบบกลุ่ม (หลายห้อง)</span>
+                      <span className="font-black text-indigo-950">
+                        บ้าน {selectedBookingModal.groupRoomNumbers?.join(' + ') || 'หลายห้อง'}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedBookingModal.groupBookingCode && (
+                    <span className="text-[10px] font-mono font-bold bg-white text-indigo-700 px-2 py-0.5 rounded-lg border border-indigo-200">
+                      #{selectedBookingModal.groupBookingCode}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Financial Breakdown (เรื่องการจ่ายเงิน & มัดจำ) */}
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2.5">
                 <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
@@ -746,6 +770,20 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-1">
+                {onOpenCloneBooking && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenCloneBooking(selectedBookingModal);
+                      setSelectedBookingModal(null);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>จองเพิ่มอีกห้องให้ลูกค้ารายนี้ ({selectedBookingModal.guestName})</span>
+                  </button>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   {onOpenAddPayment && (
                     <button

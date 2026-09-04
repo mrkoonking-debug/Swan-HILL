@@ -33,6 +33,7 @@ interface DashboardViewProps {
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenCheckoutModal?: (booking: Booking) => void;
+  onOpenCloneBooking?: (booking: Booking) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -49,6 +50,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenReceipt,
   onOpenAddPayment,
   onOpenCheckoutModal,
+  onOpenCloneBooking,
 }) => {
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
@@ -313,6 +315,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onOpenAddOrder={onOpenAddOrder}
           onOpenReceipt={onOpenReceipt}
           onOpenCheckoutModal={onOpenCheckoutModal}
+          onOpenCloneBooking={onOpenCloneBooking}
           onCheckOutGuest={onCheckOutGuest}
           onTriggerConfirmClean={handleTriggerConfirmClean}
           onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
@@ -437,6 +440,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenAddOrder={onOpenAddOrder}
         onOpenAddPayment={onOpenAddPayment}
         onOpenReceipt={onOpenReceipt}
+        onOpenCloneBooking={onOpenCloneBooking}
       />
 
       {/* 7. CUSTOM CONFIRMATION POPUP */}

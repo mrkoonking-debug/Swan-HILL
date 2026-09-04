@@ -53,6 +53,7 @@ export interface ResortMapSectionProps {
   onOpenAddOrder?: (booking: Booking) => void;
   onOpenReceipt?: (booking: Booking) => void;
   onOpenCheckoutModal?: (booking: Booking) => void;
+  onOpenCloneBooking?: (booking: Booking) => void;
   onCheckOutGuest: (bookingId: string) => void;
   onTriggerConfirmClean: (room: Room) => void;
   onTriggerConfirmMaintenance: (room: Room) => void;
@@ -80,6 +81,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
   onOpenAddOrder,
   onOpenReceipt,
   onOpenCheckoutModal,
+  onOpenCloneBooking,
   onCheckOutGuest,
   onTriggerConfirmClean,
   onTriggerConfirmMaintenance,
@@ -533,6 +535,20 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                       </a>
                     </div>
 
+                    {selectedMapBooking.groupId && (
+                      <div className="flex items-center justify-between text-[11px] bg-indigo-100/70 p-1.5 rounded-xl border border-indigo-200">
+                        <span className="font-bold text-indigo-900 flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>กรุ๊ป: บ้าน <strong>{selectedMapBooking.groupRoomNumbers?.join(' + ') || 'หลายห้อง'}</strong></span>
+                        </span>
+                        {selectedMapBooking.groupBookingCode && (
+                          <span className="text-[9px] font-mono font-bold text-indigo-700 bg-white px-1.5 py-0.5 rounded border border-indigo-200">
+                            #{selectedMapBooking.groupBookingCode}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="text-[11px] text-slate-600 flex justify-between font-medium">
                       <span>เข้าพัก: {formatThaiDate(selectedMapBooking.checkInDate)}</span>
                       <span>ออก: {formatThaiDate(selectedMapBooking.checkOutDate)} ({selectedMapBooking.totalNights} คืน)</span>
@@ -651,6 +667,17 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
 
                   {selectedMapRoomState.status === 'occupied' && selectedMapBooking && (
                     <div className="grid grid-cols-2 gap-2">
+                      {onOpenCloneBooking && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenCloneBooking(selectedMapBooking)}
+                          className="col-span-2 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-700 hover:to-teal-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4 stroke-[3]" />
+                          <span>จองเพิ่มอีกห้องให้ลูกค้ารายนี้ ({selectedMapBooking.guestName})</span>
+                        </button>
+                      )}
+
                       {onOpenAddPayment && (
                         <button
                           type="button"

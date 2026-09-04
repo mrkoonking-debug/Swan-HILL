@@ -94,6 +94,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillCheckOutDate, setPrefillCheckOutDate] = useState<string | undefined>();
+  const [prefillGuestName, setPrefillGuestName] = useState<string | undefined>();
+  const [prefillGuestPhone, setPrefillGuestPhone] = useState<string | undefined>();
+  const [prefillGroupId, setPrefillGroupId] = useState<string | undefined>();
+  const [prefillGroupBookingCode, setPrefillGroupBookingCode] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Resort Settings State (with Firebase Sync + Local fallback)
@@ -242,6 +246,24 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     setPrefillRoomId(undefined);
     setPrefillDate(undefined);
     setPrefillCheckOutDate(undefined);
+    setPrefillGuestName(undefined);
+    setPrefillGuestPhone(undefined);
+    setPrefillGroupId(undefined);
+    setPrefillGroupBookingCode(undefined);
+    setIsNewBookingOpen(true);
+  };
+
+  // Action: Open clone / add another room for the same guest
+  const handleOpenCloneBooking = (existingBooking: Booking) => {
+    setPrefillGuestName(existingBooking.guestName);
+    setPrefillGuestPhone(existingBooking.guestPhone);
+    setPrefillDate(existingBooking.checkInDate);
+    setPrefillCheckOutDate(existingBooking.checkOutDate);
+    const groupId = existingBooking.groupId || ('grp-' + existingBooking.id);
+    const groupCode = existingBooking.groupBookingCode || (`GRP-${existingBooking.checkInDate.replace(/-/g, '')}-${existingBooking.roomNumber}`);
+    setPrefillGroupId(groupId);
+    setPrefillGroupBookingCode(groupCode);
+    setPrefillRoomId(undefined);
     setIsNewBookingOpen(true);
   };
 
@@ -249,6 +271,11 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const handleOpenTimelineBooking = (roomId: string, date: string) => {
     setPrefillRoomId(roomId);
     setPrefillDate(date);
+    setPrefillCheckOutDate(undefined);
+    setPrefillGuestName(undefined);
+    setPrefillGuestPhone(undefined);
+    setPrefillGroupId(undefined);
+    setPrefillGroupBookingCode(undefined);
     setIsNewBookingOpen(true);
   };
 
@@ -428,37 +455,43 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     addLog('เช็คเอาท์ลูกค้า', `เช็คเอาท์ห้อง ${b.roomNumber} (${b.guestName}) รหัส ${b.bookingCode}`, 'room', b.roomNumber, b.bookingCode);
   };
 
-  // Action: Add New Booking (Saved to Firebase Firestore)
-  const handleAddBooking = (newBooking: Booking) => {
-    if (newBooking.paidAmount > 0) {
-      newBooking.transactions = [
-        {
-          id: 'tx-init-' + Date.now(),
-          amount: newBooking.paidAmount,
-          method: 'transfer',
-          note: newBooking.paymentStatus === 'paid' ? 'ชำระค่าห้องพักเต็มจำนวน' : 'ชำระเงินมัดจำค่าห้อง',
-          paidAt: new Date().toISOString()
-        }
-      ];
-    }
+  // Action: Add New Booking (Supports Single and Multi-Room Group Bookings)
+  const handleAddBooking = (newBookingOrList: Booking | Booking[]) => {
+    const newBookings = Array.isArray(newBookingOrList) ? newBookingOrList : [newBookingOrList];
+    const today = formatLocalDate(new Date());
 
-    setBookings(prev => [newBooking, ...prev]);
-    saveBookingToFirestore(newBooking);
+    newBookings.forEach(newBooking => {
+      if (newBooking.paidAmount > 0) {
+        newBooking.transactions = [
+          {
+            id: 'tx-init-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+            amount: newBooking.paidAmount,
+            method: 'transfer',
+            note: newBooking.paymentStatus === 'paid' ? 'ชำระค่าห้องพักเต็มจำนวน' : 'ชำระเงินมัดจำค่าห้อง',
+            paidAt: new Date().toISOString()
+          }
+        ];
+      }
+      saveBookingToFirestore(newBooking);
+    });
+
+    setBookings(prev => [...newBookings, ...prev]);
 
     // If checkInDate is today, set room status to occupied
-    const today = formatLocalDate(new Date());
-    if (newBooking.checkInDate === today) {
+    const checkInTodayRooms = newBookings.filter(b => b.checkInDate === today);
+    if (checkInTodayRooms.length > 0) {
       setRooms(prev => prev.map(r => {
-        if (r.id === newBooking.roomId) {
+        const matching = checkInTodayRooms.find(b => b.roomId === r.id || b.roomNumber === r.roomNumber);
+        if (matching) {
           const updatedRoom: Room = {
             ...r,
             status: 'occupied',
             currentGuest: {
-              name: newBooking.guestName,
-              phone: newBooking.guestPhone,
-              checkIn: newBooking.checkInDate,
-              checkOut: newBooking.checkOutDate,
-              bookingId: newBooking.id
+              name: matching.guestName,
+              phone: matching.guestPhone,
+              checkIn: matching.checkInDate,
+              checkOut: matching.checkOutDate,
+              bookingId: matching.id
             }
           };
           saveRoomToFirestore(updatedRoom);
@@ -468,13 +501,26 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       }));
     }
 
-    addLog(
-      'บันทึกการจองใหม่',
-      `จองห้อง ${newBooking.roomNumber} (${newBooking.guestName}) รหัส ${newBooking.bookingCode} รวม ฿${newBooking.totalAmount.toLocaleString()} บาท`,
-      'booking',
-      newBooking.roomNumber,
-      newBooking.bookingCode
-    );
+    if (newBookings.length > 1) {
+      const roomNames = newBookings.map(b => b.roomNumber).join(', ');
+      const totalCost = newBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+      addLog(
+        'บันทึกการจองแบบกลุ่ม',
+        `จองห้อง ${roomNames} (${newBookings[0].guestName}) รหัสกลุ่ม ${newBookings[0].groupBookingCode} รวม ฿${totalCost.toLocaleString()} บาท`,
+        'booking',
+        roomNames,
+        newBookings[0].groupBookingCode
+      );
+    } else {
+      const b = newBookings[0];
+      addLog(
+        'บันทึกการจองใหม่',
+        `จองห้อง ${b.roomNumber} (${b.guestName}) รหัส ${b.bookingCode} รวม ฿${b.totalAmount.toLocaleString()} บาท`,
+        'booking',
+        b.roomNumber,
+        b.bookingCode
+      );
+    }
   };
 
   // Action: Update Add-Ons for Booking (In-Stay Ordering)
@@ -629,6 +675,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                   setPrefillRoomId(roomId);
                   setPrefillDate(undefined);
                   setPrefillCheckOutDate(undefined);
+                  setPrefillGuestName(undefined);
+                  setPrefillGuestPhone(undefined);
+                  setPrefillGroupId(undefined);
+                  setPrefillGroupBookingCode(undefined);
                   setIsNewBookingOpen(true);
                 }}
                 onOpenNewBooking={handleOpenNormalBooking}
@@ -636,8 +686,13 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                   setPrefillRoomId(roomId);
                   setPrefillDate(checkIn);
                   setPrefillCheckOutDate(checkOut);
+                  setPrefillGuestName(undefined);
+                  setPrefillGuestPhone(undefined);
+                  setPrefillGroupId(undefined);
+                  setPrefillGroupBookingCode(undefined);
                   setIsNewBookingOpen(true);
                 }}
+                onOpenCloneBooking={handleOpenCloneBooking}
                 onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
                 onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
                 onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
@@ -651,6 +706,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 rooms={rooms}
                 bookings={bookings}
                 onOpenNewBookingWithPrefill={handleOpenTimelineBooking}
+                onOpenCloneBooking={handleOpenCloneBooking}
                 onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
                 onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
                 onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
@@ -663,6 +719,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 settings={settings}
                 searchTerm={searchTerm}
                 onOpenNewBooking={handleOpenNormalBooking}
+                onOpenCloneBooking={handleOpenCloneBooking}
                 onCheckInGuest={handleCheckInGuest}
                 onCheckOutGuest={(bId) => {
                   const b = bookings.find(item => item.id === bId);
@@ -732,6 +789,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         onClose={() => {
           setIsNewBookingOpen(false);
           setPrefillCheckOutDate(undefined);
+          setPrefillGuestName(undefined);
+          setPrefillGuestPhone(undefined);
+          setPrefillGroupId(undefined);
+          setPrefillGroupBookingCode(undefined);
         }}
         rooms={rooms}
         bookings={bookings}
@@ -739,6 +800,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         prefillRoomId={prefillRoomId}
         prefillDate={prefillDate}
         prefillCheckOutDate={prefillCheckOutDate}
+        prefillGuestName={prefillGuestName}
+        prefillGuestPhone={prefillGuestPhone}
+        prefillGroupId={prefillGroupId}
+        prefillGroupBookingCode={prefillGroupBookingCode}
       />
 
       {/* Quick Room Availability Checker Modal (Access from anywhere) */}

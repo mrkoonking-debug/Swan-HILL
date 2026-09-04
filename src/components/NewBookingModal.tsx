@@ -15,10 +15,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
-  User
+  User,
+  Home,
+  Users
 } from 'lucide-react';
 import type { Room, Booking, PaymentStatus, AddOnItem } from '../types/pms';
-import { CustomDropdown, type DropdownOption } from './CustomDropdown';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { formatLocalDate, shiftDateStr, formatThaiDate } from '../utils/dateUtils';
@@ -28,10 +29,14 @@ interface NewBookingModalProps {
   onClose: () => void;
   rooms: Room[];
   bookings?: Booking[];
-  onAddBooking: (booking: Booking) => void;
+  onAddBooking: (booking: Booking | Booking[]) => void;
   prefillRoomId?: string;
   prefillDate?: string;
   prefillCheckOutDate?: string;
+  prefillGuestName?: string;
+  prefillGuestPhone?: string;
+  prefillGroupId?: string;
+  prefillGroupBookingCode?: string;
 }
 
 // Generate auto booking code like BK-20260902-04
@@ -54,7 +59,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   onAddBooking,
   prefillRoomId,
   prefillDate,
-  prefillCheckOutDate
+  prefillCheckOutDate,
+  prefillGuestName,
+  prefillGuestPhone,
+  prefillGroupId,
+  prefillGroupBookingCode,
 }) => {
   useLockBodyScroll(isOpen);
   const defaultCheckIn = formatLocalDate(new Date());
@@ -65,7 +74,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
-  const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '');
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
   const [checkInDate, setCheckInDate] = useState(defaultCheckIn);
   const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
   const [checkInTime, setCheckInTime] = useState(getCurrentTimeString());
@@ -82,7 +91,9 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   const [mookataLarge, setMookataLarge] = useState(0);
   const [breakfast, setBreakfast] = useState(0);
 
-  const selectedRoom = rooms.find(r => r.id === selectedRoomId) || rooms[0];
+  // Resolved list of selected rooms
+  const selectedRooms = rooms.filter(r => selectedRoomIds.includes(r.id));
+  const primaryRoom = selectedRooms[0] || rooms[0];
 
   // Calculate nights safely without timezone drift
   const diffNights = () => {
@@ -95,8 +106,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
   };
   const totalNights = diffNights();
 
-  // Calculate Totals with custom price override support
-  const baseRoomPricePerNight = selectedRoom?.pricePerNight || 1200;
+  // Calculate Totals across all selected rooms with custom price override support
+  const baseRoomPricePerNight = selectedRooms.reduce((sum, r) => sum + r.pricePerNight, 0) || (rooms[0]?.pricePerNight || 1200);
   const roomPriceUnit = customPrice !== '' 
     ? (Number(customPrice) || 0) 
     : baseRoomPricePerNight;
@@ -107,7 +118,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   useEffect(() => {
     if (prefillRoomId) {
-      setSelectedRoomId(prefillRoomId);
+      setSelectedRoomIds([prefillRoomId]);
+    } else if (selectedRoomIds.length === 0 && rooms.length > 0) {
+      setSelectedRoomIds([rooms[0].id]);
+    }
+    if (prefillGuestName) {
+      setGuestName(prefillGuestName);
+    }
+    if (prefillGuestPhone) {
+      setGuestPhone(prefillGuestPhone);
     }
     if (prefillDate) {
       setCheckInDate(prefillDate);
@@ -121,7 +140,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
       setCurrentStep(1);
       setCheckInTime(getCurrentTimeString());
     }
-  }, [prefillRoomId, prefillDate, prefillCheckOutDate, isOpen, rooms]);
+  }, [prefillRoomId, prefillDate, prefillCheckOutDate, prefillGuestName, prefillGuestPhone, isOpen, rooms]);
 
   // Update default deposit (default to 50% instead of 100%)
   useEffect(() => {
@@ -150,15 +169,15 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     });
   };
 
-  // Convert rooms to Dropdown options with occupied tag
-  const roomOptions: DropdownOption[] = rooms.map(r => {
-    const occupied = isRoomOccupied(r.id, r.roomNumber);
-    return {
-      value: r.id,
-      label: `ห้อง ${r.roomNumber} - ${r.name} (฿${r.pricePerNight.toLocaleString()}/คืน)${occupied ? ' [❌ ไม่ว่างช่วงนี้]' : ' [🟢 ว่าง]'}`,
-      icon: <HouseLogo roomNumber={r.roomNumber} size="sm" />
-    };
-  });
+  const handleToggleRoom = (roomId: string) => {
+    if (selectedRoomIds.includes(roomId)) {
+      if (selectedRoomIds.length > 1) {
+        setSelectedRoomIds(selectedRoomIds.filter(id => id !== roomId));
+      }
+    } else {
+      setSelectedRoomIds([...selectedRoomIds, roomId]);
+    }
+  };
 
   const sanitizePhoneInput = (val: string) => {
     return val.replace(/[^0-9,\s-]/g, '');
@@ -180,7 +199,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRoom) return;
+    if (selectedRooms.length === 0) return;
 
     const addOnsList: AddOnItem[] = [];
     if (extraBeds > 0) {
@@ -231,31 +250,80 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     const isToday = checkInDate === defaultCheckIn;
     const bookingStatus = (autoCheckIn && isToday) ? 'checked_in' : (autoCheckIn ? 'checked_in' : 'confirmed');
 
-    const newBooking: Booking = {
-      id: 'b-' + Date.now(),
-      bookingCode: generateBookingCode(checkInDate),
-      guestName: guestName.trim() || 'รอลูกค้าแจ้ง',
-      guestPhone: guestPhone.trim() || '-',
-      roomId: selectedRoom.id,
-      roomNumber: selectedRoom.roomNumber,
-      roomType: selectedRoom.type,
-      checkInDate,
-      checkOutDate,
-      checkInTime: checkInTime || '14:00',
-      checkOutTime: checkOutTime || '12:00',
-      totalNights,
-      totalGuests: selectedRoom.capacity || 2,
-      roomPrice: roomPriceUnit,
-      addOns: addOnsList,
-      totalAmount: grandTotal,
-      paidAmount: calculatedPaidAmount,
-      paymentStatus: calculatedPaidAmount >= grandTotal ? 'paid' : (calculatedPaidAmount > 0 ? 'deposit' : 'pending'),
-      status: bookingStatus,
-      specialRequests: notes || undefined,
-      createdAt: new Date().toISOString()
-    };
+    if (selectedRooms.length === 1) {
+      // Single Room Booking
+      const singleRoom = selectedRooms[0];
+      const newBooking: Booking = {
+        id: 'b-' + Date.now(),
+        bookingCode: generateBookingCode(checkInDate),
+        guestName: guestName.trim() || 'รอลูกค้าแจ้ง',
+        guestPhone: guestPhone.trim() || '-',
+        roomId: singleRoom.id,
+        roomNumber: singleRoom.roomNumber,
+        roomType: singleRoom.type,
+        checkInDate,
+        checkOutDate,
+        checkInTime: checkInTime || '14:00',
+        checkOutTime: checkOutTime || '12:00',
+        totalNights,
+        totalGuests: singleRoom.capacity || 2,
+        roomPrice: roomPriceUnit,
+        addOns: addOnsList,
+        totalAmount: grandTotal,
+        paidAmount: calculatedPaidAmount,
+        paymentStatus: calculatedPaidAmount >= grandTotal ? 'paid' : (calculatedPaidAmount > 0 ? 'deposit' : 'pending'),
+        status: bookingStatus,
+        specialRequests: notes || undefined,
+        createdAt: new Date().toISOString(),
+        groupId: prefillGroupId,
+        groupBookingCode: prefillGroupBookingCode,
+      };
 
-    onAddBooking(newBooking);
+      onAddBooking(newBooking);
+    } else {
+      // Multi-Room Group Booking!
+      const sharedGroupId = prefillGroupId || ('grp-' + Date.now());
+      const sharedGroupCode = prefillGroupBookingCode || (`GRP-${checkInDate.replace(/-/g, '')}-${Math.floor(10 + Math.random() * 90)}`);
+      const groupRoomNumbers = selectedRooms.map(r => r.roomNumber);
+
+      const bookingsList: Booking[] = selectedRooms.map((room, index) => {
+        const isPrimary = index === 0;
+        const roomTotal = (room.pricePerNight * totalNights) + (isPrimary ? addOnsTotal : 0);
+        const propShare = grandTotal > 0 ? (roomTotal / grandTotal) : (1 / selectedRooms.length);
+        const roomPaidAmount = Math.round(calculatedPaidAmount * propShare);
+
+        return {
+          id: 'b-' + Date.now() + '-' + index,
+          bookingCode: `${sharedGroupCode}-${room.roomNumber}`,
+          guestName: guestName.trim() || 'รอลูกค้าแจ้ง',
+          guestPhone: guestPhone.trim() || '-',
+          roomId: room.id,
+          roomNumber: room.roomNumber,
+          roomType: room.type,
+          checkInDate,
+          checkOutDate,
+          checkInTime: checkInTime || '14:00',
+          checkOutTime: checkOutTime || '12:00',
+          totalNights,
+          totalGuests: room.capacity || 2,
+          roomPrice: room.pricePerNight,
+          addOns: isPrimary ? addOnsList : [],
+          totalAmount: roomTotal,
+          paidAmount: roomPaidAmount,
+          paymentStatus: roomPaidAmount >= roomTotal ? 'paid' : (roomPaidAmount > 0 ? 'deposit' : 'pending'),
+          status: bookingStatus,
+          specialRequests: notes ? (isPrimary ? notes : `(กรุ๊ปร่วมกับ ${groupRoomNumbers.join(', ')}) ${notes}`) : `(จองแบบกลุ่ม ${groupRoomNumbers.join(', ')})`,
+          createdAt: new Date().toISOString(),
+          groupId: sharedGroupId,
+          groupBookingCode: sharedGroupCode,
+          groupRoomNumbers,
+          isGroupPrimary: isPrimary,
+        };
+      });
+
+      onAddBooking(bookingsList);
+    }
+
     onClose();
 
     // Reset form
@@ -267,6 +335,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
     setMookataLarge(0);
     setBreakfast(0);
     setDepositAmount(0);
+    setSelectedRoomIds([]);
     setCurrentStep(1);
   };
 
@@ -345,12 +414,25 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
         {currentStep === 1 && (
           <form onSubmit={handleNextStep} className="p-4 overflow-y-auto no-scrollbar space-y-3 text-slate-800 flex-1">
 
+            {/* Group Clone Notification Banner */}
+            {prefillGroupId && (
+              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-2 text-xs text-blue-900 font-bold">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>กำลังจองห้องเพิ่มให้: <strong className="text-blue-950">{guestName}</strong></span>
+                </div>
+                <span className="text-[10px] bg-blue-200/80 text-blue-800 px-2 py-0.5 rounded-full">
+                  ผูกกลุ่มเดียวกัน
+                </span>
+              </div>
+            )}
+
             {/* 1. Guest Name & Phone with Quick Hold Button */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-900 flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>ข้อมูลลูกค้า</span>
+                  <span>ข้อมูลลูกค้า (ใช้ร่วมกันทุกห้องที่จอง)</span>
                 </label>
                 
                 {/* Quick Hold button */}
@@ -406,14 +488,97 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
               )}
             </div>
 
-            {/* 2. Choose Room */}
-            <div>
-              <CustomDropdown
-                label="เลือกบ้านพัก / ขนาดห้อง *"
-                options={roomOptions}
-                value={selectedRoomId}
-                onChange={(val) => setSelectedRoomId(val)}
-              />
+            {/* 2. Choose Room(s) - Interactive Multi-Room Selection for Groups */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Home className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>เลือกบ้านพัก (แตะเลือกได้หลายหลังพร้อมกัน) *</span>
+                </label>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border transition-all ${
+                  selectedRoomIds.length > 1
+                    ? 'text-emerald-800 bg-emerald-100 border-emerald-300 shadow-2xs'
+                    : 'text-slate-600 bg-slate-100 border-slate-200'
+                }`}>
+                  {selectedRoomIds.length > 1 ? `👥 จองกลุ่ม ${selectedRoomIds.length} หลัง` : 'จอง 1 หลัง'}
+                </span>
+              </div>
+
+              {/* Grid of 6 Houses */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {rooms.map(room => {
+                  const isSelected = selectedRoomIds.includes(room.id);
+                  const occupied = isRoomOccupied(room.id, room.roomNumber);
+
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      disabled={occupied}
+                      onClick={() => handleToggleRoom(room.id)}
+                      className={`p-2.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between cursor-pointer active:scale-98 ${
+                        occupied
+                          ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500 shadow-md ring-2 ring-emerald-400/60 scale-[1.02]'
+                          : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between w-full">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+                            isSelected ? 'bg-white text-emerald-800 shadow-xs' : 'bg-slate-900 text-white'
+                          }`}>
+                            {room.roomNumber}
+                          </span>
+                          <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                            {room.name}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <span className="w-4 h-4 rounded-full bg-white text-emerald-700 flex items-center justify-center shrink-0 ml-1">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between text-[10px]">
+                        <span className={`font-black ${isSelected ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                          ฿{room.pricePerNight.toLocaleString()}/คืน
+                        </span>
+                        {occupied ? (
+                          <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                            ติดจอง
+                          </span>
+                        ) : (
+                          <span className={`text-[9px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                            {room.capacity} ท่าน
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Rooms Summary Banner */}
+              <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between transition-all ${
+                selectedRoomIds.length > 1
+                  ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    {selectedRoomIds.length > 1
+                      ? `เลือก ${selectedRoomIds.length} หลัง: ${selectedRooms.map(r => r.roomNumber).join(' + ')}`
+                      : `เลือก 1 หลัง: ห้อง ${selectedRooms[0]?.roomNumber || ''}`}
+                  </span>
+                </div>
+                <span className="font-extrabold text-emerald-800">
+                  ฿{baseRoomPricePerNight.toLocaleString()} บาท/คืน
+                </span>
+              </div>
             </div>
 
             {/* 3. Check-in & Check-out Dates & Times (Resort-tailored Mobile Experience) */}
@@ -691,9 +856,18 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
             {/* Summary Tag Header */}
             <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <HouseLogo roomNumber={selectedRoom.roomNumber} size="sm" />
+                <div className="flex -space-x-1.5 overflow-hidden">
+                  {selectedRooms.map(r => (
+                    <HouseLogo key={r.id} roomNumber={r.roomNumber} size="sm" />
+                  ))}
+                </div>
                 <div>
-                  <span className="font-bold text-slate-900">บ้าน {selectedRoom.roomNumber} ({selectedRoom.name})</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedRooms.length > 1 
+                      ? `กรุ๊ป ${selectedRooms.length} หลัง: บ้าน ${selectedRooms.map(r => r.roomNumber).join(' + ')}`
+                      : `บ้าน ${primaryRoom.roomNumber} (${primaryRoom.name})`
+                    }
+                  </span>
                   <span className="text-[11px] text-slate-500 block">
                     ลูกค้า: {guestName} &bull; {totalNights} คืน ({formatThaiDate(checkInDate)} - {formatThaiDate(checkOutDate)})
                   </span>
@@ -1029,7 +1203,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                 className="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>ยืนยันบันทึกจอง (รับ ฿{effectivePaid.toLocaleString()})</span>
+                <span>
+                  {selectedRoomIds.length > 1 
+                    ? `ยืนยันจอง ${selectedRoomIds.length} หลัง (รับ ฿${effectivePaid.toLocaleString()})` 
+                    : `ยืนยันบันทึกจอง (รับ ฿${effectivePaid.toLocaleString()})`}
+                </span>
               </button>
             </div>
           </form>

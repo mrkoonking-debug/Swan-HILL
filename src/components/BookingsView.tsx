@@ -45,6 +45,7 @@ interface BookingsViewProps {
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenCheckoutModal?: (booking: Booking) => void;
+  onOpenCloneBooking?: (booking: Booking) => void;
   onUpdateBookingAddOns?: (bookingId: string, updatedAddOns: AddOnItem[]) => void;
   settings?: ResortSettings;
 }
@@ -74,6 +75,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onOpenReceipt,
   onOpenAddPayment,
   onOpenCheckoutModal,
+  onOpenCloneBooking,
   onUpdateBookingAddOns,
   settings,
 }) => {
@@ -300,6 +302,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </span>
 
                 {getStatusBadge(b.status)}
+
+                {b.groupId && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <Users className="w-3 h-3 text-indigo-600" />
+                    กรุ๊ป {b.groupRoomNumbers?.join(' + ') || 'หลายห้อง'}
+                  </span>
+                )}
               </div>
               <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
                 {b.guestName}
@@ -429,6 +438,19 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
           {/* Quick Payment / Receipt / Checkin Actions */}
           <div className="flex items-center gap-1.5 flex-wrap flex-1 sm:flex-none justify-end">
+            {/* Clone Room for this guest */}
+            {onOpenCloneBooking && b.status !== 'checked_out' && (
+              <button
+                type="button"
+                onClick={() => onOpenCloneBooking(b)}
+                className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-indigo-50 to-teal-50 hover:from-indigo-100 hover:to-teal-100 active:scale-95 text-indigo-800 text-xs font-semibold rounded-xl border border-indigo-200 transition-all cursor-pointer"
+                title={`จองห้องเพิ่มให้คุณ ${b.guestName}`}
+              >
+                <Plus className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" />
+                <span>+ จองเพิ่มอีกห้อง</span>
+              </button>
+            )}
+
             {/* Payment Button */}
             {onOpenAddPayment && remainingBalance > 0 && b.status !== 'checked_out' && (
               <button
@@ -1079,6 +1101,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                               <Phone className="w-2.5 h-2.5 text-emerald-600" />
                               <span>{b.guestPhone}</span>
                             </a>
+                            {b.groupId && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <Users className="w-2.5 h-2.5 text-indigo-600" />
+                                {b.groupRoomNumbers?.join('+') || 'กรุ๊ป'}
+                              </span>
+                            )}
                           </div>
                           {statusFilter === 'trash' && (
                             <p className="text-[10px] text-red-600 font-medium mt-1">
@@ -1144,6 +1172,18 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       <div className="xl:col-span-3 flex items-center justify-start xl:justify-end gap-1.5 flex-wrap border-t xl:border-t-0 pt-2 xl:pt-0 border-slate-100">
                         {statusFilter !== 'trash' ? (
                           <>
+                            {onOpenCloneBooking && b.status !== 'checked_out' && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenCloneBooking(b)}
+                                className="px-2.5 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1 transition-all active:scale-95 bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 cursor-pointer"
+                                title={`จองห้องเพิ่มให้คุณ ${b.guestName}`}
+                              >
+                                <Plus className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" />
+                                <span>จองเพิ่ม</span>
+                              </button>
+                            )}
+
                             {onOpenAddOrder && (
                               <button
                                 onClick={() => onOpenAddOrder(b)}

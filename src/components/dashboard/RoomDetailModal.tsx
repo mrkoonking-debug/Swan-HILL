@@ -5,7 +5,9 @@ import {
   CreditCard, 
   UtensilsCrossed, 
   Receipt, 
-  ArrowRight 
+  ArrowRight,
+  Plus,
+  Users
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../../types/pms';
 
@@ -19,6 +21,7 @@ export interface RoomDetailModalProps {
   onOpenAddOrder?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenReceipt?: (booking: Booking) => void;
+  onOpenCloneBooking?: (booking: Booking) => void;
 }
 
 export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
@@ -31,8 +34,10 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
   onOpenAddOrder,
   onOpenAddPayment,
   onOpenReceipt,
+  onOpenCloneBooking,
 }) => {
   if (!room) return null;
+  const currentBooking = bookings.find(item => item.id === room.currentGuest?.bookingId);
 
   return createPortal(
     <div 
@@ -105,6 +110,33 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
           {/* Occupied Actions */}
           {room.status === 'occupied' && (
             <div className="space-y-2">
+              {currentBooking?.groupId && (
+                <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-between text-xs">
+                  <span className="font-bold text-indigo-900 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>จองกลุ่ม: บ้าน <strong>{currentBooking.groupRoomNumbers?.join(' + ') || 'หลายห้อง'}</strong></span>
+                  </span>
+                  {currentBooking.groupBookingCode && (
+                    <span className="text-[10px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-lg border border-indigo-200">
+                      #{currentBooking.groupBookingCode}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {onOpenCloneBooking && currentBooking && (
+                <button
+                  onClick={() => {
+                    onOpenCloneBooking(currentBooking);
+                    onClose();
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>จองเพิ่มอีกห้องให้ลูกค้ารายนี้ ({room.currentGuest?.name})</span>
+                </button>
+              )}
+
               {onOpenAddPayment && (
                 <button
                   onClick={() => {

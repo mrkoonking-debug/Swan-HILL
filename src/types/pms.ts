@@ -78,6 +78,11 @@ export interface Booking {
   specialRequests?: string;
   createdAt: string;
   deletedAt?: string; // ISO string when moved to trash
+  // Group Booking fields (when multiple rooms booked together or cloned)
+  groupId?: string; // e.g. "grp-1788467123"
+  groupBookingCode?: string; // e.g. "GRP-20260904-01"
+  groupRoomNumbers?: string[]; // e.g. ["S1", "S2"]
+  isGroupPrimary?: boolean; // true for the primary booking of the group
 }
 
 export type HousekeepingPriority = 'low' | 'medium' | 'high';
