@@ -827,11 +827,11 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           <button
             type="button"
             onClick={() => setIsAIAssistantOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-600 text-white font-black text-xs shadow-lg shadow-purple-600/30 active:scale-90 transition-all border border-white/30 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-600 text-white font-black text-xs shadow-lg shadow-purple-600/30 active:scale-90 transition-all border border-white/30 cursor-pointer"
             title="แชทผู้ช่วย AI สำหรับลงข้อมูลอัตโนมัติ"
           >
-            <Sparkles className="w-4 h-4 fill-current text-yellow-300 animate-pulse" />
-            <span>✨ แชท AI</span>
+            <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300 animate-pulse" />
+            <span>แชท AI</span>
           </button>
         </div>
       )}

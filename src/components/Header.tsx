@@ -230,11 +230,11 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
-          {/* AI Smart Booking Assistant Button */}
+          {/* AI Smart Booking Assistant Button (Desktop Only - Mobile has it in Top App Bar) */}
           {onOpenAIAssistant && (
             <button
               onClick={onOpenAIAssistant}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-500 hover:to-teal-500 active:scale-95 text-white shadow-sm transition-all cursor-pointer ring-1 ring-white/20"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-500 hover:to-teal-500 active:scale-95 text-white shadow-sm transition-all cursor-pointer ring-1 ring-white/20"
               title="ผู้ช่วยแชท AI สำหรับลงข้อมูลการจองอัตโนมัติ"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
@@ -242,11 +242,11 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Quick Availability Checker Button */}
+          {/* Quick Availability Checker Button (Desktop Only - Mobile has it in Top App Bar) */}
           {onOpenQuickChecker && (
             <button
               onClick={onOpenQuickChecker}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs transition-all cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs transition-all cursor-pointer"
               title="เช็คห้องว่างด่วนตามช่วงวัน พร้อมคัดลอกส่งตอบลูกค้าใน LINE"
             >
               <Search className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -260,22 +260,22 @@ export const Header: React.FC<HeaderProps> = ({
             ห้องว่าง {availableRoomsCount} หลัง
           </span>
 
-          {/* Normal Page Reload (Icon Only) */}
+          {/* Normal Page Reload (Icon Only - Desktop) */}
           <button
             type="button"
             onClick={handleSimpleReload}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+            className="hidden md:inline-flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 transition-all cursor-pointer"
             title="รีเฟรชหน้าเว็บ"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
 
-          {/* Clear Cache Reload (Icon Only) */}
+          {/* Clear Cache Reload (Icon Only - Desktop) */}
           <button
             type="button"
             onClick={handleClearCacheAndReload}
             disabled={isClearing}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-emerald-600 border border-slate-200 transition-all cursor-pointer"
+            className="hidden md:inline-flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-emerald-600 border border-slate-200 transition-all cursor-pointer"
             title="ล้างแคชและโหลดข้อมูลล่าสุด (Deep Reload)"
           >
             <RotateCw className={`w-3.5 h-3.5 ${isClearing ? 'animate-spin' : ''}`} />

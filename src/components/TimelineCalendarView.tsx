@@ -218,7 +218,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-300 font-['Prompt'] w-full max-w-full overflow-hidden">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 pb-36 sm:pb-24 animate-in fade-in duration-300 font-['Prompt'] w-full max-w-full overflow-hidden">
       
       {/* Top Header & View Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
@@ -332,7 +332,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   return (
                     <div 
                       key={`empty-${idx}`} 
-                      className="min-w-0 min-h-[58px] sm:min-h-[92px] bg-slate-50/40 rounded-lg sm:rounded-2xl border border-dashed border-slate-200/80"
+                      className="min-w-0 min-h-[48px] sm:min-h-[92px] bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200/80"
                     />
                   );
                 }
@@ -350,7 +350,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     type="button"
                     key={cell.dateStr}
                     onClick={() => setSelectedDate(cell.dateStr)}
-                    className={`min-w-0 min-h-[58px] sm:min-h-[92px] p-1 sm:p-2.5 rounded-lg sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left relative select-none group active:scale-[0.98] ${
+                    className={`min-w-0 min-h-[48px] sm:min-h-[92px] p-1 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left relative select-none group active:scale-[0.98] ${
                       isSelected
                         ? 'ring-2 ring-emerald-600 border-emerald-600 bg-emerald-50/30 shadow-md z-10'
                         : isToday
@@ -369,17 +369,17 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                           {cell.day}
                         </span>
                       ) : (
-                        <span className={`text-xs sm:text-base font-black tracking-tight shrink-0 pl-0.5 sm:pl-0 ${
+                        <span className={`text-[12.5px] sm:text-base font-black tracking-tight shrink-0 pl-0.5 sm:pl-0 ${
                           isSelected ? 'text-emerald-950 font-black' : 'text-slate-800'
                         }`}>
                           {cell.day}
                         </span>
                       )}
 
-                      {/* Status Badge (On mobile: compact / subtle dot to avoid overlapping; On desktop: full pill badge) */}
+                      {/* Status Badge (On mobile: compact single-badge; On desktop: full pill badge) */}
                       {isFull ? (
                         <>
-                          <span className="sm:hidden px-1 py-0.2 rounded text-[8px] font-black bg-rose-100 text-rose-800 leading-none">
+                          <span className="sm:hidden px-1 py-0.5 rounded text-[8px] font-black bg-rose-100 text-rose-800 leading-none">
                             เต็ม
                           </span>
                           <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
@@ -389,7 +389,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         </>
                       ) : isPartial ? (
                         <>
-                          <span className="sm:hidden px-1 py-0.2 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-300/80 leading-none">
+                          <span className="sm:hidden px-1 py-0.5 rounded text-[8px] font-black bg-amber-100 text-amber-900 border border-amber-300/80 leading-none">
                             ว่าง {availableRoomsCount}
                           </span>
                           <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap">
@@ -399,7 +399,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         </>
                       ) : (
                         <>
-                          <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-emerald-500/80 shrink-0 mr-0.5" title="ว่างครบ 6 หลัง" />
+                          <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mr-0.5" title="ว่างครบ 6 หลัง" />
                           <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/90 whitespace-nowrap">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             <span>ว่าง 6</span>
@@ -408,21 +408,21 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                       )}
                     </div>
 
-                    {/* Bottom Row: Room Availability & Booked Chips */}
-                    <div className="mt-auto pt-0.5 sm:pt-1.5 w-full">
+                    {/* Bottom Row on Desktop: Multi-Chip Detailed View */}
+                    <div className="hidden sm:flex mt-auto pt-1.5 w-full">
                       {bookedRoomsCount === 0 ? (
-                        <div className="hidden sm:flex py-1 px-1.5 rounded-lg bg-slate-50/80 border border-slate-200/60 group-hover:bg-emerald-50/60 group-hover:border-emerald-200/80 transition-colors items-center justify-between text-[10px] text-slate-500 font-medium">
+                        <div className="py-1 px-1.5 rounded-lg bg-slate-50/80 border border-slate-200/60 group-hover:bg-emerald-50/60 group-hover:border-emerald-200/80 transition-colors items-center justify-between text-[10px] text-slate-500 font-medium w-full">
                           <span className="truncate">S1-S6 ว่าง</span>
                           <span className="text-[9px] font-bold text-emerald-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">+ จอง</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-hidden">
+                        <div className="flex items-center gap-1 flex-wrap overflow-hidden">
                           {dayBookings.slice(0, 3).map((b) => {
                             const isPaid = b.paidAmount >= b.totalAmount;
                             return (
                               <span
                                 key={b.id}
-                                className={`px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[8px] sm:text-[9px] font-black leading-none whitespace-nowrap shadow-2xs ${
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-black leading-none whitespace-nowrap shadow-2xs ${
                                   isPaid 
                                     ? 'bg-blue-600 text-white' 
                                     : 'bg-amber-500 text-white'
@@ -434,11 +434,37 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                             );
                           })}
                           {bookedRoomsCount > 3 && (
-                            <span className="px-0.5 sm:px-1 py-0.2 sm:py-0.5 rounded text-[7px] sm:text-[9px] font-bold bg-slate-800 text-white leading-none">
+                            <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-white leading-none">
                               +{bookedRoomsCount - 3}
                             </span>
                           )}
                         </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Row on Mobile: Single-Line Clean Indicator (No Awkward Wrapping) */}
+                    <div className="sm:hidden mt-auto pt-0.5 w-full flex items-center gap-0.5 overflow-hidden">
+                      {bookedRoomsCount > 0 && (
+                        <>
+                          {dayBookings.slice(0, 1).map((b) => {
+                            const isPaid = b.paidAmount >= b.totalAmount;
+                            return (
+                              <span
+                                key={b.id}
+                                className={`px-1 py-0.2 rounded text-[7.5px] font-black leading-none whitespace-nowrap ${
+                                  isPaid ? 'bg-blue-600 text-white' : 'bg-amber-500 text-white'
+                                }`}
+                              >
+                                {b.roomNumber}
+                              </span>
+                            );
+                          })}
+                          {bookedRoomsCount > 1 && (
+                            <span className="px-1 py-0.2 rounded text-[7.5px] font-extrabold bg-slate-700 text-white leading-none whitespace-nowrap">
+                              +{bookedRoomsCount - 1}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </button>
@@ -501,17 +527,22 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   return (
                     <div 
                       key={room.id}
-                      className="p-3 sm:p-3.5 bg-white hover:border-slate-300 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-3 shadow-2xs group"
+                      className="p-3 sm:p-3.5 bg-white hover:border-slate-300 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-2.5 shadow-2xs group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <HouseLogo roomNumber={room.roomNumber} size="md" />
                         <div className="min-w-0">
-                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
-                            ห้อง {room.roomNumber} - {room.name}
-                          </span>
-                          <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                            <span>ว่างพร้อมจอง &bull; ฿{room.pricePerNight.toLocaleString()}/คืน</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-black text-sm text-slate-900 shrink-0">
+                              บ้าน {room.roomNumber}
+                            </span>
+                            <span className="text-[11px] font-medium text-slate-500 truncate">
+                              ({room.name.includes('(') ? room.name.substring(room.name.indexOf('(') + 1).replace(')', '') : room.type})
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5 truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            <span className="truncate">ว่างพร้อมจอง &bull; ฿{room.pricePerNight.toLocaleString()}/คืน</span>
                           </span>
                         </div>
                       </div>
@@ -523,11 +554,11 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                             onOpenNewBookingWithPrefill(room.id, selectedDate);
                           }
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs shrink-0 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all"
+                        className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer transition-all whitespace-nowrap"
                         title={`จองห้อง ${room.roomNumber} ในวันที่ ${formatThaiDate(selectedDate)}`}
                       >
-                        <Plus className="w-4 h-4 stroke-[3]" />
-                        <span>กดจอง</span>
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>จองห้อง</span>
                       </button>
                     </div>
                   );
@@ -538,17 +569,22 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   return (
                     <div 
                       key={room.id}
-                      className="p-3 sm:p-3.5 bg-white hover:border-slate-300 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                      className="p-3 sm:p-3.5 bg-white hover:border-slate-300 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-2.5 shadow-2xs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <HouseLogo roomNumber={room.roomNumber} size="md" />
                         <div className="min-w-0">
-                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
-                            ห้อง {room.roomNumber} - {room.name}
-                          </span>
-                          <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                            <span>แขกเดิมออกแล้ว พร้อมรับ Walk-in รอบใหม่</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-black text-sm text-slate-900 shrink-0">
+                              บ้าน {room.roomNumber}
+                            </span>
+                            <span className="text-[11px] font-medium text-slate-500 truncate">
+                              ({room.name.includes('(') ? room.name.substring(room.name.indexOf('(') + 1).replace(')', '') : room.type})
+                            </span>
+                          </div>
+                          <span className="text-[10.5px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5 truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            <span className="truncate">แขกเดิมออกแล้ว พร้อมรับรอบใหม่</span>
                           </span>
                         </div>
                       </div>
@@ -560,10 +596,10 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                             onOpenNewBookingWithPrefill(room.id, selectedDate);
                           }
                         }}
-                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs shrink-0 shadow-sm flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
                       >
                         <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>จองรอบ 2</span>
+                        <span>จองเพิ่ม</span>
                       </button>
                     </div>
                   );
@@ -582,11 +618,14 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     <div className="flex items-center gap-2.5 min-w-0">
                       <HouseLogo roomNumber={room.roomNumber} size="md" />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
-                            ห้อง {room.roomNumber}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-black text-sm text-slate-900 shrink-0">
+                            บ้าน {room.roomNumber}
                           </span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-black text-white ${
+                          <span className="text-[11px] font-medium text-slate-500 truncate">
+                            ({room.name.includes('(') ? room.name.substring(room.name.indexOf('(') + 1).replace(')', '') : room.type})
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-black text-white shrink-0 ${
                             isPaid ? 'bg-blue-600' : 'bg-amber-500'
                           }`}>
                             {isPaid ? 'จ่ายครบ' : 'มัดจำ'}
@@ -599,7 +638,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                           <span>{booking.guestPhone || '-'}</span>
                           {booking.addOns && booking.addOns.length > 0 && (
                             <span className="text-amber-700 font-bold bg-amber-50 px-1 rounded flex items-center gap-0.5">
-                              <UtensilsCrossed className="w-2.5 h-2.5" /> มีหมูกระทะ
+                              <UtensilsCrossed className="w-2.5 h-2.5" /> หมูกระทะ
                             </span>
                           )}
                         </div>
