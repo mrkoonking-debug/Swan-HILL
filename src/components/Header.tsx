@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw, Menu, Download, X } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, Menu, Download, X, Sparkles } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -16,6 +16,7 @@ interface HeaderProps {
   onOpenInstallPWA?: () => void;
   isPWAInstalled?: boolean;
   onOpenQuickChecker?: () => void;
+  onOpenAIAssistant?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenInstallPWA,
   isPWAInstalled = false,
   onOpenQuickChecker,
+  onOpenAIAssistant,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -141,6 +143,17 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Buttons (Mobile) */}
         <div className="flex items-center gap-1.5">
+          {onOpenAIAssistant && (
+            <button
+              onClick={onOpenAIAssistant}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white text-[11px] font-black transition-all shadow-xs cursor-pointer"
+              title="ผู้ช่วยแชท AI ลงข้อมูลอัตโนมัติ"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
+              <span>แชท AI</span>
+            </button>
+          )}
+
           {onOpenQuickChecker && (
             <button
               onClick={onOpenQuickChecker}
@@ -211,6 +224,18 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
             />
           </div>
+
+          {/* AI Smart Booking Assistant Button */}
+          {onOpenAIAssistant && (
+            <button
+              onClick={onOpenAIAssistant}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-500 hover:to-teal-500 active:scale-95 text-white shadow-sm transition-all cursor-pointer ring-1 ring-white/20"
+              title="ผู้ช่วยแชท AI สำหรับลงข้อมูลการจองอัตโนมัติ"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
+              <span>แชท AI ลงข้อมูล</span>
+            </button>
+          )}
 
           {/* Quick Availability Checker Button */}
           {onOpenQuickChecker && (

@@ -8,7 +8,8 @@ import {
   Plus,
   User,
   History,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -21,6 +22,7 @@ interface MobileDrawerProps {
   setActiveTab: (tab: ActiveTab) => void;
   onOpenNewBooking: () => void;
   userEmail: string | null;
+  onOpenAIAssistant?: () => void;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -30,6 +32,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   setActiveTab,
   onOpenNewBooking,
   userEmail,
+  onOpenAIAssistant,
 }) => {
   const coreMenuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', subtitle: 'ตรวจสอบสถานะห้องพักและเช็คอิน', icon: Home },
@@ -64,18 +67,31 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
           />
         </div>
 
-        {/* Quick Action: New Booking */}
-        <div className="p-3.5 border-b border-slate-800/80">
+        {/* Quick Action: New Booking & AI Assistant */}
+        <div className="p-3.5 border-b border-slate-800/80 space-y-2">
           <button
             onClick={() => {
               onClose();
               onOpenNewBooking();
             }}
-            className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all"
+            className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ บันทึกการจองใหม่</span>
           </button>
+
+          {onOpenAIAssistant && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenAIAssistant();
+              }}
+              className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/20 transition-all cursor-pointer border border-purple-400/30"
+            >
+              <Sparkles className="w-4 h-4 fill-current text-yellow-300" />
+              <span>✨ แชท AI ลงข้อมูลอัตโนมัติ</span>
+            </button>
+          )}
         </div>
 
         {/* Main Navigation Menu */}

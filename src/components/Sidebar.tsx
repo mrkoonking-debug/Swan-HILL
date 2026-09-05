@@ -8,7 +8,8 @@ import {
   User,
   History,
   Settings,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
@@ -22,6 +23,7 @@ interface SidebarProps {
   userEmail: string | null;
   onOpenInstallPWA?: () => void;
   isPWAInstalled?: boolean;
+  onOpenAIAssistant?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -31,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userEmail,
   onOpenInstallPWA,
   isPWAInstalled = false,
+  onOpenAIAssistant,
 }) => {
   const coreMenuItems = [
     { id: 'dashboard', label: 'ผังบ้านพัก', icon: Home },
@@ -54,8 +57,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       </div>
 
-      {/* Action Button */}
-      <div className="p-2.5">
+      {/* Action Buttons */}
+      <div className="p-2.5 space-y-2">
         <button
           onClick={onOpenNewBooking}
           className="w-full flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold text-xs py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer"
@@ -63,6 +66,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Plus className="w-4 h-4" />
           <span>+ บันทึกการจอง</span>
         </button>
+
+        {onOpenAIAssistant && (
+          <button
+            onClick={onOpenAIAssistant}
+            className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-semibold text-xs py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer border border-purple-400/30"
+          >
+            <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
+            <span>✨ แชท AI ลงข้อมูล</span>
+          </button>
+        )}
       </div>
 
       {/* Navigation Menu */}

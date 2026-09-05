@@ -19,6 +19,8 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
 import { QuickAvailabilityModal } from './components/QuickAvailabilityModal';
+import { AIAssistantModal } from './components/AIAssistantModal';
+import { Sparkles } from 'lucide-react';
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallModal, PWAUpdateBanner } from './components/PWAInstallModal';
 import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
@@ -84,6 +86,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [isQuickCheckerOpen, setIsQuickCheckerOpen] = useState(false);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   
   // Use IDs for dynamic reactive booking modals
   const [selectedBookingForAddOrderId, setSelectedBookingForAddOrderId] = useState<string | null>(null);
@@ -624,6 +627,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         userEmail={user.email}
         onOpenInstallPWA={() => setIsInstallModalOpen(true)}
         isPWAInstalled={isInstalled}
+        onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
       />
 
       {/* Mobile Drawer */}
@@ -634,6 +638,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         setActiveTab={setActiveTab}
         onOpenNewBooking={handleOpenNormalBooking}
         userEmail={user.email}
+        onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
       />
 
       {/* Main Content Area (Shifts right when Mobile Drawer is opened) */}
@@ -655,6 +660,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           onOpenInstallPWA={() => setIsInstallModalOpen(true)}
           isPWAInstalled={isInstalled}
           onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
+          onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
         />
 
         {/* Dynamic Viewport Container */}
@@ -768,6 +774,25 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         />
       </div>
 
+      {/* Mobile Floating AI Assistant Button (Floating quick access on smartphones) */}
+      {!isNewBookingOpen && !isAIAssistantOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
+        <div 
+          className={`fixed bottom-20 right-3.5 z-30 md:hidden transition-transform duration-220 ease-out will-change-transform ${
+            isMobileDrawerOpen ? 'translate-x-[280px]' : 'translate-x-0'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setIsAIAssistantOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-600 text-white font-black text-xs shadow-lg shadow-purple-600/30 active:scale-90 transition-all border border-white/30 cursor-pointer"
+            title="แชทผู้ช่วย AI สำหรับลงข้อมูลอัตโนมัติ"
+          >
+            <Sparkles className="w-4 h-4 fill-current text-yellow-300 animate-pulse" />
+            <span>✨ แชท AI</span>
+          </button>
+        </div>
+      )}
+
       {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
       {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
         <div 
@@ -818,6 +843,26 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           setPrefillCheckOutDate(checkOut);
           setIsNewBookingOpen(true);
         }}
+      />
+
+      {/* AI Smart Booking Assistant Modal (Chat & Auto Fill with Review Screen) */}
+      <AIAssistantModal
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        rooms={rooms}
+        bookings={bookings}
+        onAddBooking={handleAddBooking}
+        onOpenNewBookingWithPrefill={(roomId, checkIn, checkOut, guestName, guestPhone) => {
+          setPrefillRoomId(roomId);
+          setPrefillDate(checkIn);
+          setPrefillCheckOutDate(checkOut);
+          setPrefillGuestName(guestName);
+          setPrefillGuestPhone(guestPhone);
+          setPrefillGroupId(undefined);
+          setPrefillGroupBookingCode(undefined);
+          setIsNewBookingOpen(true);
+        }}
+        onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
       />
 
       {/* In-Stay Add-Ons & Food Ordering Modal */}
