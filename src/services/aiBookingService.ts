@@ -48,6 +48,48 @@ const THAI_MONTH_MAP: Record<string, number> = {
   'ธ.ค.': 12, 'ธันวา': 12, 'ธันวาคม': 12,
 };
 
+// Compile all Thai month names & abbreviations sorted by length descending so longer names match first
+const THAI_MONTH_KEYS_REGEX_PART = Object.keys(THAI_MONTH_MAP)
+  .sort((a, b) => b.length - a.length)
+  .map(k => k.replace(/\./g, '\\.'))
+  .join('|');
+
+/**
+ * Safely parse and normalize booking year.
+ * Protects against accidental extraction of timestamps (e.g. 10 from 10:37) or corrupt years.
+ * Supports:
+ * - 4-digit BE: 2550 - 2650 -> converts to CE (e.g. 2569 -> 2026)
+ * - 2-digit BE: 50 - 99 -> converts to CE (e.g. 69 -> 2569 -> 2026)
+ * - 4-digit CE: 2020 - 2040 -> keeps as CE
+ * - 2-digit CE: 20 - 40 -> converts to CE (e.g. 26 -> 2026)
+ * - Fallback: currentYear
+ */
+export function normalizeBookingYear(rawYStr: string | undefined, currentYear: number): number {
+  if (!rawYStr) return currentYear;
+  const raw = parseInt(rawYStr, 10);
+  if (isNaN(raw)) return currentYear;
+
+  // 1. Thai Buddhist Era (พ.ศ.) 4 digits: e.g. 2550 - 2650
+  if (raw >= 2550 && raw <= 2650) {
+    return raw - 543;
+  }
+  // 2. Thai Buddhist Era (พ.ศ.) 2 digits: e.g. 50 - 99
+  if (raw >= 50 && raw <= 99) {
+    return (raw + 2500) - 543;
+  }
+  // 3. Christian Era (ค.ศ.) 4 digits: e.g. 2020 - 2040
+  if (raw >= 2020 && raw <= 2040) {
+    return raw;
+  }
+  // 4. Christian Era (ค.ศ.) 2 digits: e.g. 20 - 40
+  if (raw >= 20 && raw <= 40) {
+    return raw + 2000;
+  }
+
+  // Any other number (e.g. 10 from 10:37) is NOT a valid booking year
+  return currentYear;
+}
+
 // Known senders and family names to ignore as guest names
 const KNOWN_SENDERS = new Set([
   'พ่อ', 'แม่', 'z', 'Z', 'ᴬᴼᴹ', 'พี่คิว', 'ออม', 'น้องออม', 'sayan', 'eid', 
@@ -99,14 +141,19 @@ export function cleanLineChatText(rawText: string): { cleanedLines: string[]; co
       // If sender is a known family sender or short sender token, strip it and keep content
       if (KNOWN_SENDERS.has(sender) || KNOWN_SENDERS.has(sender.toLowerCase()) || sender.length <= 4) {
         if (content && !/^(Photos|Videos|Stickers)/i.test(content)) {
-          cleanedLines.push(content);
+          // Strip any inline LINE timestamps & senders like "10:37 พ่อ " that occur within merged lines
+          let cleanedContent = content.replace(/\b\d{1,2}:\d{2}\s+(?:พ่อ|แม่|z|Z|ᴬᴼᴹ|พี่คิว|ออม|น้องออม|sayan|eid|admin|แอดมิน|user|me|staff)\s+/gi, ' ');
+          cleanedContent = cleanedContent.replace(/\b\d{1,2}:\d{2}(?!\s*(?:น\.|โมง))\s+/g, ' ');
+          cleanedLines.push(cleanedContent.trim());
         }
         continue;
       }
     }
 
     // Normal message line without timestamp/sender
-    cleanedLines.push(trimmed);
+    let cleanedLine = trimmed.replace(/\b\d{1,2}:\d{2}\s+(?:พ่อ|แม่|z|Z|ᴬᴼᴹ|พี่คิว|ออม|น้องออม|sayan|eid|admin|แอดมิน|user|me|staff)\s+/gi, ' ');
+    cleanedLine = cleanedLine.replace(/\b\d{1,2}:\d{2}(?!\s*(?:น\.|โมง))\s+/g, ' ');
+    cleanedLines.push(cleanedLine.trim());
   }
 
   return { cleanedLines, contextDate };
@@ -275,16 +322,22 @@ export function parseThaiBookingText(
   let checkOutDate = shiftDateStr(checkInDate, 1);
   let totalNights = 1;
 
-  // Pattern A: "วันที่ 26 กันยายน 2569" or "วันที่ 19 กันยายน"
-  const fullThaiDateRegex = /วันที่\s*(\d{1,2})\s*([ก-๙.]+)\s*(?:พ\.ศ\.\s*)?(\d{2,4})?/;
+  // Pattern A: "วันที่ 26 กันยายน 2569" or "วันที่ 26 ก.ย." or "26 ก.ย. 69"
+  const fullThaiDateRegex = new RegExp(
+    `(?:วันที่\\s*)?(\\d{1,2})\\s*(${THAI_MONTH_KEYS_REGEX_PART})(?:\\s*(?:พ\\.ศ\\.|ค\\.ศ\\.)?\\s*(\\d{2,4}))?`,
+    'i'
+  );
   const fullThaiMatch = normalized.match(fullThaiDateRegex);
 
-  // Pattern B: "วันที่ 11-12" or "10-12 ก.ย."
-  const rangeDateRegex = /(\d{1,2})\s*(?:-|ถึง|to)\s*(\d{1,2})\s*([ก-๙.]+)?(?:\s*(\d{2,4}))?/;
+  // Pattern B: "วันที่ 11-12" or "10-12 ก.ย." or "10-12 ก.ย. 69"
+  const rangeDateRegex = new RegExp(
+    `(\\d{1,2})\\s*(?:-|ถึง|to)\\s*(\\d{1,2})(?:\\s*(${THAI_MONTH_KEYS_REGEX_PART}))?(?:\\s*(?:พ\\.ศ\\.|ค\\.ศ\\.)?\\s*(\\d{2,4}))?`,
+    'i'
+  );
   const rangeMatch = normalized.match(rangeDateRegex);
 
-  // Pattern C: "วันที่5/9/69" or "5/9/2569"
-  const slashDateRegex = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/;
+  // Pattern C: "วันที่5/9/69" or "5/9/2569" or "5/9"
+  const slashDateRegex = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/;
   const slashMatch = normalized.match(slashDateRegex);
 
   if (rangeMatch) {
@@ -304,13 +357,7 @@ export function parseThaiBookingText(
       m = parseInt(contextDate.split('-')[1], 10);
     }
 
-    let y = currentYear;
-    if (rangeMatch[4]) {
-      let rawY = parseInt(rangeMatch[4], 10);
-      if (rawY > 2500) rawY -= 543;
-      else if (rawY < 100) rawY += 2000;
-      y = rawY;
-    }
+    const y = normalizeBookingYear(rangeMatch[4], currentYear);
 
     checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d1).padStart(2, '0')}`;
     checkOutDate = `${y}-${String(m).padStart(2, '0')}-${String(d2).padStart(2, '0')}`;
@@ -318,9 +365,7 @@ export function parseThaiBookingText(
   } else if (slashMatch) {
     const d = parseInt(slashMatch[1], 10);
     const m = parseInt(slashMatch[2], 10);
-    let y = parseInt(slashMatch[3], 10);
-    if (y > 2500) y -= 543;
-    else if (y < 100) y += 2000;
+    const y = normalizeBookingYear(slashMatch[3], currentYear);
 
     checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     checkOutDate = shiftDateStr(checkInDate, 1);
@@ -335,13 +380,7 @@ export function parseThaiBookingText(
       }
     }
 
-    let y = currentYear;
-    if (fullThaiMatch[3]) {
-      let rawY = parseInt(fullThaiMatch[3], 10);
-      if (rawY > 2500) rawY -= 543;
-      else if (rawY < 100) rawY += 2000;
-      y = rawY;
-    }
+    const y = normalizeBookingYear(fullThaiMatch[3], currentYear);
 
     checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     checkOutDate = shiftDateStr(checkInDate, 1);
@@ -349,13 +388,14 @@ export function parseThaiBookingText(
     checkInDate = shiftDateStr(contextDate || formatLocalDate(today), 1);
     checkOutDate = shiftDateStr(checkInDate, 1);
   } else {
-    // Single date pattern: "วันที่ 12", "วันที่ 5"
-    const singleDateMatch = normalized.match(/วันที่\s*(\d{1,2})\b/);
+    // Single date pattern: "วันที่ 12", "วันที่ 5", "วันเช็คอิน 12"
+    const singleDateMatch = normalized.match(/(?:วันที่|วันเช็คอิน|เช็คอิน|เข้าพัก)\s*(\d{1,2})\b/);
     if (singleDateMatch) {
       const d = parseInt(singleDateMatch[1], 10);
       let m = today.getMonth() + 1;
       if (contextDate) m = parseInt(contextDate.split('-')[1], 10);
-      checkInDate = `${currentYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const y = contextDate ? parseInt(contextDate.split('-')[0], 10) : currentYear;
+      checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       checkOutDate = shiftDateStr(checkInDate, 1);
     }
   }

@@ -483,7 +483,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                           className="flex-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
                         >
                           <Check className="w-4 h-4 stroke-[3]" />
-                          <span>✓ ยืนยันบันทึกทันที</span>
+                          <span>ยืนยันบันทึกทันที</span>
                         </button>
                       </>
                     )}
