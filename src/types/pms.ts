@@ -126,7 +126,8 @@ export interface StaffMember {
   id: string;
   name: string;
   phone: string; // e.g. '0812345678'
-  pin: string; // 4-6 digits, e.g. '1234'
+  pin: string; // Password / PIN code
+  password?: string;
   role: StaffRole;
   isActive: boolean;
   notes?: string;

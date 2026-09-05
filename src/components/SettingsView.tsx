@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Building2, 
@@ -11,7 +11,7 @@ import {
   Sparkles,
   Users,
   Phone,
-  KeyRound,
+  Lock,
   Plus,
   Trash2,
   Eye,
@@ -19,7 +19,10 @@ import {
   ShieldCheck,
   UserCheck,
   X,
-  Mail
+  Mail,
+  Bed,
+  Coffee,
+  Store
 } from 'lucide-react';
 import type { ResortSettings, StaffMember, StaffRole } from '../types/pms';
 import { initialSettings } from '../data/initialData';
@@ -38,21 +41,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  // Staff & PIN Access Control
-  const currentStaffList: StaffMember[] = formData.staffList || initialSettings.staffList || [];
+  // Sync settings when remote/parent changes, but preserve any user edits
+  useEffect(() => {
+    if (settings) {
+      setFormData(prev => ({
+        ...settings,
+        allowedEmails: settings.allowedEmails !== undefined ? settings.allowedEmails : (prev.allowedEmails || []),
+        staffList: settings.staffList !== undefined ? settings.staffList : (prev.staffList || []),
+      }));
+    }
+  }, [settings]);
+
+  // Staff & Login Credentials Access Control
+  const currentStaffList: StaffMember[] = formData.staffList || [];
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
-  const [newStaffPin, setNewStaffPin] = useState('');
+  const [newStaffPassword, setNewStaffPassword] = useState('');
+  const [showNewStaffPassword, setShowNewStaffPassword] = useState(false);
   const [newStaffRole, setNewStaffRole] = useState<StaffRole>('reception');
-  const [showPins, setShowPins] = useState<Record<string, boolean>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   // Email / Gmail Whitelist
   const [newAllowedEmail, setNewAllowedEmail] = useState('');
-  const currentAllowedEmails: string[] = formData.allowedEmails || initialSettings.allowedEmails || [];
+  const currentAllowedEmails: string[] = formData.allowedEmails || [];
 
-  const handleTogglePin = (id: string) => {
-    setShowPins(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleTogglePassword = (id: string) => {
+    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleAddAllowedEmail = () => {
@@ -71,18 +86,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleDeleteAllowedEmail = (emailToRemove: string) => {
-    if (currentAllowedEmails.length <= 1) {
-      if (!confirm('หากลบอีเมลนี้ออกทั้งหมด อาจไม่มีอีเมลใดสามารถล็อกอินด้วย Google ได้ ต้องการลบใช่หรือไม่?')) {
-        return;
-      }
-    }
     const updated = currentAllowedEmails.filter(e => e.toLowerCase() !== emailToRemove.toLowerCase());
     setFormData(prev => ({ ...prev, allowedEmails: updated }));
   };
 
   const handleAddStaff = () => {
     const cleanPhone = newStaffPhone.replace(/[^0-9]/g, '');
-    const cleanPin = newStaffPin.trim();
+    const cleanPassword = newStaffPassword.trim();
 
     if (!newStaffName.trim()) {
       alert('กรุณากรอกชื่อพนักงาน');
@@ -92,8 +102,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       alert('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)');
       return;
     }
-    if (cleanPin.length < 4) {
-      alert('กรุณากำหนดรหัส PIN อย่างน้อย 4 หลัก');
+    if (cleanPassword.length < 4) {
+      alert('กรุณากำหนดรหัสผ่านอย่างน้อย 4 ตัวอักษรเพื่อความปลอดภัย');
       return;
     }
 
@@ -101,7 +111,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       id: 'staff-' + Date.now(),
       name: newStaffName.trim(),
       phone: cleanPhone,
-      pin: cleanPin,
+      pin: cleanPassword,
+      password: cleanPassword,
       role: newStaffRole,
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -111,7 +122,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setFormData(prev => ({ ...prev, staffList: updatedList }));
     setNewStaffName('');
     setNewStaffPhone('');
-    setNewStaffPin('');
+    setNewStaffPassword('');
     setNewStaffRole('reception');
     setIsAddingStaff(false);
   };
@@ -125,9 +136,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setFormData(prev => ({ ...prev, staffList: updatedList }));
   };
 
-  const handleUpdateStaffPin = (id: string, newPin: string) => {
-    const clean = newPin.replace(/[^0-9]/g, '').slice(0, 6);
-    const updatedList = currentStaffList.map(s => s.id === id ? { ...s, pin: clean } : s);
+  const handleUpdateStaffPassword = (id: string, newPassword: string) => {
+    const clean = newPassword.trim();
+    const updatedList = currentStaffList.map(s => s.id === id ? { ...s, pin: clean, password: clean } : s);
     setFormData(prev => ({ ...prev, staffList: updatedList }));
   };
 
@@ -154,8 +165,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleConfirmReset = () => {
-    setFormData(initialSettings);
-    onSaveSettings(initialSettings);
+    // PRESERVE user's whitelist and staff list so they are NOT deleted unless user explicitly deletes them
+    const resetData: ResortSettings = {
+      ...initialSettings,
+      allowedEmails: formData.allowedEmails || [],
+      staffList: formData.staffList || [],
+    };
+    setFormData(resetData);
+    onSaveSettings(resetData);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
@@ -308,8 +325,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <div className="space-y-2.5 text-xs">
             <div>
-              <label className="block font-medium text-slate-700 mb-1">
-                🛖 บ้านพักหลังกลาง (ห้อง S1 และ S2)
+              <label className="block font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>บ้านพักหลังกลาง (ห้อง S1 และ S2)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">฿</span>
@@ -325,8 +343,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-medium text-slate-700 mb-1">
-                🛖 บ้านพักหลังใหญ่ (ห้อง S3 และ S4)
+              <label className="block font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>บ้านพักหลังใหญ่ (ห้อง S3 และ S4)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">฿</span>
@@ -342,8 +361,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">
-                🛖 บ้านพักแฝดหลังเล็ก (ห้อง S5 และ S6)
+              <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>บ้านพักแฝดหลังเล็ก (ห้อง S5 และ S6)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black">฿</span>
@@ -360,8 +380,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
               <div>
-                <label className="block font-bold text-slate-800 mb-1">
-                  🛏️ เตียงเสริม / ท่าน
+                <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Bed className="w-3.5 h-3.5 text-slate-500" />
+                  <span>เตียงเสริม / ท่าน</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black">฿</span>
@@ -376,8 +397,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 mb-1">
-                  🍳 อาหารเช้าเสริม / ท่าน
+                <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Coffee className="w-3.5 h-3.5 text-slate-500" />
+                  <span>อาหารเช้าเสริม / ท่าน</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black">฿</span>
@@ -409,8 +431,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="space-y-3 text-xs">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block font-bold text-slate-800 mb-1">
-                  🥓 หมูกระทะชุดเล็ก (บาท)
+                <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-amber-600" />
+                  <span>หมูกระทะชุดเล็ก (บาท)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black">฿</span>
@@ -425,8 +448,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 mb-1">
-                  🥩 หมูกระทะชุดใหญ่ (บาท)
+                <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-amber-600" />
+                  <span>หมูกระทะชุดใหญ่ (บาท)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black">฿</span>
@@ -450,8 +474,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* External Mookata Supplier Config */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <span className="font-bold text-slate-800 text-xs block flex items-center gap-1.5">
-                <span>🛵 ร้านหมูกระทะข้างนอก (สั่งภายนอก • ไม่ได้ทำเอง)</span>
+              <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <Store className="w-3.5 h-3.5 text-slate-600" />
+                <span>ร้านหมูกระทะข้างนอก (สั่งภายนอก • ไม่ได้ทำเอง)</span>
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
@@ -561,7 +586,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       </div>
 
-      {/* CARD 5: Staff Management & PIN Access (Full Width) */}
+      {/* CARD 5: Staff Management & Password Access (Full Width) */}
       <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -570,13 +595,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <span>จัดการพนักงาน & กำหนดรหัส PIN เข้าสู่ระบบ</span>
+                <span>จัดการพนักงาน & กำหนดรหัสผ่านเข้าสู่ระบบ</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
                   {currentStaffList.length} ท่าน
                 </span>
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                พนักงานใช้เบอร์โทร + รหัส PIN นี้ล็อกอินเข้าทำงานได้ทันที ฟรี 100% ไม่เสียค่า SMS
+                พนักงานใช้เบอร์โทร + รหัสผ่านนี้ล็อกอินเข้าทำงานได้ทันที มีความปลอดภัยสูง
               </p>
             </div>
           </div>
@@ -623,15 +648,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">กำหนดรหัส PIN (4-6 หลัก)</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={newStaffPin}
-                  onChange={(e) => setNewStaffPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                  placeholder="เช่น 1234"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-emerald-600 focus:border-emerald-500 outline-none tracking-widest"
-                />
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">กำหนดรหัสผ่าน (Password)</label>
+                <div className="relative">
+                  <input
+                    type={showNewStaffPassword ? "text" : "password"}
+                    value={newStaffPassword}
+                    onChange={(e) => setNewStaffPassword(e.target.value)}
+                    placeholder="ตั้งรหัสผ่านที่ปลอดภัย"
+                    className="w-full pl-3 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-emerald-600 focus:border-emerald-500 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewStaffPassword(!showNewStaffPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    title={showNewStaffPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                  >
+                    {showNewStaffPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -641,9 +675,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onChange={(e) => setNewStaffRole(e.target.value as StaffRole)}
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:border-emerald-500 outline-none"
                 >
-                  <option value="owner">👑 เจ้าของ / ผู้จัดการ</option>
-                  <option value="reception">🛎️ พนักงานต้อนรับ</option>
-                  <option value="housekeeping">🧹 แม่บ้าน</option>
+                  <option value="owner">เจ้าของ / ผู้จัดการ</option>
+                  <option value="reception">พนักงานต้อนรับ</option>
+                  <option value="housekeeping">แม่บ้าน</option>
                 </select>
               </div>
             </div>
@@ -671,15 +705,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="divide-y divide-slate-100">
           {currentStaffList.map((staff) => {
             const isOwner = staff.role === 'owner';
-            const roleLabels: Record<StaffRole, { label: string; badge: string }> = {
-              owner: { label: '👑 เจ้าของ / ผู้ดูแล', badge: 'bg-purple-100 text-purple-800 border-purple-200' },
-              manager: { label: '⭐ ผู้จัดการ', badge: 'bg-blue-100 text-blue-800 border-blue-200' },
-              reception: { label: '🛎️ พนักงานต้อนรับ', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
-              housekeeping: { label: '🧹 แม่บ้าน', badge: 'bg-teal-100 text-teal-800 border-teal-200' },
+            const roleLabels: Record<StaffRole, { label: string; badge: string; icon: React.FC<{ className?: string }> }> = {
+              owner: { label: 'เจ้าของ / ผู้ดูแล', badge: 'bg-purple-100 text-purple-800 border-purple-200', icon: ShieldCheck },
+              manager: { label: 'ผู้จัดการ', badge: 'bg-blue-100 text-blue-800 border-blue-200', icon: UserCheck },
+              reception: { label: 'พนักงานต้อนรับ', badge: 'bg-amber-100 text-amber-800 border-amber-200', icon: Users },
+              housekeeping: { label: 'แม่บ้าน', badge: 'bg-teal-100 text-teal-800 border-teal-200', icon: Sparkles },
             };
 
             const roleInfo = roleLabels[staff.role] || roleLabels.reception;
-            const isPinVisible = showPins[staff.id];
+            const RoleIcon = roleInfo.icon;
+            const isPasswordVisible = showPasswords[staff.id];
 
             return (
               <div 
@@ -694,8 +729,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold text-xs text-slate-900">{staff.name}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleInfo.badge}`}>
-                        {roleInfo.label}
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleInfo.badge}`}>
+                        <RoleIcon className="w-3 h-3" />
+                        <span>{roleInfo.label}</span>
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
@@ -705,26 +741,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
 
-                {/* PIN Control & Actions */}
+                {/* Password Control & Actions */}
                 <div className="flex items-center gap-2 sm:self-center">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs">
-                    <KeyRound className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-[11px] font-medium text-slate-500">PIN:</span>
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-[11px] font-medium text-slate-500">รหัสผ่าน:</span>
                     <input
-                      type={isPinVisible ? "text" : "password"}
-                      maxLength={6}
-                      value={staff.pin}
-                      onChange={(e) => handleUpdateStaffPin(staff.id, e.target.value)}
-                      className="w-16 bg-transparent font-mono font-bold text-xs text-slate-900 outline-none text-center"
-                      title="กดเพื่อแก้ไขรหัส PIN ได้ทันที"
+                      type={isPasswordVisible ? "text" : "password"}
+                      value={staff.password || staff.pin}
+                      onChange={(e) => handleUpdateStaffPassword(staff.id, e.target.value)}
+                      className="w-24 bg-transparent font-mono font-bold text-xs text-slate-900 outline-none text-center"
+                      title="กดเพื่อแก้ไขรหัสผ่านได้ทันที"
                     />
                     <button
                       type="button"
-                      onClick={() => handleTogglePin(staff.id)}
+                      onClick={() => handleTogglePassword(staff.id)}
                       className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                      title={isPinVisible ? "ซ่อนรหัส PIN" : "แสดงรหัส PIN"}
+                      title={isPasswordVisible ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                     >
-                      {isPinVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {isPasswordVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
 
@@ -748,7 +783,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-800">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <strong>คำแนะนำสำหรับผู้ดูแล:</strong> พนักงานสามารถล็อกอินด้วยเบอร์โทรศัพท์และรหัส PIN ข้างต้นได้ทันที และหากติ๊ก <strong>"จดจำการเข้าสู่ระบบไว้ในเครื่องนี้"</strong> ตัวเครื่องจะจำการเข้าสู่ระบบไว้ตลอด ไม่ต้องเสียเวลากรอกซ้ำทุกวัน
+            <strong>คำแนะนำสำหรับผู้ดูแล:</strong> พนักงานสามารถล็อกอินด้วยเบอร์โทรศัพท์และรหัสผ่านข้างต้นได้ทันที และหากติ๊ก <strong>"จดจำการเข้าสู่ระบบไว้ในเครื่องนี้"</strong> ตัวเครื่องจะจำการเข้าสู่ระบบไว้ตลอด ไม่ต้องเสียเวลากรอกซ้ำทุกวัน
           </div>
         </div>
 
@@ -763,8 +798,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {currentAllowedEmails.length} อีเมล
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                🔒 <strong>ระบบความปลอดภัย:</strong> เฉพาะ Gmail ที่อยู่ในรายชื่อนี้เท่านั้นที่สามารถล็อกอินได้ หากมีคนอื่นนำ Gmail อื่นมากด จะโดนบล็อกและเตะออกจากระบบทันที
+              <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-purple-600 inline shrink-0" />
+                <span><strong>ระบบความปลอดภัย:</strong> เฉพาะ Gmail ที่อยู่ในรายชื่อนี้เท่านั้นที่สามารถล็อกอินได้ หากมีคนอื่นนำ Gmail อื่นมากด จะโดนบล็อกและเตะออกจากระบบทันที</span>
               </p>
             </div>
 

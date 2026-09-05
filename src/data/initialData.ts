@@ -222,10 +222,7 @@ export const initialSettings: ResortSettings = {
   mookataSupplierPhone: '081-234-5678',
 
   // Google & Email Whitelist Control
-  allowedEmails: [
-    '67708153@chonburi.spu.ac.th',
-    'admin@swanhill.com',
-  ],
+  allowedEmails: [],
   allowGoogleLogin: true,
 };
 

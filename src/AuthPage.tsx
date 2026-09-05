@@ -10,7 +10,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from './lib/firebase';
 import { initialSettings } from './data/initialData';
 import type { ResortSettings, StaffMember } from './types/pms';
-import { Phone, Mail, Lock, KeyRound, Eye, EyeOff, ShieldCheck, Sparkles, CheckSquare, Square, UserCheck } from 'lucide-react';
+import { Phone, Mail, Lock, Eye, EyeOff, ShieldCheck, Sparkles, CheckSquare, Square, UserCheck } from 'lucide-react';
 
 interface AuthPageProps {
   onLoginSuccess?: () => void;
@@ -114,7 +114,7 @@ async function computeSha256Hex(text: string): Promise<string> {
     setIsLoading(true);
 
     const cleanInputPhone = phone.replace(/[^0-9]/g, '');
-    const cleanInputPin = pin.trim();
+    const cleanInputPassword = pin.trim();
 
     if (!cleanInputPhone || cleanInputPhone.length < 9) {
       setError('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)');
@@ -122,8 +122,8 @@ async function computeSha256Hex(text: string): Promise<string> {
       return;
     }
 
-    if (!cleanInputPin || cleanInputPin.length < 4) {
-      setError('กรุณากรอกรหัส PIN อย่างน้อย 4 หลัก');
+    if (!cleanInputPassword || cleanInputPassword.length < 4) {
+      setError('กรุณากรอกรหัสผ่านอย่างน้อย 4 ตัวอักษร');
       setIsLoading(false);
       return;
     }
@@ -131,18 +131,20 @@ async function computeSha256Hex(text: string): Promise<string> {
     // Match against dynamic staff list (from Firestore or localStorage)
     let matchedStaff = staffList.find(s => {
       const staffCleanPhone = s.phone.replace(/[^0-9]/g, '');
-      return staffCleanPhone === cleanInputPhone && s.pin.trim() === cleanInputPin && s.isActive !== false;
+      const staffSecret = s.password || s.pin;
+      return staffCleanPhone === cleanInputPhone && (staffSecret.trim() === cleanInputPassword || s.pin.trim() === cleanInputPassword) && s.isActive !== false;
     });
 
     // If not found in dynamic staff list, verify against secure one-way hash (No plaintext in code)
     if (!matchedStaff) {
-      const inputHash = await computeSha256Hex(`swanhill_auth_v1_${cleanInputPhone}:${cleanInputPin}`);
+      const inputHash = await computeSha256Hex(`swanhill_auth_v1_${cleanInputPhone}:${cleanInputPassword}`);
       if (inputHash && inputHash === MASTER_AUTH_HASH) {
         matchedStaff = {
           id: 'staff-owner',
           name: 'ผู้ดูแลระบบ / เจ้าของ',
           phone: cleanInputPhone,
-          pin: cleanInputPin,
+          pin: cleanInputPassword,
+          password: cleanInputPassword,
           role: 'owner',
           isActive: true,
           notes: 'ผู้ดูแลหลัก',
@@ -160,7 +162,7 @@ async function computeSha256Hex(text: string): Promise<string> {
     }
 
     if (!matchedStaff) {
-      setError('เบอร์โทรศัพท์หรือรหัส PIN ไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อผู้ดูแลระบบ Swan HILL');
+      setError('เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อผู้ดูแลระบบ Swan HILL');
       setIsLoading(false);
       return;
     }
@@ -232,7 +234,7 @@ async function computeSha256Hex(text: string): Promise<string> {
       currentStaff.some(s => s.email?.toLowerCase().trim() === cleanEmail);
 
     if (!isAllowed) {
-      setError(`❌ อีเมลนี้ (${cleanEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งาน กรุณาติดต่อผู้ดูแลระบบ Swan HILL`);
+      setError(`อีเมลนี้ (${cleanEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งาน กรุณาติดต่อผู้ดูแลระบบ Swan HILL`);
       setIsLoading(false);
       return;
     }
@@ -293,7 +295,7 @@ async function computeSha256Hex(text: string): Promise<string> {
       if (!isAllowed) {
         // KICK THEM OUT IMMEDIATELY!
         await auth.signOut();
-        setError(`❌ บัญชี Google (${userEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ Swan HILL เพื่อเพิ่มสิทธิ์ในหน้าตั้งค่า`);
+        setError(`บัญชี Google (${userEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ Swan HILL เพื่อเพิ่มสิทธิ์ในหน้าตั้งค่า`);
         setIsLoading(false);
         return;
       }
@@ -368,7 +370,7 @@ async function computeSha256Hex(text: string): Promise<string> {
             }`}
           >
             <Phone className="w-3.5 h-3.5" />
-            <span>เบอร์โทร + รหัส PIN</span>
+            <span>เบอร์โทร + รหัสผ่าน</span>
           </button>
 
           <button
@@ -388,7 +390,7 @@ async function computeSha256Hex(text: string): Promise<string> {
           </button>
         </div>
 
-        {/* 1. Phone Number + PIN Form (Primary & Friendly for Elderly Staff) */}
+        {/* 1. Phone Number + Password Form */}
         {method === 'phone_pin' ? (
           <form onSubmit={handlePhonePinLogin} className="space-y-4">
             {/* Phone Input */}
@@ -414,29 +416,27 @@ async function computeSha256Hex(text: string): Promise<string> {
               </p>
             </div>
 
-            {/* PIN Code Input */}
+            {/* Password Input */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>รหัส PIN (4 - 6 หลัก)</span>
-                <span className="text-[11px] text-emerald-400 font-normal">รหัสประจำตัว</span>
+                <span>รหัสผ่าน (Password / PIN)</span>
+                <span className="text-[11px] text-emerald-400 font-normal">รหัสความปลอดภัย</span>
               </label>
               <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
                 <input
                   type={showPin ? "text" : "password"}
-                  inputMode="numeric"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                  className="w-full pl-11 pr-12 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-lg sm:text-xl font-mono font-bold text-emerald-300 placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-[0.25em]"
-                  placeholder="••••"
-                  maxLength={6}
+                  onChange={(e) => setPin(e.target.value)}
+                  className="w-full pl-11 pr-12 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-base sm:text-lg font-mono font-bold text-emerald-300 placeholder-slate-600 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all tracking-wider"
+                  placeholder="กรอกรหัสผ่านของคุณ"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPin(!showPin)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 cursor-pointer"
-                  title={showPin ? "ซ่อนรหัส PIN" : "แสดงรหัส PIN"}
+                  title={showPin ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                 >
                   {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

@@ -180,9 +180,9 @@ export const HousekeepingView: React.FC<HousekeepingViewProps> = ({
                   onChange={(e) => setPriority(e.target.value as HousekeepingPriority)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                 >
-                  <option value="high">🔴 ด่วนมาก (มีแขกรอเช็คอิน)</option>
-                  <option value="medium">🟡 ปานกลาง (ประจำวัน)</option>
-                  <option value="low">🟢 ทั่วไป</option>
+                  <option value="high">ด่วนมาก (มีแขกรอเช็คอิน)</option>
+                  <option value="medium">ปานกลาง (ประจำวัน)</option>
+                  <option value="low">ทั่วไป</option>
                 </select>
               </div>
 
