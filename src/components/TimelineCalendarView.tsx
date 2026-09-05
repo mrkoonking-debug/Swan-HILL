@@ -4,19 +4,19 @@ import {
   Calendar, 
   Plus, 
   CreditCard, 
-  Receipt,
-  Users,
-  LayoutGrid,
-  ListFilter,
-  UtensilsCrossed,
-  X,
-  Phone,
-  ChevronRight as ArrowRightIcon,
-  ChevronLeft,
+  Receipt, 
+  Users, 
+  LayoutGrid, 
+  CalendarDays, 
+  UtensilsCrossed, 
+  X, 
+  Phone, 
+  ChevronRight as ArrowRightIcon, 
+  ChevronLeft, 
   ChevronRight
 } from 'lucide-react';
 import type { Room, Booking } from '../types/pms';
-import { formatThaiDate, THAI_MONTHS_FULL } from '../utils/dateUtils';
+import { formatThaiDate, THAI_MONTHS_FULL, formatLocalDate, shiftDateStr } from '../utils/dateUtils';
 import { HouseLogo } from './HouseLogo';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { LiquidSegmentedControl } from './LiquidSegmentedControl';
@@ -40,17 +40,18 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   onOpenAddPayment,
   onOpenAddOrder,
 }) => {
-  const [selectedDateModal, setSelectedDateModal] = useState<string | null>(null);
   const [selectedBookingModal, setSelectedBookingModal] = useState<Booking | null>(null);
-  const [viewMode, setViewMode] = useState<'month' | 'timeline'>('month');
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
-  useLockBodyScroll(!!selectedDateModal || !!selectedBookingModal);
+  useLockBodyScroll(!!selectedBookingModal);
 
   // Strictly order rooms: S1, S2 -> S3, S4 -> S5, S6 (Memoized)
   const orderedRooms = useMemo(() => {
     const order = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
     return [...rooms].sort((a, b) => order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber));
   }, [rooms]);
+
+  const todayStr = useMemo(() => formatLocalDate(new Date()), []);
 
   // Dynamic viewing month/year state (Default to Sept 2026 if bookings exist there, else current month)
   const [viewDate, setViewDate] = useState<Date>(() => {
@@ -60,28 +61,78 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
+  // Selected date for Master-Detail inspection in Month View
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
+    if (hasSept) return '2026-09-01';
+    return todayStr;
+  });
+
+  // 7-Day Rolling Window Start Date (defaults to selectedDate or viewDate)
+  const [weekStartDateStr, setWeekStartDateStr] = useState<string>(() => {
+    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
+    if (hasSept) return '2026-09-01';
+    return todayStr;
+  });
+
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth(); // 0-indexed (0=Jan, 8=Sept)
   const currentMonthYear = `${THAI_MONTHS_FULL[month]} ${year + 543}`;
 
   const handlePrevMonth = () => {
-    setViewDate(new Date(year, month - 1, 1));
+    const prev = new Date(year, month - 1, 1);
+    setViewDate(prev);
+    const newDateStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-01`;
+    setSelectedDate(newDateStr);
+    setWeekStartDateStr(newDateStr);
   };
+
   const handleNextMonth = () => {
-    setViewDate(new Date(year, month + 1, 1));
+    const next = new Date(year, month + 1, 1);
+    setViewDate(next);
+    const newDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-01`;
+    setSelectedDate(newDateStr);
+    setWeekStartDateStr(newDateStr);
   };
-  const handleResetToCurrentMonth = () => {
+
+  const handleResetToToday = () => {
     const now = new Date();
     setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(todayStr);
+    setWeekStartDateStr(todayStr);
   };
 
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }, []);
+  // 7-Day Window Navigation
+  const handlePrevWeek = () => {
+    setWeekStartDateStr(prev => shiftDateStr(prev, -7));
+  };
 
-  // Memoize Month Grid Cells & Timeline Days calculation
-  const { calendarCells, timelineDays } = useMemo(() => {
+  const handleNextWeek = () => {
+    setWeekStartDateStr(prev => shiftDateStr(prev, 7));
+  };
+
+  const handleResetWeekToToday = () => {
+    setWeekStartDateStr(todayStr);
+  };
+
+  // Memoize 7-Day Window Array
+  const weekDays = useMemo(() => {
+    const days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(shiftDateStr(weekStartDateStr, i));
+    }
+    return days;
+  }, [weekStartDateStr]);
+
+  const weekDateRangeLabel = useMemo(() => {
+    if (weekDays.length === 0) return '';
+    const first = weekDays[0];
+    const last = weekDays[6];
+    return `${formatThaiDate(first)} - ${formatThaiDate(last)}`;
+  }, [weekDays]);
+
+  // Memoize Month Grid Cells
+  const calendarCells = useMemo(() => {
     const startDayOfWeek = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -93,13 +144,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       cells.push({ day: d, dateStr });
     }
-
-    const tDays = Array.from({ length: daysInMonth }, (_, i) => {
-      const d = i + 1;
-      return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    });
-
-    return { calendarCells: cells, timelineDays: tDays };
+    return cells;
   }, [year, month]);
 
   // Active bookings filter (Memoized)
@@ -107,7 +152,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     return bookings.filter(b => b.status !== 'cancelled' && !b.deletedAt);
   }, [bookings]);
 
-  // Precomputed Date Lookup Maps: O(1) Instant Access instead of 370+ iterations per render
+  // Precomputed Date Lookup Maps: O(1) Instant Access
   const { bookingsByDate, bookingsByRoomAndDate } = useMemo(() => {
     const byDate = new Map<string, Booking[]>();
     const byRoomAndDate = new Map<string, Booking[]>();
@@ -158,71 +203,57 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
     return list.find(b => b.status === 'checked_in') || list.find(b => b.status === 'confirmed') || list[0];
   }, [getAllBookingsForRoomAndDate]);
 
+  // Selected date statistics
+  const selectedDateBookings = useMemo(() => {
+    return getBookingsForDate(selectedDate);
+  }, [getBookingsForDate, selectedDate]);
+
+  const selectedDateVacantCount = Math.max(0, rooms.length - selectedDateBookings.length);
+
+  // Helper to extract clean short guest nickname or first name
+  const formatShortGuestName = (name: string): string => {
+    if (!name) return 'ผู้เข้าพัก';
+    const clean = name.replace(/^คุณ\s*/, '').trim();
+    return clean.split(' ')[0] || clean;
+  };
+
   return (
-    <div className="space-y-3 sm:space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-500 font-['Prompt'] w-full max-w-full overflow-hidden">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 pb-24 md:pb-12 animate-in fade-in duration-300 font-['Prompt'] w-full max-w-full overflow-hidden">
       
       {/* Top Header & View Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
         <div>
           <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
-            <span>ปฏิทินห้องพัก Swan HILL Resort</span>
+            <span>ปฏิทินตรวจเช็คห้องว่าง Swan HILL</span>
           </h1>
           <p className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5">
-            {currentMonthYear} &bull; แตะที่วันเพื่อดูสรุปและสถานะห้องพัก 6 หลัง
+            บ้านพัก 6 หลัง (S1 - S6) &bull; แตะเลือกวันเพื่อดูสถานะและกดจองได้ทันที
           </p>
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
-          {/* Month Shift Navigation Buttons */}
-          <div className="flex items-center gap-0.5 sm:gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs shrink-0">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 sm:p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
-              title="เดือนก่อนหน้า"
-            >
-              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleResetToCurrentMonth}
-              className="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
-              title="กลับมาดูเดือนปัจจุบัน"
-            >
-              {currentMonthYear}
-            </button>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 sm:p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
-              title="เดือนถัดไป"
-            >
-              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-          </div>
-
-          {/* Legend: Visible on both Desktop & Mobile for clear understanding */}
-          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-x-auto no-scrollbar">
-            <span className="flex items-center gap-1 text-emerald-800 whitespace-nowrap font-black">
+          {/* Legend Badges */}
+          <div className="hidden lg:flex items-center gap-2 text-[11px] font-bold px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+            <span className="flex items-center gap-1 text-emerald-800 font-black">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> ว่างครบ 6
             </span>
-            <span className="flex items-center gap-1 text-amber-900 whitespace-nowrap font-black">
+            <span className="flex items-center gap-1 text-amber-900 font-black">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> มัดจำ
             </span>
-            <span className="flex items-center gap-1 text-blue-900 whitespace-nowrap font-black">
+            <span className="flex items-center gap-1 text-blue-900 font-black">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> จ่ายครบ
             </span>
-            <span className="flex items-center gap-1 text-rose-900 whitespace-nowrap font-black">
+            <span className="flex items-center gap-1 text-rose-900 font-black">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span> เต็ม
             </span>
           </div>
 
-          {/* Toggle View Mode (Apple Liquid Glass Sliding Capsule) */}
-          <LiquidSegmentedControl<'month' | 'timeline'>
+          {/* Liquid View Mode Switcher */}
+          <LiquidSegmentedControl<'month' | 'week'>
             options={[
               { value: 'month', label: 'รายเดือน', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-              { value: 'timeline', label: 'ผัง 6 ห้อง', icon: <ListFilter className="w-3.5 h-3.5" /> },
+              { value: 'week', label: 'ผัง 7 วัน', icon: <CalendarDays className="w-3.5 h-3.5" /> },
             ]}
             value={viewMode}
             onChange={(val) => setViewMode(val)}
@@ -232,169 +263,410 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
         </div>
       </div>
 
-      {/* VIEW 1: HIGH-CONTRAST & CLEAR FULL MONTH CALENDAR GRID */}
+      {/* ========================================================= */}
+      {/* MODE 1: SMART MONTH CALENDAR + MASTER-DETAIL 6-ROOM PANEL */}
+      {/* ========================================================= */}
       {viewMode === 'month' && (
-        <div className="bg-white rounded-xl sm:rounded-3xl border border-slate-300 p-1.5 sm:p-5 shadow-sm w-full max-w-full overflow-hidden space-y-1.5 sm:space-y-2">
-          {/* Day of Week Headers (High-Contrast Bold Colors) */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
-            {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
-              <div 
-                key={dayName} 
-                className={`py-1.5 sm:py-2 text-[10px] sm:text-xs font-black rounded-lg shadow-2xs ${
-                  idx === 0 
-                    ? 'bg-rose-500 text-white' 
-                    : idx === 6
-                    ? 'bg-indigo-600 text-white' 
-                    : 'bg-slate-800 text-white'
-                }`}
+        <div className="space-y-3 sm:space-y-4">
+          
+          {/* Month Navigation Card */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-2 sm:p-3 shadow-2xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                className="p-1.5 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-700 transition-all cursor-pointer"
+                title="เดือนก่อนหน้า"
               >
-                <span className="hidden sm:inline">{dayName}</span>
-                <span className="sm:hidden">{['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][idx]}</span>
-              </div>
-            ))}
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <span className="text-xs sm:text-sm font-black text-slate-900 px-2 sm:px-3">
+                {currentMonthYear}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                className="p-1.5 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-700 transition-all cursor-pointer"
+                title="เดือนถัดไป"
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleResetToToday}
+                className="px-2.5 py-1 text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 active:scale-95 rounded-xl border border-emerald-200 transition-all cursor-pointer whitespace-nowrap"
+              >
+                กลับมาวันนี้
+              </button>
+            </div>
           </div>
 
-          {/* Days Cells Grid (Crystal-Clear Text, High-Contrast Badges) */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {calendarCells.map((cell, idx) => {
-              if (!cell) {
-                return (
-                  <div 
-                    key={`empty-${idx}`} 
-                    className="min-w-0 min-h-[68px] sm:min-h-[84px] bg-slate-50/50 rounded-lg sm:rounded-2xl border border-dashed border-slate-200"
-                  />
-                );
-              }
-
-              const dayBookings = getBookingsForDate(cell.dateStr);
-              const bookedRoomsCount = dayBookings.length;
-              const availableRoomsCount = Math.max(0, rooms.length - bookedRoomsCount);
-              const isFull = availableRoomsCount === 0;
-              const isToday = cell.dateStr === todayStr;
-              const isPartial = bookedRoomsCount > 0 && !isFull;
-
-              return (
-                <div
-                  key={cell.dateStr}
-                  onClick={() => setSelectedDateModal(cell.dateStr)}
-                  className={`min-w-0 min-h-[68px] sm:min-h-[84px] p-1 sm:p-2 rounded-lg sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between hover:shadow-md select-none group relative overflow-hidden ${
-                    isToday ? 'ring-2 ring-emerald-600 ring-offset-1 z-10' : ''
-                  } ${
-                    isFull 
-                      ? 'bg-rose-50/80 border-rose-300 hover:border-rose-400' 
-                      : isPartial 
-                      ? 'bg-amber-50/60 border-amber-300 hover:border-amber-400' 
-                      : 'bg-white border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20'
+          {/* 7-Column Responsive Month Grid */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-2 sm:p-4 shadow-sm space-y-1.5 sm:space-y-2">
+            {/* Day of Week Headers */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center select-none">
+              {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
+                <div 
+                  key={dayName} 
+                  className={`py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-lg sm:rounded-xl shadow-2xs ${
+                    idx === 0 
+                      ? 'bg-rose-500 text-white' 
+                      : idx === 6
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-slate-800 text-white'
                   }`}
                 >
-                  {/* Top Bar: Day Number & High-Contrast Status Pill */}
-                  <div className="flex items-center justify-between gap-1 leading-none mb-1">
-                    {isToday ? (
-                      <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-[11px] sm:text-xs shadow-xs shrink-0">
+                  <span className="hidden sm:inline">{dayName}</span>
+                  <span className="sm:hidden">{['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][idx]}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              {calendarCells.map((cell, idx) => {
+                if (!cell) {
+                  return (
+                    <div 
+                      key={`empty-${idx}`} 
+                      className="min-w-0 min-h-[58px] sm:min-h-[78px] bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200"
+                    />
+                  );
+                }
+
+                const dayBookings = getBookingsForDate(cell.dateStr);
+                const bookedRoomsCount = dayBookings.length;
+                const availableRoomsCount = Math.max(0, rooms.length - bookedRoomsCount);
+                const isFull = availableRoomsCount === 0;
+                const isToday = cell.dateStr === todayStr;
+                const isSelected = cell.dateStr === selectedDate;
+                const isPartial = bookedRoomsCount > 0 && !isFull;
+
+                return (
+                  <button
+                    type="button"
+                    key={cell.dateStr}
+                    onClick={() => setSelectedDate(cell.dateStr)}
+                    className={`min-w-0 min-h-[58px] sm:min-h-[78px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left relative overflow-hidden select-none active:scale-[0.98] ${
+                      isSelected
+                        ? 'ring-3 ring-emerald-600 ring-offset-1 bg-emerald-50/70 border-emerald-500 shadow-md z-10'
+                        : isToday
+                        ? 'ring-2 ring-slate-400 bg-white border-slate-300 shadow-2xs'
+                        : isFull 
+                        ? 'bg-rose-50/60 border-rose-200 hover:border-rose-300' 
+                        : isPartial 
+                        ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300' 
+                        : 'bg-white border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20'
+                    }`}
+                  >
+                    {/* Top Row: Date Number + Vacancy Pill */}
+                    <div className="flex items-center justify-between gap-0.5 w-full leading-none">
+                      <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 ${
+                        isToday
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : isSelected
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-800'
+                      }`}>
                         {cell.day}
                       </span>
-                    ) : (
-                      <span className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-emerald-700 shrink-0">
-                        {cell.day}
-                      </span>
-                    )}
 
-                    {/* Status Pill: Bold White Text on Solid Color Background */}
-                    {isFull ? (
-                      <span className="bg-rose-600 text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
-                        เต็ม
-                      </span>
-                    ) : isPartial ? (
-                      <span className="bg-amber-500 text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
-                        ว่าง {availableRoomsCount}
-                      </span>
-                    ) : (
-                      <span className="bg-emerald-700 text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
-                        ว่าง 6
-                      </span>
-                    )}
-                  </div>
+                      {/* Status indicator badge */}
+                      {isFull ? (
+                        <span className="bg-rose-600 text-white font-black text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
+                          เต็ม
+                        </span>
+                      ) : isPartial ? (
+                        <span className="bg-amber-500 text-white font-black text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
+                          ว่าง {availableRoomsCount}
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-700 text-white font-black text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-md shadow-2xs whitespace-nowrap">
+                          ว่าง 6
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Bottom Area: Room Badges or Full Availability Status */}
-                  <div className="flex items-center gap-1 flex-wrap overflow-hidden mt-auto pt-0.5">
-                    {bookedRoomsCount === 0 ? (
-                      <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-1 py-0.5 rounded-md border border-emerald-300/80 truncate block w-full text-center">
-                        ✓ ว่างหมด
-                      </span>
-                    ) : (
-                      <>
-                        {dayBookings.slice(0, 3).map((b) => {
+                    {/* Bottom Row: Room Tokens */}
+                    <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-hidden mt-auto pt-1 w-full">
+                      {bookedRoomsCount === 0 ? (
+                        <span className="text-[8px] sm:text-[9px] font-extrabold text-emerald-800 bg-emerald-100/80 px-1 py-0.5 rounded-md block w-full text-center truncate">
+                          ว่างหมด
+                        </span>
+                      ) : (
+                        dayBookings.slice(0, 3).map((b) => {
                           const isPaid = b.paidAmount >= b.totalAmount;
                           return (
                             <span
                               key={b.id}
-                              title={`${b.roomNumber}: ${b.guestName} (${isPaid ? 'จ่ายครบ' : 'มัดจำ'})`}
-                              className={`px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black text-white shadow-2xs whitespace-nowrap ${
-                                isPaid 
-                                  ? 'bg-blue-600 border border-blue-700' 
-                                  : 'bg-amber-500 border border-amber-600'
+                              className={`px-1 py-0.5 rounded text-[8px] sm:text-[9px] font-black text-white leading-none whitespace-nowrap shadow-2xs ${
+                                isPaid ? 'bg-blue-600' : 'bg-amber-500'
                               }`}
                             >
                               {b.roomNumber}
                             </span>
                           );
-                        })}
-                        {bookedRoomsCount > 3 && (
-                          <span className="px-1 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-slate-800 text-white shadow-2xs whitespace-nowrap">
-                            +{bookedRoomsCount - 3}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                        })
+                      )}
+                      {bookedRoomsCount > 3 && (
+                        <span className="px-1 py-0.5 rounded text-[8px] font-black bg-slate-800 text-white leading-none">
+                          +{bookedRoomsCount - 3}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* ========================================================= */}
+          {/* MASTER-DETAIL 6-ROOM STATUS PANEL (INSTANT ON SELECTION) */}
+          {/* ========================================================= */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border-2 border-emerald-500/80 shadow-md p-3 sm:p-5 space-y-3 sm:space-y-4 animate-in slide-in-from-top-3 duration-200">
+            {/* Panel Title Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+                    <span>สถานะบ้านพักวันที่ {formatThaiDate(selectedDate)}</span>
+                    {selectedDate === todayStr && (
+                      <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                        วันนี้
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    ว่าง {selectedDateVacantCount} หลัง &bull; จองแล้ว {selectedDateBookings.length} หลัง
+                  </p>
+                </div>
+              </div>
+
+              {/* Status summary pill */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <span className={`px-3 py-1 rounded-full text-xs font-black shadow-2xs ${
+                  selectedDateVacantCount === 0 
+                    ? 'bg-rose-100 text-rose-900 border border-rose-200' 
+                    : selectedDateVacantCount === 6 
+                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
+                    : 'bg-amber-100 text-amber-900 border border-amber-200'
+                }`}>
+                  {selectedDateVacantCount === 0 ? '🔴 บ้านเต็มทุกหลัง' : `🟢 มีห้องว่างพร้อมรับ ${selectedDateVacantCount} หลัง`}
+                </span>
+              </div>
+            </div>
+
+            {/* 6 Rooms Grid Cards: Clean, Thumb-Friendly, No Horizontal Overflow */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+              {orderedRooms.map((room) => {
+                const roomBookings = getAllBookingsForRoomAndDate(room.id, selectedDate);
+                const activeBooking = roomBookings.find(b => b.status === 'checked_in' || b.status === 'confirmed');
+                const checkedOutBooking = roomBookings.find(b => b.status === 'checked_out');
+
+                // Case 1: Room is Vacant
+                if (roomBookings.length === 0) {
+                  return (
+                    <div 
+                      key={room.id}
+                      className="p-3 sm:p-3.5 bg-emerald-50/40 hover:bg-emerald-50/80 rounded-2xl border border-emerald-200 transition-all flex items-center justify-between gap-3 shadow-2xs group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <HouseLogo roomNumber={room.roomNumber} size="md" />
+                        <div className="min-w-0">
+                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
+                            ห้อง {room.roomNumber} - {room.name}
+                          </span>
+                          <span className="text-[11px] text-emerald-800 font-bold block">
+                            🟢 ว่างพร้อมจอง &bull; ฿{room.pricePerNight.toLocaleString()}/คืน
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenNewBookingWithPrefill) {
+                            onOpenNewBookingWithPrefill(room.id, selectedDate);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs shrink-0 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all"
+                        title={`จองห้อง ${room.roomNumber} ในวันที่ ${formatThaiDate(selectedDate)}`}
+                      >
+                        <Plus className="w-4 h-4 stroke-[3]" />
+                        <span>กดจอง</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Case 2: Cleaned and Ready after earlier checkout
+                if (!activeBooking && checkedOutBooking) {
+                  return (
+                    <div 
+                      key={room.id}
+                      className="p-3 sm:p-3.5 bg-emerald-50/30 hover:bg-emerald-50 rounded-2xl border border-emerald-200 transition-all flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <HouseLogo roomNumber={room.roomNumber} size="md" />
+                        <div className="min-w-0">
+                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
+                            ห้อง {room.roomNumber} - {room.name}
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-bold block">
+                            ✨ แขกเดิมออกแล้ว พร้อมรับ Walk-in รอบใหม่
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenNewBookingWithPrefill) {
+                            onOpenNewBookingWithPrefill(room.id, selectedDate);
+                          }
+                        }}
+                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs shrink-0 shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>จองรอบ 2</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                // Case 3: Active Booking
+                const booking = activeBooking || checkedOutBooking || roomBookings[0];
+                const isPaid = booking.paidAmount >= booking.totalAmount;
+
+                return (
+                  <div
+                    key={room.id}
+                    onClick={() => setSelectedBookingModal(booking)}
+                    className="p-3 sm:p-3.5 bg-white hover:border-emerald-500 rounded-2xl border-2 border-slate-200 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-2.5 group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <HouseLogo roomNumber={room.roomNumber} size="md" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-xs sm:text-sm text-slate-900 block truncate">
+                            ห้อง {room.roomNumber}
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-black text-white ${
+                            isPaid ? 'bg-blue-600' : 'bg-amber-500'
+                          }`}>
+                            {isPaid ? 'จ่ายครบ' : 'มัดจำ'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-700 font-bold truncate block">
+                          คุณ {booking.guestName}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                          <span>{booking.guestPhone || '-'}</span>
+                          {booking.addOns && booking.addOns.length > 0 && (
+                            <span className="text-amber-700 font-bold bg-amber-50 px-1 rounded flex items-center gap-0.5">
+                              <UtensilsCrossed className="w-2.5 h-2.5" /> มีหมูกระทะ
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0 flex items-center gap-1">
+                      <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       )}
 
-      {/* VIEW 2: 6-ROOM TIMELINE MATRIX */}
-      {viewMode === 'timeline' && (
-        <div className="space-y-2 w-full max-w-full">
-          {/* Mobile Swipe Guidance Banner */}
-          <div className="sm:hidden flex items-center justify-between px-2.5 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200">
-            <span className="flex items-center gap-1.5">
-              <span className="text-sm">👆</span>
-              <span>เลื่อนซ้าย-ขวา เพื่อดูผังห้องและวันที่ทั้งหมด</span>
-            </span>
-            <span className="text-[10px] bg-white text-emerald-700 px-1.5 py-0.5 rounded-md border border-emerald-200 font-bold">
-              30 วัน
-            </span>
+      {/* ========================================================= */}
+      {/* MODE 2: WORLD-CLASS 7-DAY ROLLING TIMELINE MATRIX         */}
+      {/* ========================================================= */}
+      {viewMode === 'week' && (
+        <div className="space-y-3 sm:space-y-4">
+          
+          {/* Week Navigation Header */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-2 sm:p-3 shadow-2xs flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                type="button"
+                onClick={handlePrevWeek}
+                className="p-1.5 sm:p-2 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-700 transition-all cursor-pointer border border-slate-200 shadow-2xs"
+                title="7 วันก่อนหน้า"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="px-1 sm:px-2">
+                <span className="text-xs sm:text-sm font-black text-slate-900 block leading-tight">
+                  {weekDateRangeLabel}
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  ผังห้องพักรายสัปดาห์ 7 วัน
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleNextWeek}
+                className="p-1.5 sm:p-2 hover:bg-slate-100 active:scale-95 rounded-xl text-slate-700 transition-all cursor-pointer border border-slate-200 shadow-2xs"
+                title="7 วันถัดไป"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleResetWeekToToday}
+                className="px-2.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 active:scale-95 rounded-xl border border-emerald-200 transition-all cursor-pointer whitespace-nowrap"
+              >
+                สัปดาห์นี้ (วันนี้)
+              </button>
+            </div>
           </div>
 
-          <div className="bg-white rounded-xl sm:rounded-3xl border border-slate-300 p-2 sm:p-4 shadow-sm overflow-x-auto no-scrollbar touch-pan-x w-full max-w-full">
-            <table className="w-full min-w-[650px] sm:min-w-[700px] text-left border-collapse">
+          {/* 7-Day Matrix Table (Strict Fixed Column Widths, No Distortion) */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 p-2 sm:p-4 shadow-sm overflow-x-auto no-scrollbar w-full max-w-full">
+            <table className="w-full table-fixed min-w-[580px] sm:min-w-[700px] border-collapse">
               <thead>
-                <tr className="border-b border-slate-300">
-                  <th className="sticky left-0 bg-white z-20 py-2 sm:py-2.5 px-2 sm:px-3 text-xs font-black text-slate-900 w-28 sm:w-44 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                <tr className="border-b-2 border-slate-200">
+                  {/* Sticky Room Column */}
+                  <th className="sticky left-0 bg-white z-20 py-2 sm:py-3 px-2 sm:px-3 text-xs font-black text-slate-900 w-24 sm:w-36 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.03)] text-left">
                     บ้านพัก
                   </th>
-                  {timelineDays.map((dStr) => {
-                    const date = new Date(dStr);
-                    const isTimelineToday = dStr === todayStr;
+                  
+                  {/* Exactly 7 Day Columns with Equal Width */}
+                  {weekDays.map((dStr) => {
+                    const date = new Date(dStr + 'T00:00:00');
+                    const isWeekToday = dStr === todayStr;
                     const isSunday = date.getDay() === 0;
                     const isSaturday = date.getDay() === 6;
+
                     return (
-                      <th 
-                        key={dStr} 
-                        className={`py-2 px-1 text-center text-xs font-bold border-r border-slate-100 ${
-                          isTimelineToday 
-                            ? 'bg-emerald-600 text-white' 
-                            : isSunday 
-                            ? 'bg-rose-50 text-rose-900' 
-                            : isSaturday 
-                            ? 'bg-indigo-50 text-indigo-900' 
-                            : 'bg-slate-50 text-slate-800'
+                      <th
+                        key={dStr}
+                        className={`py-2 px-1 text-center border-r border-slate-100 transition-colors ${
+                          isWeekToday
+                            ? 'bg-emerald-600 text-white shadow-2xs'
+                            : isSunday
+                            ? 'bg-rose-50/70 text-rose-900'
+                            : isSaturday
+                            ? 'bg-indigo-50/70 text-indigo-900'
+                            : 'bg-slate-50/70 text-slate-800'
                         }`}
                       >
                         <span className={`block text-[10px] font-bold ${
-                          isTimelineToday 
+                          isWeekToday 
                             ? 'text-emerald-100' 
                             : isSunday 
                             ? 'text-rose-600' 
@@ -404,7 +676,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                         }`}>
                           {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][date.getDay()]}
                         </span>
-                        <span className={`font-black text-xs ${isTimelineToday ? 'text-white' : 'text-slate-900'}`}>
+                        <span className={`font-black text-xs sm:text-sm ${isWeekToday ? 'text-white' : 'text-slate-900'}`}>
                           {date.getDate()}
                         </span>
                       </th>
@@ -412,259 +684,83 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   })}
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-100">
                 {orderedRooms.map((room) => (
-                  <tr key={room.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="sticky left-0 bg-white z-10 py-2 sm:py-3 px-2 sm:px-3 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                  <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
+                    {/* Sticky Room Column Header */}
+                    <td className="sticky left-0 bg-white z-10 py-2 sm:py-3 px-2 sm:px-3 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.03)]">
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <HouseLogo roomNumber={room.roomNumber} size="sm" />
-                        <div>
-                          <span className="font-black text-xs text-slate-900 block">
+                        <div className="min-w-0">
+                          <span className="font-black text-xs text-slate-900 block truncate">
                             ห้อง {room.roomNumber}
                           </span>
-                          <span className="text-[9px] sm:text-[10px] text-slate-600 font-extrabold block">
-                            ฿{room.pricePerNight.toLocaleString()}/คืน
+                          <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold block truncate">
+                            ฿{room.pricePerNight.toLocaleString()}
                           </span>
                         </div>
                       </div>
                     </td>
-                  {timelineDays.map((dStr) => {
-                    const roomBookings = getAllBookingsForRoomAndDate(room.id, dStr);
-                    const booking = getBookingForRoomAndDate(room.id, dStr);
 
-                    return (
-                      <td key={dStr} className="py-2 px-1 text-center">
-                        {booking ? (
-                          <div
-                            onClick={() => setSelectedBookingModal(booking)}
-                            className={`p-1 rounded-lg border font-black text-[10px] truncate cursor-pointer hover:scale-105 transition-transform shadow-2xs ${
-                              booking.status === 'checked_out'
-                                ? 'bg-slate-200 border-slate-400 text-slate-900'
-                                : booking.paidAmount >= booking.totalAmount
-                                ? 'bg-blue-600 border-blue-700 text-white'
-                                : 'bg-amber-500 border-amber-600 text-white'
-                            }`}
-                            title={`คลิกเพื่อดูการจอง: ${booking.guestName} ${roomBookings.length > 1 ? `(มี ${roomBookings.length} รายการจองวันนี้)` : ''}`}
-                          >
-                            <span className="truncate block font-black">
-                              {booking.guestName}
-                              {roomBookings.length > 1 && <span className="text-[8px] ml-0.5 text-yellow-200 font-extrabold">(+{roomBookings.length - 1})</span>}
-                            </span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => onOpenNewBookingWithPrefill && onOpenNewBookingWithPrefill(room.id, dStr)}
-                            className="w-full h-8 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 flex items-center justify-center transition-colors border border-dashed border-slate-200 font-bold"
-                            title="กดจองห้องนี้ในวันนี้"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {/* 7 Daily Cells */}
+                    {weekDays.map((dStr) => {
+                      const roomBookings = getAllBookingsForRoomAndDate(room.id, dStr);
+                      const booking = getBookingForRoomAndDate(room.id, dStr);
+
+                      return (
+                        <td key={dStr} className="py-1.5 px-1 text-center align-middle">
+                          {booking ? (
+                            <div
+                              onClick={() => setSelectedBookingModal(booking)}
+                              className={`p-1.5 rounded-xl border text-left cursor-pointer hover:scale-[1.03] transition-all shadow-2xs select-none ${
+                                booking.status === 'checked_out'
+                                  ? 'bg-slate-100 border-slate-300 text-slate-800'
+                                  : booking.paidAmount >= booking.totalAmount
+                                  ? 'bg-blue-600 border-blue-700 text-white'
+                                  : 'bg-amber-500 border-amber-600 text-white'
+                              }`}
+                              title={`คลิกเพื่อดู: คุณ ${booking.guestName} (${booking.paidAmount >= booking.totalAmount ? 'จ่ายครบ' : 'มัดจำ'})`}
+                            >
+                              <span className="block font-black text-[10px] sm:text-[11px] truncate leading-tight">
+                                {formatShortGuestName(booking.guestName)}
+                              </span>
+                              <div className="flex items-center justify-between gap-0.5 mt-0.5 leading-none">
+                                <span className="text-[8px] opacity-90 truncate">
+                                  {booking.paidAmount >= booking.totalAmount ? 'ชำระแล้ว' : 'มัดจำ'}
+                                </span>
+                                {roomBookings.length > 1 && (
+                                  <span className="text-[8px] font-bold bg-white/30 px-1 rounded">
+                                    +{roomBookings.length - 1}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onOpenNewBookingWithPrefill && onOpenNewBookingWithPrefill(room.id, dStr)}
+                              className="w-full h-9 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-slate-400 hover:text-emerald-700 flex items-center justify-center transition-all border border-dashed border-slate-200 cursor-pointer active:scale-95"
+                              title={`กดจองห้อง ${room.roomNumber} ในวันที่ ${formatThaiDate(dStr)}`}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
         </div>
       )}
 
-      {/* LEVEL 2 MODAL: DAILY DAY OVERVIEW (เมื่อกดที่วันใดวันหนึ่งในปฏิทิน) */}
-      {selectedDateModal && createPortal(
-        <div 
-          onClick={() => setSelectedDateModal(null)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md overscroll-contain animate-in fade-in"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[88dvh] sm:max-h-[90vh] flex flex-col overscroll-contain animate-in slide-in-from-bottom-8 duration-200"
-          >
-            
-            {/* Mobile Bottom Sheet Handle */}
-            <div className="pt-2.5 pb-1 bg-slate-900 flex justify-center sm:hidden shrink-0">
-              <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
-            </div>
-
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black">
-                    สรุปบ้านพักวันที่ {formatThaiDate(selectedDateModal)}
-                  </h3>
-                  <p className="text-xs text-slate-400 font-medium">
-                    ว่าง {Math.max(0, rooms.length - getBookingsForDate(selectedDateModal).length)} หลัง &bull; จองแล้ว {getBookingsForDate(selectedDateModal).length} หลัง
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedDateModal(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* List of All 6 Rooms on this Date */}
-            <div className="p-4 overflow-y-auto no-scrollbar space-y-2.5 flex-1 overscroll-contain">
-              {orderedRooms.map((room) => {
-                const roomBookings = getAllBookingsForRoomAndDate(room.id, selectedDateModal);
-                const activeBooking = roomBookings.find(b => b.status === 'checked_in' || b.status === 'confirmed');
-                const checkedOutBooking = roomBookings.find(b => b.status === 'checked_out');
-
-                // Case 1: No bookings at all
-                if (roomBookings.length === 0) {
-                  return (
-                    <div 
-                      key={room.id} 
-                      className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-2xl border border-slate-200 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center justify-center font-black text-xs shrink-0">
-                          {room.roomNumber}
-                        </span>
-                        <div className="min-w-0">
-                          <span className="font-extrabold text-xs text-slate-900 block truncate">
-                            ห้อง {room.roomNumber} - {room.name}
-                          </span>
-                          <span className="text-[10px] text-emerald-700 font-bold">
-                            🟢 ว่างพร้อมจอง (฿{room.pricePerNight.toLocaleString()}/คืน)
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (onOpenNewBookingWithPrefill && selectedDateModal) {
-                            onOpenNewBookingWithPrefill(room.id, selectedDateModal);
-                          }
-                          setSelectedDateModal(null);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>กดจอง</span>
-                      </button>
-                    </div>
-                  );
-                }
-
-                // Case 2: Room was checked out earlier today, but currently vacant for round 2
-                if (!activeBooking && checkedOutBooking) {
-                  return (
-                    <div 
-                      key={room.id} 
-                      className="p-3 bg-emerald-50/40 hover:bg-emerald-50 rounded-2xl border border-emerald-200 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-                          {room.roomNumber}
-                        </span>
-                        <div className="min-w-0">
-                          <span className="font-extrabold text-xs text-slate-900 block truncate">
-                            ห้อง {room.roomNumber} - {room.name}
-                          </span>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] text-emerald-700 font-bold">
-                              ✨ เคลียร์ห้องเสร็จแล้ว พร้อมรับรอบ 2 (Walk-in)
-                            </span>
-                            <span 
-                              onClick={() => {
-                                setSelectedBookingModal(checkedOutBooking);
-                                setSelectedDateModal(null);
-                              }}
-                              className="text-[9px] text-slate-500 underline hover:text-slate-800 cursor-pointer"
-                            >
-                              (ดูบิลเดิม: คุณ {checkedOutBooking.guestName})
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (onOpenNewBookingWithPrefill && selectedDateModal) {
-                            onOpenNewBookingWithPrefill(room.id, selectedDateModal);
-                          }
-                          setSelectedDateModal(null);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shrink-0 shadow-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>จองรอบใหม่</span>
-                      </button>
-                    </div>
-                  );
-                }
-
-                // Case 3: Active booking (possibly with previous checkout today as well)
-                const booking = activeBooking || checkedOutBooking || roomBookings[0];
-                return (
-                  <div
-                    key={room.id}
-                    onClick={() => {
-                      setSelectedBookingModal(booking);
-                      setSelectedDateModal(null);
-                    }}
-                    className="p-3 bg-white hover:border-emerald-500 rounded-2xl border-2 border-slate-200 shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-                        {room.roomNumber}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-extrabold text-xs text-slate-900 block truncate">
-                            ห้อง {room.roomNumber} - {room.name}
-                          </span>
-                          {checkedOutBooking && activeBooking && (
-                            <span className="text-[9px] bg-blue-100 text-blue-900 font-bold px-1 rounded">แขกใหม่คืนนี้</span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-blue-700 font-semibold truncate block">
-                          🔵 พักโดย: คุณ {booking.guestName}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0 flex items-center gap-2">
-                      <div>
-                        <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          booking.paidAmount >= booking.totalAmount 
-                            ? 'bg-emerald-100 text-emerald-800' 
-                            : 'bg-amber-100 text-amber-900'
-                        }`}>
-                          {booking.paidAmount >= booking.totalAmount ? 'จ่ายครบแล้ว' : `ค้าง ฿${(booking.totalAmount - booking.paidAmount).toLocaleString()}`}
-                        </span>
-                      </div>
-                      <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
-              <button
-                onClick={() => setSelectedDateModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer"
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
-
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* LEVEL 3 MODAL: FULL BOOKING, PAYMENT & MOOKATA INSPECTOR (เมื่อกดเลือกบ้านพักนั้น) */}
+      {/* ========================================================= */}
+      {/* BOOKING DETAILS INSPECTOR MODAL (LEVEL 3)                 */}
+      {/* ========================================================= */}
       {selectedBookingModal && createPortal(
         <div 
           onClick={() => setSelectedBookingModal(null)}
@@ -674,7 +770,6 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="bg-white text-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[88dvh] sm:max-h-[92vh] flex flex-col overscroll-contain animate-in slide-in-from-bottom-8 duration-200"
           >
-            
             {/* Mobile Bottom Sheet Handle */}
             <div className="pt-2.5 pb-1 bg-slate-900 flex justify-center sm:hidden shrink-0">
               <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
@@ -683,7 +778,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             {/* Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm">
+                <span className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
                   {selectedBookingModal.roomNumber}
                 </span>
                 <div>
@@ -697,14 +792,14 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
               </div>
               <button
                 onClick={() => setSelectedBookingModal(null)}
-                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white"
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Content Details */}
-            <div className="p-4 overflow-y-auto no-scrollbar space-y-4 flex-1 overscroll-contain">
+            <div className="p-4 overflow-y-auto no-scrollbar space-y-3.5 flex-1 overscroll-contain">
               
               {/* Guest Details */}
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
@@ -732,7 +827,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 </div>
               </div>
 
-              {/* Group Booking Badge / Indicator */}
+              {/* Group Booking Badge */}
               {selectedBookingModal.groupId && (
                 <div className="p-2.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
@@ -754,7 +849,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 </div>
               )}
 
-              {/* Financial Breakdown (เรื่องการจ่ายเงิน & มัดจำ) */}
+              {/* Financial Breakdown */}
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2.5">
                 <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4 text-emerald-600" />
@@ -762,13 +857,13 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 </span>
 
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2 bg-white rounded-xl border border-blue-100">
+                  <div className="p-2 bg-white rounded-xl border border-blue-100 shadow-2xs">
                     <span className="text-[9px] text-slate-500 font-bold block">ยอดรวมทั้งสิ้น</span>
                     <span className="text-xs font-black text-slate-900">
                       ฿{selectedBookingModal.totalAmount.toLocaleString()}
                     </span>
                   </div>
-                  <div className="p-2 bg-emerald-100/90 rounded-xl border border-emerald-200">
+                  <div className="p-2 bg-emerald-100/90 rounded-xl border border-emerald-200 shadow-2xs">
                     <span className="text-[9px] text-emerald-800 font-bold block">
                       {selectedBookingModal.paidAmount >= selectedBookingModal.totalAmount ? 'ชำระครบ' : `มัดจำ ${Math.round((selectedBookingModal.paidAmount / selectedBookingModal.totalAmount) * 100)}%`}
                     </span>
@@ -776,7 +871,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                       ฿{selectedBookingModal.paidAmount.toLocaleString()}
                     </span>
                   </div>
-                  <div className={`p-2 rounded-xl border ${selectedBookingModal.totalAmount - selectedBookingModal.paidAmount > 0 ? 'bg-amber-100 border-amber-300' : 'bg-slate-100 border-slate-200'}`}>
+                  <div className={`p-2 rounded-xl border shadow-2xs ${selectedBookingModal.totalAmount - selectedBookingModal.paidAmount > 0 ? 'bg-amber-100 border-amber-300' : 'bg-slate-100 border-slate-200'}`}>
                     <span className="text-[9px] text-amber-900 font-bold block">คงเหลือค้างจ่าย</span>
                     <span className="text-xs font-black text-amber-950">
                       ฿{Math.max(0, selectedBookingModal.totalAmount - selectedBookingModal.paidAmount).toLocaleString()}
@@ -785,7 +880,7 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 </div>
               </div>
 
-              {/* Mookata & Add-ons Section (เรื่องหมูกระทะ / บริการเสริม) */}
+              {/* Mookata & Add-ons Section */}
               <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
@@ -794,11 +889,12 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                   </span>
                   {onOpenAddOrder && (
                     <button
+                      type="button"
                       onClick={() => {
                         onOpenAddOrder(selectedBookingModal);
                         setSelectedBookingModal(null);
                       }}
-                      className="px-2 py-0.5 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-950 text-[10px] font-black flex items-center gap-1"
+                      className="px-2 py-0.5 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-950 text-[10px] font-black flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" /> เพิ่มออเดอร์
                     </button>
@@ -840,11 +936,12 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   {onOpenAddPayment && (
                     <button
+                      type="button"
                       onClick={() => {
                         onOpenAddPayment(selectedBookingModal);
                         setSelectedBookingModal(null);
                       }}
-                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                      className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                     >
                       <CreditCard className="w-4 h-4" />
                       <span>การชำระเงิน</span>
@@ -853,11 +950,12 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
                   {onOpenReceipt && (
                     <button
+                      type="button"
                       onClick={() => {
                         onOpenReceipt(selectedBookingModal);
                         setSelectedBookingModal(null);
                       }}
-                      className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                      className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                     >
                       <Receipt className="w-4 h-4 text-emerald-400" />
                       <span>พิมพ์ใบเสร็จรับเงิน</span>
@@ -871,8 +969,9 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             {/* Footer */}
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
               <button
+                type="button"
                 onClick={() => setSelectedBookingModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 active:scale-95 text-slate-800 font-bold text-xs cursor-pointer"
               >
                 ปิดหน้าต่าง
               </button>
