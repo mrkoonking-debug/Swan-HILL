@@ -29,7 +29,7 @@ export const subscribeToBookings = (onUpdate: (bookings: Booking[]) => void) => 
     return onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
         // Initialize Firestore with default bookings if empty
-        console.log('[Firebase] Initializing default bookings in Firestore...');
+        console.log('[Firebase] Initializing real bookings in Firestore...');
         const batch = writeBatch(db);
         initialBookings.forEach((b) => {
           const ref = doc(db, BOOKINGS_COL, b.id);
@@ -39,9 +39,37 @@ export const subscribeToBookings = (onUpdate: (bookings: Booking[]) => void) => 
         onUpdate(initialBookings);
       } else {
         const list: Booking[] = [];
+        const mockKeywords = ['สุรชัย', 'กิตติศักดิ์', 'พัชราภรณ์', 'ธนากร'];
+        const mockIds = ['b-101', 'b-102', 'b-103', 'b-104'];
+        let hasLegacyMock = false;
+
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as Booking);
+          const b = docSnap.data() as Booking;
+          if (mockIds.includes(docSnap.id) || mockKeywords.some(k => b.guestName?.includes(k))) {
+            hasLegacyMock = true;
+          } else {
+            list.push(b);
+          }
         });
+
+        if (hasLegacyMock) {
+          console.log('[Firebase] Purging legacy mock bookings from Firestore...');
+          const batch = writeBatch(db);
+          snapshot.forEach((docSnap) => {
+            const b = docSnap.data() as Booking;
+            if (mockIds.includes(docSnap.id) || mockKeywords.some(k => b.guestName?.includes(k))) {
+              batch.delete(docSnap.ref);
+            }
+          });
+          // Ensure all initialBookings are present
+          initialBookings.forEach((b) => {
+            const ref = doc(db, BOOKINGS_COL, b.id);
+            batch.set(ref, b);
+          });
+          await batch.commit();
+          return;
+        }
+
         // Sort newest first
         list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         onUpdate(list);
@@ -112,9 +140,28 @@ export const subscribeToRooms = (onUpdate: (rooms: Room[]) => void) => {
         onUpdate(initialRooms);
       } else {
         const list: Room[] = [];
+        const mockKeywords = ['สุรชัย', 'กิตติศักดิ์'];
+        let hasLegacyMockGuest = false;
+
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as Room);
+          const r = docSnap.data() as Room;
+          if (mockKeywords.some(k => r.currentGuest?.name?.includes(k))) {
+            hasLegacyMockGuest = true;
+          }
+          list.push(r);
         });
+
+        if (hasLegacyMockGuest || list.length < 6) {
+          console.log('[Firebase] Resetting rooms with authentic current occupancy...');
+          const batch = writeBatch(db);
+          initialRooms.forEach((r) => {
+            const ref = doc(db, ROOMS_COL, r.id);
+            batch.set(ref, r);
+          });
+          await batch.commit();
+          return;
+        }
+
         // Sort rooms: S1, S2, S3, S4, S5, S6
         const order = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'];
         list.sort((a, b) => order.indexOf(a.roomNumber) - order.indexOf(b.roomNumber));
@@ -195,10 +242,36 @@ export const subscribeToLogs = (onUpdate: (logs: ActivityLog[]) => void) => {
         onUpdate(initialLogs);
       } else {
         const list: ActivityLog[] = [];
+        const mockKeywords = ['สุรชัย', 'กิตติศักดิ์'];
+        let hasLegacyMockLog = false;
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as ActivityLog);
+          const l = docSnap.data() as ActivityLog;
+          if (mockKeywords.some(k => l.details?.includes(k))) {
+            hasLegacyMockLog = true;
+          } else {
+            list.push(l);
+          }
         });
-        onUpdate(list);
+        if (hasLegacyMockLog) {
+          const batch = writeBatch(db);
+          snapshot.forEach((docSnap) => {
+            const l = docSnap.data() as ActivityLog;
+            if (mockKeywords.some(k => l.details?.includes(k))) {
+              batch.delete(docSnap.ref);
+            }
+          });
+          initialLogs.forEach((l) => {
+            const ref = doc(db, LOGS_COL, l.id);
+            batch.set(ref, l);
+          });
+          await batch.commit();
+          return;
+        }
+        if (list.length === 0) {
+          onUpdate(initialLogs);
+        } else {
+          onUpdate(list);
+        }
       }
     }, (err) => {
       console.warn('[Firebase] Firestore logs listener warning:', err);
