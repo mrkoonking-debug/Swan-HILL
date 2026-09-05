@@ -5,7 +5,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s3',
     roomNumber: 'S3',
-    name: 'สวอน วิลล่า S3 (หลังใหญ่)',
+    name: 'บ้าน S3 (หลังใหญ่)',
     type: 'บ้านพักหลังใหญ่',
     sizeCategory: 'large',
     pricePerNight: 1500,
@@ -23,7 +23,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s4',
     roomNumber: 'S4',
-    name: 'สวอน วิลล่า S4 (หลังใหญ่)',
+    name: 'บ้าน S4 (หลังใหญ่)',
     type: 'บ้านพักหลังใหญ่',
     sizeCategory: 'large',
     pricePerNight: 1500,
@@ -36,7 +36,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s1',
     roomNumber: 'S1',
-    name: 'สวอน วิลล่า S1 (หลังกลาง)',
+    name: 'บ้าน S1 (หลังกลาง)',
     type: 'บ้านพักหลังกลาง',
     sizeCategory: 'medium',
     pricePerNight: 1200,
@@ -54,7 +54,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s2',
     roomNumber: 'S2',
-    name: 'สวอน วิลล่า S2 (หลังกลาง)',
+    name: 'บ้าน S2 (หลังกลาง)',
     type: 'บ้านพักหลังกลาง',
     sizeCategory: 'medium',
     pricePerNight: 1200,
@@ -67,7 +67,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s5',
     roomNumber: 'S5',
-    name: 'สวอน วิลล่า S5 (บ้านแฝดซ้าย)',
+    name: 'บ้าน S5 (บ้านแฝดซ้าย)',
     type: 'บ้านพักแฝดหลังเล็ก',
     sizeCategory: 'small',
     pricePerNight: 1000,
@@ -78,7 +78,7 @@ export const initialRooms: Room[] = [
   {
     id: 'room-s6',
     roomNumber: 'S6',
-    name: 'สวอน วิลล่า S6 (บ้านแฝดขวา)',
+    name: 'บ้าน S6 (บ้านแฝดขวา)',
     type: 'บ้านพักแฝดหลังเล็ก',
     sizeCategory: 'small',
     pricePerNight: 1000,

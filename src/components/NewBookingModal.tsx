@@ -539,9 +539,21 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                                 }`}>
                                   {room.roomNumber}
                                 </span>
-                                <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                                  {room.name}
+                                <span className={`text-xs font-black truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                  บ้าน {room.roomNumber}
                                 </span>
+                                {(() => {
+                                  const typeTag = room.name.includes('หลังใหญ่') ? 'หลังใหญ่' :
+                                                  room.name.includes('หลังกลาง') ? 'หลังกลาง' :
+                                                  room.name.includes('แฝด') ? 'บ้านแฝด' : '';
+                                  return typeTag ? (
+                                    <span className={`text-[9px] font-bold px-1 py-0.2 rounded truncate ${
+                                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                      {typeTag}
+                                    </span>
+                                  ) : null;
+                                })()}
                               </div>
                               {isSelected && (
                                 <span className="w-4 h-4 rounded-full bg-white text-emerald-700 flex items-center justify-center shrink-0 ml-1">
@@ -925,7 +937,11 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({
                     <span className="font-bold text-slate-900 block">
                       {selectedRooms.length > 1 
                         ? `กรุ๊ป ${selectedRooms.length} หลัง: บ้าน ${selectedRooms.map(r => r.roomNumber).join(' + ')}`
-                        : `บ้าน ${primaryRoom.roomNumber} (${primaryRoom.name})`
+                        : `บ้าน ${primaryRoom.roomNumber}${
+                            primaryRoom.name.includes('หลังใหญ่') ? ' (หลังใหญ่)' :
+                            primaryRoom.name.includes('หลังกลาง') ? ' (หลังกลาง)' :
+                            primaryRoom.name.includes('แฝด') ? ' (บ้านแฝด)' : ''
+                          }`
                       }
                     </span>
                     <span className="text-[11px] text-slate-500 block">
