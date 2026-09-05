@@ -139,11 +139,12 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   // PMS Rooms State
   const [rooms, setRooms] = useState<Room[]>(() => {
-    // Purge legacy mock caches
+    // Purge legacy caches
+    localStorage.removeItem('swanhill_rooms_v4');
     localStorage.removeItem('swanhill_rooms_v3');
     localStorage.removeItem('swanhill_rooms_v2');
     localStorage.removeItem('swanhill_rooms');
-    const saved = localStorage.getItem('swanhill_rooms_v4');
+    const saved = localStorage.getItem('swanhill_rooms_v5');
     if (!saved) return initialRooms;
     try {
       const parsed: Room[] = JSON.parse(saved);
@@ -158,11 +159,12 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   // PMS Bookings State
   const [bookings, setBookings] = useState<Booking[]>(() => {
-    // Purge legacy mock caches
+    // Purge legacy caches
+    localStorage.removeItem('swanhill_bookings_v4');
     localStorage.removeItem('swanhill_bookings_v3');
     localStorage.removeItem('swanhill_bookings_v2');
     localStorage.removeItem('swanhill_bookings');
-    const saved = localStorage.getItem('swanhill_bookings_v4');
+    const saved = localStorage.getItem('swanhill_bookings_v5');
     if (!saved) return initialBookings;
     try {
       const parsed: Booking[] = JSON.parse(saved);
@@ -190,13 +192,13 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       setBookings(liveBookings);
       if (bookingsTimer) clearTimeout(bookingsTimer);
       bookingsTimer = setTimeout(() => {
-        safeSetLocalStorage('swanhill_bookings_v4', liveBookings);
+        safeSetLocalStorage('swanhill_bookings_v5', liveBookings);
       }, 500);
     });
 
     const unsubRooms = subscribeToRooms((liveRooms) => {
       setRooms(liveRooms);
-      safeSetLocalStorage('swanhill_rooms_v4', liveRooms);
+      safeSetLocalStorage('swanhill_rooms_v5', liveRooms);
     });
 
     const unsubSettings = subscribeToSettings((liveSettings) => {

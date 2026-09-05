@@ -53,26 +53,19 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
 
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
 
-  // Dynamic viewing month/year state (Default to Sept 2026 if bookings exist there, else current month)
+  // Dynamic viewing month/year state (Default to Sept 2026 as requested by user)
   const [viewDate, setViewDate] = useState<Date>(() => {
-    const now = new Date();
-    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
-    if (hasSept) return new Date(2026, 8, 1);
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    return new Date(2026, 8, 1);
   });
 
-  // Selected date for Master-Detail inspection in Month View
+  // Selected date for Master-Detail inspection in Month View (Starts 1 Sept 2026)
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
-    if (hasSept) return '2026-09-01';
-    return todayStr;
+    return '2026-09-01';
   });
 
-  // 7-Day Rolling Window Start Date (defaults to selectedDate or viewDate)
+  // 7-Day Rolling Window Start Date (defaults to 1 Sept 2026)
   const [weekStartDateStr, setWeekStartDateStr] = useState<string>(() => {
-    const hasSept = bookings.some(b => b.checkInDate.startsWith('2026-09') && !b.deletedAt);
-    if (hasSept) return '2026-09-01';
-    return todayStr;
+    return '2026-09-01';
   });
 
   const year = viewDate.getFullYear();

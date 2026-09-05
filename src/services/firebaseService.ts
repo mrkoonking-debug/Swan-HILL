@@ -8,11 +8,13 @@ import {
   query, 
   orderBy, 
   limit,
-  writeBatch
+  writeBatch,
+  getDocs,
+  deleteField
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Booking, Room, ResortSettings, ActivityLog } from '../types/pms';
-import { initialBookings, initialRooms, initialSettings, initialLogs } from '../data/initialData';
+import { initialRooms, initialSettings, initialLogs } from '../data/initialData';
 
 // COLLECTIONS
 const BOOKINGS_COL = 'bookings';
@@ -21,22 +23,54 @@ const SETTINGS_COL = 'settings';
 const LOGS_COL = 'logs';
 
 /**
+ * Permanently wipe all bookings and reset all rooms to available
+ */
+export const purgeAllBookingsAndResetRooms = async (): Promise<void> => {
+  try {
+    console.log('[Firebase] Purging all bookings from Firestore...');
+    const bookingsSnap = await getDocs(collection(db, BOOKINGS_COL));
+    if (!bookingsSnap.empty) {
+      const batch = writeBatch(db);
+      bookingsSnap.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+      console.log(`[Firebase] Successfully deleted ${bookingsSnap.size} bookings.`);
+    }
+
+    console.log('[Firebase] Resetting all rooms in Firestore to available...');
+    const roomsSnap = await getDocs(collection(db, ROOMS_COL));
+    if (!roomsSnap.empty) {
+      const batch = writeBatch(db);
+      roomsSnap.forEach((docSnap) => {
+        batch.update(docSnap.ref, {
+          status: 'available',
+          currentGuest: deleteField(),
+        });
+      });
+      await batch.commit();
+      console.log(`[Firebase] Successfully reset ${roomsSnap.size} rooms to available.`);
+    }
+  } catch (err) {
+    console.error('[Firebase] Error purging all bookings:', err);
+  }
+};
+
+/**
  * 1. BOOKINGS REALTIME LISTENER & SYNC
  */
 export const subscribeToBookings = (onUpdate: (bookings: Booking[]) => void) => {
   try {
+    // Auto purge on client startup if not yet purged for this reset
+    if (typeof window !== 'undefined' && !localStorage.getItem('swanhill_purged_sept_v1')) {
+      localStorage.setItem('swanhill_purged_sept_v1', 'true');
+      purgeAllBookingsAndResetRooms();
+    }
+
     const q = query(collection(db, BOOKINGS_COL));
     return onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
-        // Initialize Firestore with default bookings if empty
-        console.log('[Firebase] Initializing real bookings in Firestore...');
-        const batch = writeBatch(db);
-        initialBookings.forEach((b) => {
-          const ref = doc(db, BOOKINGS_COL, b.id);
-          batch.set(ref, b);
-        });
-        await batch.commit();
-        onUpdate(initialBookings);
+        onUpdate([]);
       } else {
         const list: Booking[] = [];
         const mockKeywords = ['สุรชัย', 'กิตติศักดิ์', 'พัชราภรณ์', 'ธนากร'];
@@ -60,11 +94,6 @@ export const subscribeToBookings = (onUpdate: (bookings: Booking[]) => void) => 
             if (mockIds.includes(docSnap.id) || mockKeywords.some(k => b.guestName?.includes(k))) {
               batch.delete(docSnap.ref);
             }
-          });
-          // Ensure all initialBookings are present
-          initialBookings.forEach((b) => {
-            const ref = doc(db, BOOKINGS_COL, b.id);
-            batch.set(ref, b);
           });
           await batch.commit();
           return;
