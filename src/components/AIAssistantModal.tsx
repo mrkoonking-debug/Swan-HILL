@@ -14,7 +14,9 @@ import {
   UtensilsCrossed, 
   RotateCcw,
   Check,
-  Bot
+  Bot,
+  FileText,
+  Plus
 } from 'lucide-react';
 import type { Room, Booking } from '../types/pms';
 import { formatThaiDate } from '../utils/dateUtils';
@@ -50,6 +52,75 @@ interface ChatMessage {
   createdBooking?: Booking;
 }
 
+interface BookingTemplate {
+  id: string;
+  icon: string;
+  label: string;
+  badge?: string;
+  text: string;
+}
+
+const BOOKING_TEMPLATES: BookingTemplate[] = [
+  {
+    id: 'single-room',
+    icon: '🏠',
+    label: 'จอง 1 ห้อง',
+    badge: 'ยอดนิยม',
+    text: 'จองห้อง S1 วันที่ 26 ก.ย. ชื่อ คุณสมชาย โทร. 0812345678 มัดจำ 1,000 บาท',
+  },
+  {
+    id: 'multi-room',
+    icon: '🏘️',
+    label: 'จอง 2 ห้อง',
+    badge: '2 ห้อง',
+    text: 'ลูกค้า 4 ท่าน 2 ห้อง (01 กับ 02) วันที่ 26 ก.ย. ชื่อ พันธิตรา (ออย) โทร. 0839507264',
+  },
+  {
+    id: 'mookata',
+    icon: '🥩',
+    label: 'จอง + หมูกระทะ',
+    badge: 'อาหาร',
+    text: 'จองห้อง S3 วันที่ 15 ต.ค. คุณวิภา โทร. 0891112222 สั่งหมูกระทะชุดใหญ่ 1 ชุด มัดจำ 1,000 บาท',
+  },
+  {
+    id: 'extra-bed',
+    icon: '🛏️',
+    label: 'จอง + เสริมเตียง',
+    badge: 'เตียงเสริม',
+    text: 'บ้านหลังที่ 4 วันที่ 12 ต.ค. 2,000 บาท เสริมที่นอน 2 คน คุณกานต์ โทร. 0823456789 โอนมัดจำแล้ว 1,000 บาท',
+  },
+  {
+    id: 'paid-full',
+    icon: '💰',
+    label: 'ชำระเงินครบแล้ว',
+    badge: 'จ่ายครบ',
+    text: 'บ้านหลังที่ 2 และหลังที่ 3 วันที่ 18 ต.ค. คุณสุชาติ โทร. 0851234567 โอนตังค์มาให้หมดแล้ว',
+  },
+  {
+    id: 'check-vacant',
+    icon: '🔍',
+    label: 'เช็คห้องว่าง',
+    badge: 'สอบถาม',
+    text: 'วันนี้มีห้องไหนว่างบ้าง?',
+  },
+];
+
+const QUICK_INSERT_CHIPS = [
+  { label: 'ห้อง S1', snippet: 'ห้อง S1' },
+  { label: 'ห้อง S2', snippet: 'ห้อง S2' },
+  { label: 'ห้อง S3', snippet: 'ห้อง S3' },
+  { label: 'ห้อง S4', snippet: 'ห้อง S4' },
+  { label: 'ห้อง S5', snippet: 'ห้อง S5' },
+  { label: 'ห้อง S6', snippet: 'ห้อง S6' },
+  { label: 'วันนี้', snippet: 'วันนี้' },
+  { label: 'พรุ่งนี้', snippet: 'พรุ่งนี้' },
+  { label: 'หมูกระทะชุดใหญ่', snippet: 'หมูกระทะชุดใหญ่ 1 ชุด' },
+  { label: 'หมูกระทะชุดเล็ก', snippet: 'หมูกระทะชุดเล็ก 1 ชุด' },
+  { label: 'เสริมที่นอน 1 คน', snippet: 'เสริมที่นอน 1 คน' },
+  { label: 'มัดจำ 50%', snippet: 'มัดจำแล้ว 50%' },
+  { label: 'จ่ายครบแล้ว', snippet: 'โอนตังค์มาให้หมดแล้ว' },
+];
+
 export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   isOpen,
   onClose,
@@ -62,11 +133,15 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   useLockBodyScroll(isOpen);
 
   const [input, setInput] = useState('');
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [showHelperHint, setShowHelperHint] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'ai',
-      text: 'สวัสดีครับ! ผมคือผู้ช่วย AI ของ Swan HILL Resort\n\nพนักงานสามารถ "ก็อปปี้ข้อความจากกลุ่ม LINE ทั้งท่อน" หรือ "พิมพ์ภาษาพูด" มาวางได้เลยครับ\n(ระบบจะตัดเวลาและชื่อคนพิมพ์ออกให้อัตโนมัติ แล้วดึงข้อมูลห้อง, ชื่อลูกค้า, เบอร์โทร, วันที่ และเงินมัดจำมาแสดงในหน้าจอตรวจสอบความถูกต้องครับ ✨)'
+      text: 'สวัสดีครับ! ผมคือผู้ช่วย AI ของ Swan HILL Resort\n\nพนักงานสามารถเลือก "เทมเพลตด้านล่าง" เพื่อนำข้อความลงช่องพิมพ์แล้วปรับแก้ หรือ "ก็อปปี้แชทจาก LINE" มาวางได้เลยครับ\n(ระบบจะดึงห้อง, ชื่อลูกค้า, เบอร์โทร, วันที่ และเงินมัดจำมาแสดงในหน้าจอตรวจสอบความถูกต้องครับ ✨)'
     }
   ]);
 
@@ -85,13 +160,33 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
   if (!isOpen) return null;
 
-  const quickSamples = [
-    '11:27 Z ลูกค้า 4 ท่าน 2 ห้อง (01 กับ 02) วันที่ 26 ก.ย. ชื่อ พันธิตรา (ออย) โทร. 0839507264',
-    '20:04 Z คุณโจ้เข้าพัก 1 คน วันที่ 19 กันยายน มัดจำแล้ว 50% = 600 บาท',
-    '10:36 พ่อ บ้านหลังที่ 4 วันที่ 12 มีลูกค้าจองแล้ว 2,000 บาท เสริมที่นอน 4 คน โอนตังค์มาแล้ว 1,000 บาท',
-    '12:48 พ่อ บ้านหลังที่ 2 และหลังที่ 3 มีลูกค้าจองแล้ว โอนตังค์มาให้หมดแล้ว',
-    'วันนี้มีห้องไหนว่างบ้าง?',
-  ];
+  const handleApplyTemplate = (tmpl: BookingTemplate) => {
+    setInput(tmpl.text);
+    setActiveTemplateId(tmpl.id);
+    setShowHelperHint(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(tmpl.text.length, tmpl.text.length);
+    }, 50);
+  };
+
+  const handleAppendChip = (snippet: string) => {
+    setInput(prev => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${snippet}` : snippet;
+    });
+    setShowHelperHint(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  };
+
+  const handleClearInput = () => {
+    setInput('');
+    setActiveTemplateId(null);
+    setShowHelperHint(false);
+    inputRef.current?.focus();
+  };
 
   const handleSendMessage = (textToSend?: string) => {
     const messageText = (textToSend || input).trim();
@@ -104,6 +199,8 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
     ];
     setMessages(newMessages);
     setInput('');
+    setActiveTemplateId(null);
+    setShowHelperHint(false);
     setIsProcessing(true);
 
     // Simulate snappy AI response time
@@ -408,20 +505,89 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="px-3 py-2 bg-slate-950 border-t border-slate-800 overflow-x-auto no-scrollbar flex items-center gap-1.5">
-          <span className="text-[10px] font-black text-slate-500 uppercase shrink-0">ตัวอย่าง:</span>
-          {quickSamples.map((sample, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleSendMessage(sample)}
-              className="text-[11px] font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl whitespace-nowrap transition-all border border-slate-700/80 shrink-0 cursor-pointer active:scale-95"
-            >
-              {sample}
-            </button>
-          ))}
+        {/* Templates Bar (แถบเทมเพลตตัวอย่าง - กดเพื่อเลือกโหลด ยังไม่ส่งทันที) */}
+        <div className="bg-slate-950 border-t border-slate-800 shrink-0">
+          <div className="px-3 pt-2 pb-1 flex items-center justify-between text-[11px]">
+            <div className="flex items-center gap-1.5 text-slate-300 font-bold">
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>เทมเพลตสำเร็จรูป</span>
+              <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">(กดเพื่อโหลดลงช่องพิมพ์ ยังไม่ส่งทันที)</span>
+            </div>
+            {input && (
+              <button
+                type="button"
+                onClick={handleClearInput}
+                className="text-[10px] text-slate-400 hover:text-rose-400 flex items-center gap-1 cursor-pointer transition-colors"
+                title="ล้างข้อความในช่องพิมพ์"
+              >
+                <RotateCcw className="w-3 h-3" /> ล้างช่องพิมพ์
+              </button>
+            )}
+          </div>
+
+          {/* Horizontally scrollable template cards ("เลือกเลื่อนทีละอัน") */}
+          <div className="px-3 pb-2 overflow-x-auto no-scrollbar flex items-center gap-2">
+            {BOOKING_TEMPLATES.map((tmpl) => {
+              const isSelected = activeTemplateId === tmpl.id;
+              return (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => handleApplyTemplate(tmpl)}
+                  className={`shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${
+                    isSelected
+                      ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-xs'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                  }`}
+                  title={tmpl.text}
+                >
+                  <span className="text-sm">{tmpl.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold block">{tmpl.label}</span>
+                      {tmpl.badge && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-emerald-400 font-semibold border border-slate-700">
+                          {tmpl.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Insert Sub-row ("เลือกเลื่อนเติมทีละอัน") */}
+          <div className="px-3 py-1.5 bg-slate-900/90 border-t border-slate-800/80 overflow-x-auto no-scrollbar flex items-center gap-1.5 text-[10px]">
+            <span className="text-slate-400 font-bold shrink-0 flex items-center gap-1">
+              <Plus className="w-3 h-3 text-emerald-400" /> แตะเติมคำ:
+            </span>
+            {QUICK_INSERT_CHIPS.map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleAppendChip(chip.snippet)}
+                className="shrink-0 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-300 border border-slate-700/70 cursor-pointer active:scale-95 transition-all font-medium"
+              >
+                + {chip.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Dynamic Helper Hint when template is loaded */}
+        {showHelperHint && input && (
+          <div className="px-3.5 py-1 bg-emerald-950/70 border-t border-emerald-800/50 text-[11px] text-emerald-300 flex items-center justify-between shrink-0 animate-in fade-in">
+            <span className="truncate">💡 โหลดเทมเพลตแล้ว — แก้ไขชื่อ, วันที่, หรือห้อง แล้วกดปุ่มส่งได้เลยครับ</span>
+            <button 
+              type="button" 
+              onClick={() => setShowHelperHint(false)}
+              className="text-emerald-400 hover:text-white ml-2 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Input Bar */}
         <form 
@@ -429,21 +595,34 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
             e.preventDefault();
             handleSendMessage();
           }}
-          className="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2"
+          className="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2 shrink-0"
         >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="พิมพ์หรือวางแชทลูกค้า เช่น: จองห้อง S1 คุณสมชาย..."
-            className="flex-1 bg-slate-800 text-white placeholder-slate-400 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-hidden focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-          />
+          <div className="relative flex-1 flex items-center">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="พิมพ์หรือวางแชทลูกค้า เช่น: จองห้อง S1 คุณสมชาย..."
+              className="w-full bg-slate-800 text-white placeholder-slate-400 text-xs sm:text-sm pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-700 focus:outline-hidden focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+            />
+            {input && (
+              <button
+                type="button"
+                onClick={handleClearInput}
+                className="absolute right-2.5 p-1 text-slate-400 hover:text-white rounded-md cursor-pointer transition-colors"
+                title="ล้างข้อความ"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
           <button
             type="submit"
             disabled={!input.trim() || isProcessing}
             className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black transition-all cursor-pointer active:scale-95 shrink-0"
-            title="ส่งข้อความ"
+            title="ส่งข้อความให้ AI ดึงข้อมูล"
           >
             <Send className="w-4 h-4" />
           </button>

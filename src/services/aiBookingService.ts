@@ -157,51 +157,45 @@ export function parseThaiBookingText(
 
   // 2. Detect Rooms: S1 to S6
   // Patterns:
+  // - "ห้อง 01 กับ 02", "(01 กับ 02)", "S1 กับ S2"
   // - "บ้านหลังที่ 4", "บ้านหลังที่ 2 และหลังที่ 3", "บ้านหลังที่ 2 และ 3"
-  // - "ห้อง 01 กับ 02", "(01 กับ 02)"
-  // - "ห้อง 2", "ห้องที่ 6", "ห้องที่ 1", "หลังที่ S6"
+  // - "ห้อง 2", "ห้องที่ 6", "ห้องที่ 1", "ห้อง S1"
   // - "S1", "S2", "S3", "S4", "S5", "S6"
   // - "บ้านหลังใหญ่" (S3, S4), "บ้านหลังกลาง" (S1, S2), "บ้านหลังเล็ก" (S5, S6)
   const roomMatches = new Set<string>();
 
-  // Pattern A: "บ้านหลังที่ X" or "หลังที่ X"
-  const houseOrderRegex = /(?:บ้าน|ห้อง)?\s*หลังที่\s*([sS]?[1-6])(?:\s*(?:และ|กับ|,|\+)\s*(?:หลังที่\s*)?([sS]?[1-6]))?/g;
-  let hMatch: RegExpExecArray | null;
-  while ((hMatch = houseOrderRegex.exec(normalized)) !== null) {
-    if (hMatch[1]) {
-      let r = hMatch[1].toUpperCase();
-      if (!r.startsWith('S')) r = 'S' + r;
-      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) roomMatches.add(r);
-    }
-    if (hMatch[2]) {
-      let r = hMatch[2].toUpperCase();
-      if (!r.startsWith('S')) r = 'S' + r;
-      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) roomMatches.add(r);
+  // Pattern A: Group pattern with parens or connector: (01 กับ 02), (1 กับ 2), (S1, S2), 01 กับ 02, S1 และ S2
+  const groupRegex = /(?:(?:\(|ห้อง|หลัง|บ้าน)\s*)?([sS]?0?[1-6])\s*(?:และ|กับ|,|\+|\/)\s*([sS]?0?[1-6])\)?/gi;
+  let gMatch: RegExpExecArray | null;
+  while ((gMatch = groupRegex.exec(normalized)) !== null) {
+    const fullMatch = gMatch[0];
+    const r1 = gMatch[1].toUpperCase().replace(/^0/, '');
+    const r2 = gMatch[2].toUpperCase().replace(/^0/, '');
+    const hasRoomSign = fullMatch.includes('(') || fullMatch.includes('ห้อง') || fullMatch.includes('หลัง') || fullMatch.includes('บ้าน') || r1.startsWith('S') || r2.startsWith('S');
+    if (hasRoomSign) {
+      const room1 = r1.startsWith('S') ? r1 : 'S' + r1;
+      const room2 = r2.startsWith('S') ? r2 : 'S' + r2;
+      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(room1)) roomMatches.add(room1);
+      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(room2)) roomMatches.add(room2);
     }
   }
 
-  // Pattern B: "01 กับ 02" or "(01 กับ 02)" or "ห้อง 01"
-  const zeroNumberRegex = /(?:ห้อง|จำนวน)?\s*\(?0?([1-6])\s*(?:และ|กับ|,|\+)\s*0?([1-6])\)?/g;
-  let zMatch: RegExpExecArray | null;
-  while ((zMatch = zeroNumberRegex.exec(normalized)) !== null) {
-    if (zMatch[1]) roomMatches.add('S' + zMatch[1]);
-    if (zMatch[2]) roomMatches.add('S' + zMatch[2]);
-  }
-
-  // Pattern C: Standard S1-S6 or "ห้องที่ 6", "ห้อง 2"
-  const standardRoomRegex = /(?:ห้องที่|ห้อง|room)?\s*([sS][1-6]|[1-6])\b/g;
+  // Pattern B: Explicit S1 - S6 (e.g. S1, s2, S6)
+  const sRegex = /(?:^|[^a-zA-Z0-9])([sS]\s*[1-6])(?![0-9])/g;
   let sMatch: RegExpExecArray | null;
-  while ((sMatch = standardRoomRegex.exec(normalized)) !== null) {
-    let r = sMatch[1].toUpperCase();
-    if (!r.startsWith('S')) r = 'S' + r;
-    if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) {
-      // Exclude false positives like "1 คน", "1 ท่าน", "1 หลัง", "1 คืน"
-      const matchIndex = sMatch.index;
-      const followingText = normalized.substring(matchIndex + sMatch[0].length, matchIndex + sMatch[0].length + 10).trim();
-      if (!/^(คน|ท่าน|คืน|บาท|ชุด|แก้ว|ขวด|บ่อ)/.test(followingText)) {
-        roomMatches.add(r);
-      }
-    }
+  while ((sMatch = sRegex.exec(normalized)) !== null) {
+    const rNum = sMatch[1].toUpperCase().replace(/\s+/g, '');
+    if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(rNum)) roomMatches.add(rNum);
+  }
+
+  // Pattern C: Thai room identifier: 'ห้อง 1', 'ห้อง 02', 'ห้องที่ 3', 'บ้านหลังที่ 4', 'หลังที่ 5'
+  // Note: Thai syntax: 'ห้อง' precedes the number (NOT '2 ห้อง' which is quantity)
+  const roomPrefixRegex = /(?:ห้องที่|ห้อง|บ้านหลังที่|หลังที่|บ้านที่)\s*(?:เบอร์)?\s*([sS]?0?[1-6])(?![0-9])/gi;
+  let prefixMatch: RegExpExecArray | null;
+  while ((prefixMatch = roomPrefixRegex.exec(normalized)) !== null) {
+    let rNum = prefixMatch[1].toUpperCase().replace(/^0/, '');
+    if (!rNum.startsWith('S')) rNum = 'S' + rNum;
+    if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(rNum)) roomMatches.add(rNum);
   }
 
   // Pattern D: "บ้านหลังใหญ่" -> S3, "บ้านหลังเล็ก" -> S5
@@ -221,27 +215,30 @@ export function parseThaiBookingText(
   const guestPhone = phoneMatch ? phoneMatch[1].replace(/[- ]/g, '') : '';
 
   // 4. Detect Guest Name
-  // Patterns from real chat:
-  // - "ชื่อ พันธิตรา (ออย)"
-  // - "คุณโจ้", "คุณสมชาย"
-  // - "ลูกค้าชื่อ..."
+  // Helper to clean guest name from trailing phone/contact words or action verbs
+  const cleanRawGuestName = (rawStr: string): string => {
+    let cleaned = rawStr.trim();
+    cleaned = cleaned.replace(/\s*(?:เข้าพัก|พัก|จอง|มาพัก|โทร\.?|เบอร์(?:\s*โทร)?|tel\.?|phone|mobile|\d+).*$/i, '').trim();
+    return cleaned;
+  };
+
   let guestName = '';
 
   // Pattern A: explicit "ชื่อ พันธิตรา (ออย)" or "ชื่อ: ..."
-  const explicitNameMatch = normalized.match(/ชื่อ\s*(?::|\.)?\s*([ก-๙a-zA-Z]+(?:\s*\([ก-๙a-zA-Z]+\))?(?:\s+[ก-๙a-zA-Z]+)?)/);
+  const explicitNameMatch = normalized.match(/ชื่อ\s*(?::|\.)?\s*([ก-๙a-zA-Z0-9]+(?:\s*\([ก-๙a-zA-Z0-9]+\))?(?:\s+[ก-๙a-zA-Z0-9]+)?)/);
   if (explicitNameMatch) {
-    const raw = explicitNameMatch[1].trim();
-    if (!NON_GUEST_WORDS.has(raw)) {
+    const raw = cleanRawGuestName(explicitNameMatch[1]);
+    if (raw && !NON_GUEST_WORDS.has(raw)) {
       guestName = raw.startsWith('คุณ') ? raw : `คุณ${raw}`;
     }
   }
 
   // Pattern B: "คุณโจ้เข้าพัก", "คุณสมชาย"
   if (!guestName) {
-    const khunMatch = normalized.match(/(?:คุณ|k\.|khun)\s*([ก-๙a-zA-Z]+(?:\s*\([ก-๙a-zA-Z]+\))?(?:\s+[ก-๙a-zA-Z]+)?)/);
+    const khunMatch = normalized.match(/(?:คุณ|k\.|khun)\s*([ก-๙a-zA-Z0-9]+(?:\s*\([ก-๙a-zA-Z0-9]+\))?(?:\s+[ก-๙a-zA-Z0-9]+)?)/);
     if (khunMatch) {
-      const raw = khunMatch[1].trim();
-      if (!NON_GUEST_WORDS.has(raw)) {
+      const raw = cleanRawGuestName(khunMatch[1]);
+      if (raw && !NON_GUEST_WORDS.has(raw)) {
         guestName = `คุณ${raw}`;
       }
     }
@@ -249,10 +246,10 @@ export function parseThaiBookingText(
 
   // Pattern C: "ลูกค้าชื่อ..."
   if (!guestName) {
-    const customerMatch = normalized.match(/ลูกค้าชื่อ\s*([ก-๙a-zA-Z]+)/);
+    const customerMatch = normalized.match(/ลูกค้าชื่อ\s*([ก-๙a-zA-Z0-9]+)/);
     if (customerMatch) {
-      const raw = customerMatch[1].trim();
-      if (!NON_GUEST_WORDS.has(raw)) {
+      const raw = cleanRawGuestName(customerMatch[1]);
+      if (raw && !NON_GUEST_WORDS.has(raw)) {
         guestName = `คุณ${raw}`;
       }
     }
