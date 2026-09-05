@@ -3,7 +3,8 @@ import {
   Trees, 
   Map, 
   LayoutGrid, 
-  Home 
+  Home,
+  Sparkles
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../types/pms';
 import { shiftDateStr, formatThaiDate } from '../utils/dateUtils';
@@ -58,6 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [rightPanelTab, setRightPanelTab] = useState<'all' | 'single'>('all');
   const [isQuickCheckerOpen, setIsQuickCheckerOpen] = useState(false);
   const [copiedLineAllSuccess, setCopiedLineAllSuccess] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -80,13 +82,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const todayStr = getLocalDateStr(new Date());
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const hasToday = bookings.some(b => b.checkInDate <= todayStr && b.checkOutDate >= todayStr && !b.deletedAt);
-    if (hasToday) return todayStr;
-    const hasSept = bookings.some(b => b.checkInDate <= '2026-09-01' && b.checkOutDate >= '2026-09-01' && !b.deletedAt);
-    if (hasSept) return '2026-09-01';
-    return todayStr;
-  });
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const isViewingToday = selectedDate === todayStr;
 
@@ -106,21 +102,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Helper to determine room status on selectedDate
   const getRoomStatusOnDate = (room: Room) => {
-    // 1. Look for active booking staying during selectedDate night (checkIn <= selectedDate < checkOut)
+    // 1. Look for active booking staying during selectedDate night
+    // (Arrived on or before selectedDate, and hasn't checked out yet)
     const stayingBooking = bookings.find(b => 
       (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
       b.checkInDate <= selectedDate && 
-      b.checkOutDate > selectedDate && 
       b.status !== 'cancelled' && 
       b.status !== 'checked_out' &&
-      !b.deletedAt
+      !b.deletedAt &&
+      (
+        // Overnight stay
+        b.checkOutDate > selectedDate ||
+        // OR checkout date is selectedDate, but guest is currently checked in (still occupying the room)
+        (b.checkOutDate === selectedDate && b.status === 'checked_in')
+      )
     );
 
     if (stayingBooking) {
       return { status: 'occupied' as RoomStatus, booking: stayingBooking };
     }
 
-    // 2. Look for booking checking out on selectedDate (checkOut === selectedDate -> Waiting for Cleaning)
+    // 2. Look for booking checking out on selectedDate
     const checkoutBooking = bookings.find(b =>
       (b.roomId === room.id || b.roomNumber === room.roomNumber) &&
       b.status !== 'cancelled' &&
@@ -129,30 +131,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     );
 
     if (checkoutBooking) {
-      // If viewing today, check if room status was manually marked available after cleaning
-      if (isViewingToday && room.status === 'available') {
+      // If room is marked available (housekeeping completed), it is available!
+      if (room.status === 'available') {
         return { status: 'available' as RoomStatus, booking: undefined };
       }
-      return { status: 'cleaning' as RoomStatus, booking: checkoutBooking };
+      // If selectedDate was in the past (prior to today), cleaning was already finished in the past!
+      if (selectedDate < todayStr) {
+        return { status: 'available' as RoomStatus, booking: undefined };
+      }
+      // If guest has not actually checked out yet, they are still in the room!
+      if (checkoutBooking.status === 'checked_in') {
+        return { status: 'occupied' as RoomStatus, booking: checkoutBooking };
+      }
+      // If room status is explicitly cleaning, show cleaning
+      if (room.status === 'cleaning') {
+        return { status: 'cleaning' as RoomStatus, booking: checkoutBooking };
+      }
+      return { status: 'available' as RoomStatus, booking: undefined };
     }
 
-    // 3. If viewing today, respect manual room status (cleaning or maintenance or occupied)
-    if (isViewingToday) {
-      if (room.status === 'cleaning') {
-        return { status: 'cleaning' as RoomStatus, booking: undefined };
-      }
-      if (room.status === 'maintenance') {
-        return { status: 'maintenance' as RoomStatus, booking: undefined };
-      }
-      if (room.status === 'occupied') {
-        const todayBooking = bookings.find(b => 
-          (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
-          b.checkInDate <= todayStr && 
-          b.checkOutDate >= todayStr && 
-          (b.status === 'checked_in' || b.status === 'confirmed') && 
-          !b.deletedAt
-        );
-        return { status: 'occupied' as RoomStatus, booking: todayBooking };
+    // 3. Respect manual room status
+    if (room.status === 'maintenance') {
+      return { status: 'maintenance' as RoomStatus, booking: undefined };
+    }
+    if (room.status === 'cleaning' && (selectedDate === todayStr || isViewingToday)) {
+      return { status: 'cleaning' as RoomStatus, booking: undefined };
+    }
+    if (room.status === 'occupied') {
+      const activeBooking = bookings.find(b => 
+        (b.roomId === room.id || b.roomNumber === room.roomNumber) && 
+        b.checkInDate <= selectedDate && 
+        b.checkOutDate >= selectedDate && 
+        (b.status === 'checked_in' || b.status === 'confirmed') && 
+        !b.deletedAt
+      );
+      if (activeBooking) {
+        return { status: 'occupied' as RoomStatus, booking: activeBooking };
       }
     }
 
@@ -205,28 +219,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const largeRooms = [roomMap['S3'], roomMap['S4']].filter((r): r is Room => Boolean(r));
   const smallRooms = [roomMap['S5'], roomMap['S6']].filter((r): r is Room => Boolean(r));
 
+  // Direct, instant, guaranteed room opening upon cleaning completion
   const handleTriggerConfirmClean = (room: Room) => {
-    setConfirmDialog({
-      isOpen: true,
-      type: 'clean',
-      roomBadge: `ห้อง ${room.roomNumber}`,
-      title: 'ยืนยันทำความสะอาดเสร็จสิ้น',
-      description: `คุณต้องการเปลี่ยนสถานะห้อง ${room.roomNumber} เป็น "ห้องว่างพร้อมเปิดรับจอง" ทันทีใช่หรือไม่?`,
-      confirmText: 'ยืนยันเปิดห้องว่าง',
-      onConfirm: () => onUpdateRoomStatus(room.id, 'available'),
-    });
+    onUpdateRoomStatus(room.id, 'available');
+    setSuccessToast(`✨ ทำความสะอาดเสร็จแล้ว — เปิดบ้าน ${room.roomNumber} ว่างพร้อมรับจองเรียบร้อย`);
+    setTimeout(() => setSuccessToast(null), 3000);
   };
 
   const handleTriggerConfirmMaintenance = (room: Room) => {
-    setConfirmDialog({
-      isOpen: true,
-      type: 'clean',
-      roomBadge: `ห้อง ${room.roomNumber}`,
-      title: 'ยืนยันเปิดใช้งานห้องพัก',
-      description: `คุณต้องการเปิดใช้งานห้อง ${room.roomNumber} ให้เป็นห้องว่างพร้อมขายใช่หรือไม่?`,
-      confirmText: 'ยืนยันเปิดห้องพัก',
-      onConfirm: () => onUpdateRoomStatus(room.id, 'available'),
-    });
+    onUpdateRoomStatus(room.id, 'available');
+    setSuccessToast(`✨ เปิดใช้งานบ้าน ${room.roomNumber} ว่างพร้อมรับจองเรียบร้อย`);
+    setTimeout(() => setSuccessToast(null), 3000);
   };
 
   return (
@@ -474,6 +477,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           }
         }}
       />
+
+      {/* 9. FLOATING SUCCESS TOAST NOTIFICATION */}
+      {successToast && (
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 bg-emerald-900/95 text-white px-4 py-3 rounded-2xl shadow-2xl border border-emerald-400/50 backdrop-blur-md flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-300 font-bold text-xs sm:text-sm">
+          <Sparkles className="w-5 h-5 text-emerald-300 shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
 
     </div>
   );

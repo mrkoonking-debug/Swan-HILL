@@ -253,11 +253,25 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
 
   // Action: Update Room Status
   const handleUpdateRoomStatus = (roomId: string, newStatus: RoomStatus) => {
-    const r = rooms.find(item => item.id === roomId);
-    const updatedRooms = rooms.map(item => item.id === roomId ? { ...item, status: newStatus } : item);
+    const r = rooms.find(item => item.id === roomId || item.roomNumber === roomId);
+    const targetId = r ? r.id : roomId;
+    const updatedRooms = rooms.map(item => {
+      if (item.id === targetId || item.roomNumber === targetId) {
+        return {
+          ...item,
+          status: newStatus,
+          currentGuest: newStatus === 'available' ? undefined : item.currentGuest,
+        };
+      }
+      return item;
+    });
     setRooms(updatedRooms);
     if (r) {
-      saveRoomToFirestore({ ...r, status: newStatus });
+      saveRoomToFirestore({
+        ...r,
+        status: newStatus,
+        currentGuest: newStatus === 'available' ? undefined : r.currentGuest,
+      });
     }
     addLog(
       'เปลี่ยนสถานะห้องพัก',
