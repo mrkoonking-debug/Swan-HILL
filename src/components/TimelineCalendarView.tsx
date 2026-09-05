@@ -305,18 +305,18 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
           </div>
 
           {/* 7-Column Responsive Month Grid */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-2 sm:p-4 shadow-sm space-y-2">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-2.5 sm:p-4 shadow-sm space-y-2.5">
             {/* Day of Week Headers */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center select-none mb-1">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center select-none">
               {['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสฯ', 'ศุกร์', 'เสาร์'].map((dayName, idx) => (
                 <div 
                   key={dayName} 
-                  className={`py-1.5 text-xs font-bold rounded-xl ${
+                  className={`py-2 text-xs font-bold rounded-xl transition-colors ${
                     idx === 0 
-                      ? 'text-rose-600 bg-rose-50/70 border border-rose-100' 
+                      ? 'text-rose-600 bg-rose-50/60 border border-rose-100/80' 
                       : idx === 6
-                      ? 'text-indigo-600 bg-indigo-50/70 border border-indigo-100' 
-                      : 'text-slate-600 bg-slate-50 border border-slate-200/60'
+                      ? 'text-indigo-600 bg-indigo-50/60 border border-indigo-100/80' 
+                      : 'text-slate-600 bg-slate-50 border border-slate-200/70'
                   }`}
                 >
                   <span className="hidden sm:inline">{dayName}</span>
@@ -326,13 +326,13 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
             </div>
 
             {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {calendarCells.map((cell, idx) => {
                 if (!cell) {
                   return (
                     <div 
                       key={`empty-${idx}`} 
-                      className="min-w-0 min-h-[66px] sm:min-h-[86px] bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200/80"
+                      className="min-w-0 min-h-[72px] sm:min-h-[92px] bg-slate-50/40 rounded-xl sm:rounded-2xl border border-dashed border-slate-200/80"
                     />
                   );
                 }
@@ -350,71 +350,82 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     type="button"
                     key={cell.dateStr}
                     onClick={() => setSelectedDate(cell.dateStr)}
-                    className={`min-w-0 min-h-[66px] sm:min-h-[86px] p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left relative overflow-hidden select-none active:scale-[0.98] ${
+                    className={`min-w-0 min-h-[72px] sm:min-h-[92px] p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left relative select-none group active:scale-[0.98] ${
                       isSelected
-                        ? 'ring-2 ring-slate-900 border-slate-900 bg-slate-50/90 shadow-sm z-10'
+                        ? 'ring-2 ring-emerald-600 border-emerald-600 bg-emerald-50/30 shadow-md z-10'
                         : isToday
-                        ? 'ring-2 ring-emerald-500/40 border-emerald-400 bg-emerald-50/15 shadow-2xs'
+                        ? 'ring-2 ring-slate-400/80 border-slate-300 bg-white shadow-2xs hover:border-emerald-400'
                         : isFull 
-                        ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300' 
+                        ? 'bg-rose-50/25 border-rose-200/80 hover:border-rose-300' 
                         : isPartial 
-                        ? 'bg-amber-50/25 border-amber-200/80 hover:border-amber-300' 
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                        ? 'bg-amber-50/20 border-amber-200/80 hover:border-amber-300' 
+                        : 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-xs'
                     }`}
                   >
-                    {/* Top Row: Date Number (LARGE & CLEAR!) + Status Badge */}
-                    <div className="flex items-center justify-between gap-1 w-full leading-none">
+                    {/* Top Row: Date Number (Large, Bold & Legible) + Status Badge */}
+                    <div className="flex items-center justify-between gap-1 w-full">
                       {isToday ? (
-                        <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-xs shrink-0">
+                        <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs shrink-0">
                           {cell.day}
                         </span>
                       ) : (
                         <span className={`text-sm sm:text-base font-extrabold tracking-tight shrink-0 ${
-                          isSelected ? 'text-slate-900 font-black' : 'text-slate-800'
+                          isSelected ? 'text-emerald-950 font-black' : 'text-slate-800'
                         }`}>
                           {cell.day}
                         </span>
                       )}
 
-                      {/* Clean, subtle status badge (NO screaming badges on empty days!) */}
+                      {/* Status Badge (Clean, Consistent, High-Contrast across ALL states) */}
                       {isFull ? (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/90 px-1.5 py-0.5 rounded-md whitespace-nowrap">
-                          เต็ม
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                          <span>เต็ม</span>
                         </span>
                       ) : isPartial ? (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/90 px-1.5 py-0.5 rounded-md whitespace-nowrap">
-                          ว่าง {availableRoomsCount}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {/* Bottom Row: Room Tokens or Clean Vacancy Status */}
-                    <div className="flex items-center gap-1 flex-wrap overflow-hidden mt-auto pt-1.5 w-full">
-                      {bookedRoomsCount === 0 ? (
-                        <span className="text-[10px] font-medium text-slate-400/90 w-full truncate">
-                          ว่าง 6 หลัง
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span>ว่าง {availableRoomsCount}</span>
                         </span>
                       ) : (
-                        dayBookings.slice(0, 3).map((b) => {
-                          const isPaid = b.paidAmount >= b.totalAmount;
-                          return (
-                            <span
-                              key={b.id}
-                              className={`px-1.5 py-0.5 rounded text-[9px] font-black leading-none whitespace-nowrap border ${
-                                isPaid 
-                                  ? 'bg-blue-50 text-blue-800 border-blue-200' 
-                                  : 'bg-amber-50 text-amber-900 border-amber-200'
-                              }`}
-                            >
-                              {b.roomNumber}
-                            </span>
-                          );
-                        })
-                      )}
-                      {bookedRoomsCount > 3 && (
-                        <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200 leading-none">
-                          +{bookedRoomsCount - 3}
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/90 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>ว่าง 6</span>
                         </span>
+                      )}
+                    </div>
+
+                    {/* Bottom Row: Room Availability & Booked Chips */}
+                    <div className="mt-auto pt-1.5 w-full">
+                      {bookedRoomsCount === 0 ? (
+                        <div className="py-1 px-1.5 rounded-lg bg-slate-50/80 border border-slate-200/60 group-hover:bg-emerald-50/60 group-hover:border-emerald-200/80 transition-colors flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                          <span className="truncate">S1-S6 ว่าง</span>
+                          <span className="text-[9px] font-bold text-emerald-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">+ จอง</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 flex-wrap overflow-hidden">
+                          {dayBookings.slice(0, 3).map((b) => {
+                            const isPaid = b.paidAmount >= b.totalAmount;
+                            return (
+                              <span
+                                key={b.id}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold leading-none whitespace-nowrap shadow-2xs ${
+                                  isPaid 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-amber-500 text-white'
+                                }`}
+                                title={`ห้อง ${b.roomNumber}: คุณ ${b.guestName} (${isPaid ? 'จ่ายครบ' : 'มัดจำ'})`}
+                              >
+                                {b.roomNumber}
+                              </span>
+                            );
+                          })}
+                          {bookedRoomsCount > 3 && (
+                            <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-white leading-none">
+                              +{bookedRoomsCount - 3}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </button>
