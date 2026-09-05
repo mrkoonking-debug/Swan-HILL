@@ -9,6 +9,7 @@ export interface ParsedBookingIntent {
   checkInDate: string;
   checkOutDate: string;
   totalNights: number;
+  totalGuests: number;
   paymentStatus: 'paid' | 'deposit' | 'pending';
   depositAmount: number;
   addOns: AddOnItem[];
@@ -20,6 +21,7 @@ export interface ParsedBookingIntent {
   isRoomAvailable: boolean;
   conflictDetails?: string;
   estimatedTotal: number;
+  sourceText?: string;
 }
 
 export interface GeneralAIResponse {
@@ -36,7 +38,7 @@ const THAI_MONTH_MAP: Record<string, number> = {
   'ก.พ.': 2, 'กุมภา': 2, 'กุมภาพันธ์': 2,
   'มี.ค.': 3, 'มีนา': 3, 'มีนาคม': 3,
   'เม.ย.': 4, 'เมษา': 4, 'เมษายน': 4,
-  'พ.ค.': 5, 'พฤษภา': 5, 'พฤษภาคม': 5,
+  'พ.ค.': 5, 'พฤษภา': 5, 'พฤษภาพันธ์': 5,
   'มิ.ย.': 6, 'มิถุนา': 6, 'มิถุนายน': 6,
   'ก.ค.': 7, 'กรกฎา': 7, 'กรกฎาคม': 7,
   'ส.ค.': 8, 'สิงหา': 8, 'สิงหาคม': 8,
@@ -46,85 +48,247 @@ const THAI_MONTH_MAP: Record<string, number> = {
   'ธ.ค.': 12, 'ธันวา': 12, 'ธันวาคม': 12,
 };
 
+// Known senders and family names to ignore as guest names
+const KNOWN_SENDERS = new Set([
+  'พ่อ', 'แม่', 'z', 'Z', 'ᴬᴼᴹ', 'พี่คิว', 'ออม', 'น้องออม', 'sayan', 'eid', 
+  'admin', 'แอดมิน', 'user', 'me', 'staff'
+]);
+
+// Non-guest keywords that might follow "คุณ" or "ชื่อ"
+const NON_GUEST_WORDS = new Set([
+  'ลูกค้า', 'จอง', 'ห้อง', 'บ้าน', 'วัน', 'มัดจำ', 'หมูกระทะ', 'คน', 'ท่าน', 'หลัง',
+  'พ่อ', 'แม่', 'ออม', 'พี่คิว', 'โอน', 'เงิน', 'แล้ว', 'ครับ', 'ค่ะ', 'ว่าง', 'เต็ม'
+]);
+
+/**
+ * Clean LINE export text:
+ * Strips date headers, timestamps, sender names, media notes (Photos, Videos, Stickers)
+ */
+export function cleanLineChatText(rawText: string): { cleanedLines: string[]; contextDate?: string } {
+  const lines = rawText.split(/\r?\n/);
+  const cleanedLines: string[] = [];
+  let contextDate: string | undefined;
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    // Detect LINE Date Header: 2026.09.04 Friday or 2026-09-04
+    const dateHeaderMatch = trimmed.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (dateHeaderMatch) {
+      const y = parseInt(dateHeaderMatch[1], 10);
+      const m = String(parseInt(dateHeaderMatch[2], 10)).padStart(2, '0');
+      const d = String(parseInt(dateHeaderMatch[3], 10)).padStart(2, '0');
+      contextDate = `${y}-${m}-${d}`;
+      continue;
+    }
+
+    // Filter out LINE Media lines
+    if (/^(Photos|Videos|Stickers|Group voice call|unsent a message)/i.test(trimmed)) {
+      continue;
+    }
+
+    // Match LINE message timestamp and sender prefix: "11:27 Z ลูกค้า..." or "20:04 Z คุณโจ้..." or "10:36 พ่อ บ้านหลังที่ 4..."
+    const linePrefixRegex = /^(?:\d{1,2}:\d{2}\s+)?([^\s:]+)\s+(.*)$/;
+    const prefixMatch = trimmed.match(linePrefixRegex);
+
+    if (prefixMatch) {
+      const sender = prefixMatch[1].trim();
+      const content = prefixMatch[2].trim();
+
+      // If sender is a known family sender or short sender token, strip it and keep content
+      if (KNOWN_SENDERS.has(sender) || KNOWN_SENDERS.has(sender.toLowerCase()) || sender.length <= 4) {
+        if (content && !/^(Photos|Videos|Stickers)/i.test(content)) {
+          cleanedLines.push(content);
+        }
+        continue;
+      }
+    }
+
+    // Normal message line without timestamp/sender
+    cleanedLines.push(trimmed);
+  }
+
+  return { cleanedLines, contextDate };
+}
+
 /**
  * Intelligent Deterministic Thai Natural Language Parser for Hotel Bookings
+ * Specially trained on Swan HILL real-world staff LINE chats.
  */
 export function parseThaiBookingText(
   text: string,
   rooms: Room[],
   bookings: Booking[]
 ): AIParseResult {
-  const normalized = text.trim();
+  const { cleanedLines, contextDate } = cleanLineChatText(text);
+  const normalized = cleanedLines.join(' ');
   const lower = normalized.toLowerCase();
 
-  // Check for status queries first
+  // 1. Check for availability / room status queries
   if (
     lower.includes('ว่างไหม') ||
     lower.includes('ห้องว่าง') ||
     lower.includes('มีห้องไหนว่าง') ||
     lower.includes('ว่างกี่ห้อง')
   ) {
-    const today = formatLocalDate(new Date());
-    const activeToday = bookings.filter(
+    const targetDate = contextDate || formatLocalDate(new Date());
+    const activeOnDate = bookings.filter(
       b => !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out' &&
-      b.checkInDate <= today && b.checkOutDate > today
+      b.checkInDate <= targetDate && b.checkOutDate > targetDate
     );
-    const bookedRooms = activeToday.map(b => b.roomNumber);
+    const bookedRooms = activeOnDate.map(b => b.roomNumber);
     const vacant = rooms.filter(r => !bookedRooms.includes(r.roomNumber));
 
     if (vacant.length === 0) {
       return {
         type: 'info',
-        message: 'วันนี้บ้านพัก Swan HILL เต็มทุกหลังครับ (S1 - S6)',
+        message: `วันที่ ${targetDate} บ้านพัก Swan HILL เต็มทุกหลังครับ (S1 - S6)`,
       };
     }
 
     const vacantList = vacant.map(r => `ห้อง ${r.roomNumber} (${r.type || 'บ้านพัก'} ฿${r.pricePerNight.toLocaleString()}/คืน)`).join(', ');
     return {
       type: 'info',
-      message: `วันนี้มีห้องว่างพร้อมรับ ${vacant.length} หลังครับ ได้แก่:\n${vacantList}`,
+      message: `วันที่ ${targetDate} มีห้องว่าง ${vacant.length} หลัง ได้แก่:\n${vacantList}`,
       suggestedAction: 'คลิกเพื่อสร้างการจองใหม่'
     };
   }
 
-  // Detect Rooms: S1, S2, S3, S4, S5, S6
+  // 2. Detect Rooms: S1 to S6
+  // Patterns:
+  // - "บ้านหลังที่ 4", "บ้านหลังที่ 2 และหลังที่ 3", "บ้านหลังที่ 2 และ 3"
+  // - "ห้อง 01 กับ 02", "(01 กับ 02)"
+  // - "ห้อง 2", "ห้องที่ 6", "ห้องที่ 1", "หลังที่ S6"
+  // - "S1", "S2", "S3", "S4", "S5", "S6"
+  // - "บ้านหลังใหญ่" (S3, S4), "บ้านหลังกลาง" (S1, S2), "บ้านหลังเล็ก" (S5, S6)
   const roomMatches = new Set<string>();
-  const roomRegex = /(?:ห้อง|บ้าน|room)?\s*([sS][1-6]|[1-6])\b/g;
-  let rMatch: RegExpExecArray | null;
-  while ((rMatch = roomRegex.exec(normalized)) !== null) {
-    let rNum = rMatch[1].toUpperCase();
-    if (!rNum.startsWith('S')) rNum = 'S' + rNum;
-    if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(rNum)) {
-      roomMatches.add(rNum);
+
+  // Pattern A: "บ้านหลังที่ X" or "หลังที่ X"
+  const houseOrderRegex = /(?:บ้าน|ห้อง)?\s*หลังที่\s*([sS]?[1-6])(?:\s*(?:และ|กับ|,|\+)\s*(?:หลังที่\s*)?([sS]?[1-6]))?/g;
+  let hMatch: RegExpExecArray | null;
+  while ((hMatch = houseOrderRegex.exec(normalized)) !== null) {
+    if (hMatch[1]) {
+      let r = hMatch[1].toUpperCase();
+      if (!r.startsWith('S')) r = 'S' + r;
+      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) roomMatches.add(r);
+    }
+    if (hMatch[2]) {
+      let r = hMatch[2].toUpperCase();
+      if (!r.startsWith('S')) r = 'S' + r;
+      if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) roomMatches.add(r);
     }
   }
 
-  // Detect Phone: 10 digits starting with 0 (e.g. 0812345678, 081-234-5678, 098 765 4321)
-  const phoneRegex = /(0[689]\d{1}[- ]?\d{3}[- ]?\d{4}|0[2-57]\d{1}[- ]?\d{3}[- ]?\d{3,4})/;
+  // Pattern B: "01 กับ 02" or "(01 กับ 02)" or "ห้อง 01"
+  const zeroNumberRegex = /(?:ห้อง|จำนวน)?\s*\(?0?([1-6])\s*(?:และ|กับ|,|\+)\s*0?([1-6])\)?/g;
+  let zMatch: RegExpExecArray | null;
+  while ((zMatch = zeroNumberRegex.exec(normalized)) !== null) {
+    if (zMatch[1]) roomMatches.add('S' + zMatch[1]);
+    if (zMatch[2]) roomMatches.add('S' + zMatch[2]);
+  }
+
+  // Pattern C: Standard S1-S6 or "ห้องที่ 6", "ห้อง 2"
+  const standardRoomRegex = /(?:ห้องที่|ห้อง|room)?\s*([sS][1-6]|[1-6])\b/g;
+  let sMatch: RegExpExecArray | null;
+  while ((sMatch = standardRoomRegex.exec(normalized)) !== null) {
+    let r = sMatch[1].toUpperCase();
+    if (!r.startsWith('S')) r = 'S' + r;
+    if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(r)) {
+      // Exclude false positives like "1 คน", "1 ท่าน", "1 หลัง", "1 คืน"
+      const matchIndex = sMatch.index;
+      const followingText = normalized.substring(matchIndex + sMatch[0].length, matchIndex + sMatch[0].length + 10).trim();
+      if (!/^(คน|ท่าน|คืน|บาท|ชุด|แก้ว|ขวด|บ่อ)/.test(followingText)) {
+        roomMatches.add(r);
+      }
+    }
+  }
+
+  // Pattern D: "บ้านหลังใหญ่" -> S3, "บ้านหลังเล็ก" -> S5
+  if (roomMatches.size === 0) {
+    if (normalized.includes('บ้านหลังใหญ่')) {
+      roomMatches.add('S3');
+    } else if (normalized.includes('บ้านหลังเล็ก')) {
+      roomMatches.add('S5');
+    } else if (normalized.includes('บ้านหลังกลาง')) {
+      roomMatches.add('S1');
+    }
+  }
+
+  // 3. Detect Phone Number (e.g. 0839507264, 081-234-5678, โทร. 0839507264)
+  const phoneRegex = /(?:โทร\.?|เบอร์)?\s*(0[689]\d{1}[- ]?\d{3}[- ]?\d{4}|0[2-57]\d{1}[- ]?\d{3}[- ]?\d{3,4})\b/;
   const phoneMatch = normalized.match(phoneRegex);
-  const guestPhone = phoneMatch ? phoneMatch[0].replace(/[- ]/g, '') : '';
+  const guestPhone = phoneMatch ? phoneMatch[1].replace(/[- ]/g, '') : '';
 
-  // Detect Guest Name
+  // 4. Detect Guest Name
+  // Patterns from real chat:
+  // - "ชื่อ พันธิตรา (ออย)"
+  // - "คุณโจ้", "คุณสมชาย"
+  // - "ลูกค้าชื่อ..."
   let guestName = '';
-  const namePrefixMatch = normalized.match(/(?:ชื่อ|ลูกค้า|คุณ|k\.|khun)\s*([ก-๙a-zA-Z]+(?:\s+[ก-๙a-zA-Z]+)?)/);
-  if (namePrefixMatch) {
-    const rawName = namePrefixMatch[1].trim();
-    // Exclude common keywords
-    if (!['จอง', 'ห้อง', 'บ้าน', 'วัน', 'มัดจำ', 'หมูกระทะ'].includes(rawName)) {
-      guestName = rawName.startsWith('คุณ') ? rawName : `คุณ${rawName}`;
+
+  // Pattern A: explicit "ชื่อ พันธิตรา (ออย)" or "ชื่อ: ..."
+  const explicitNameMatch = normalized.match(/ชื่อ\s*(?::|\.)?\s*([ก-๙a-zA-Z]+(?:\s*\([ก-๙a-zA-Z]+\))?(?:\s+[ก-๙a-zA-Z]+)?)/);
+  if (explicitNameMatch) {
+    const raw = explicitNameMatch[1].trim();
+    if (!NON_GUEST_WORDS.has(raw)) {
+      guestName = raw.startsWith('คุณ') ? raw : `คุณ${raw}`;
     }
   }
 
-  // Detect Dates
+  // Pattern B: "คุณโจ้เข้าพัก", "คุณสมชาย"
+  if (!guestName) {
+    const khunMatch = normalized.match(/(?:คุณ|k\.|khun)\s*([ก-๙a-zA-Z]+(?:\s*\([ก-๙a-zA-Z]+\))?(?:\s+[ก-๙a-zA-Z]+)?)/);
+    if (khunMatch) {
+      const raw = khunMatch[1].trim();
+      if (!NON_GUEST_WORDS.has(raw)) {
+        guestName = `คุณ${raw}`;
+      }
+    }
+  }
+
+  // Pattern C: "ลูกค้าชื่อ..."
+  if (!guestName) {
+    const customerMatch = normalized.match(/ลูกค้าชื่อ\s*([ก-๙a-zA-Z]+)/);
+    if (customerMatch) {
+      const raw = customerMatch[1].trim();
+      if (!NON_GUEST_WORDS.has(raw)) {
+        guestName = `คุณ${raw}`;
+      }
+    }
+  }
+
+  // 5. Detect Total Guests & Extra Beds
+  let totalGuests = 2;
+  const guestCountMatch = normalized.match(/เข้าพัก\s*(\d+)\s*(?:คน|ท่าน)/) || normalized.match(/(\d+)\s*(?:คน|ท่าน)/);
+  if (guestCountMatch) {
+    totalGuests = parseInt(guestCountMatch[1], 10);
+  }
+
+  let extraBeds = 0;
+  const extraBedMatch = normalized.match(/(?:เสริมที่นอน|ที่นอนเสริม|เตียงเสริม)\s*(\d+)\s*(?:คน|ท่าน|หลัง|เตียง)?/);
+  if (extraBedMatch) {
+    extraBeds = parseInt(extraBedMatch[1], 10);
+  }
+
+  // 6. Detect Dates
   const today = new Date();
   const currentYear = today.getFullYear();
-  let checkInDate = formatLocalDate(today);
+  let checkInDate = contextDate || formatLocalDate(today);
   let checkOutDate = shiftDateStr(checkInDate, 1);
   let totalNights = 1;
 
-  // Pattern: วันที่ 10-12 ก.ย., 10 - 12 กันยายน, 15-16/09
+  // Pattern A: "วันที่ 26 กันยายน 2569" or "วันที่ 19 กันยายน"
+  const fullThaiDateRegex = /วันที่\s*(\d{1,2})\s*([ก-๙.]+)\s*(?:พ\.ศ\.\s*)?(\d{2,4})?/;
+  const fullThaiMatch = normalized.match(fullThaiDateRegex);
+
+  // Pattern B: "วันที่ 11-12" or "10-12 ก.ย."
   const rangeDateRegex = /(\d{1,2})\s*(?:-|ถึง|to)\s*(\d{1,2})\s*([ก-๙.]+)?(?:\s*(\d{2,4}))?/;
   const rangeMatch = normalized.match(rangeDateRegex);
+
+  // Pattern C: "วันที่5/9/69" or "5/9/2569"
+  const slashDateRegex = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/;
+  const slashMatch = normalized.match(slashDateRegex);
 
   if (rangeMatch) {
     const d1 = parseInt(rangeMatch[1], 10);
@@ -139,6 +303,8 @@ export function parseThaiBookingText(
           break;
         }
       }
+    } else if (contextDate) {
+      m = parseInt(contextDate.split('-')[1], 10);
     }
 
     let y = currentYear;
@@ -151,123 +317,142 @@ export function parseThaiBookingText(
 
     checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d1).padStart(2, '0')}`;
     checkOutDate = `${y}-${String(m).padStart(2, '0')}-${String(d2).padStart(2, '0')}`;
-    
-    // Safety check
-    if (d2 > d1) {
-      totalNights = d2 - d1;
-    } else {
-      totalNights = 1;
-      checkOutDate = shiftDateStr(checkInDate, 1);
-    }
-  } else if (normalized.includes('พรุ่งนี้')) {
-    checkInDate = shiftDateStr(formatLocalDate(today), 1);
+    totalNights = d2 > d1 ? d2 - d1 : 1;
+  } else if (slashMatch) {
+    const d = parseInt(slashMatch[1], 10);
+    const m = parseInt(slashMatch[2], 10);
+    let y = parseInt(slashMatch[3], 10);
+    if (y > 2500) y -= 543;
+    else if (y < 100) y += 2000;
+
+    checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     checkOutDate = shiftDateStr(checkInDate, 1);
-  } else if (normalized.includes('มะรืน') || normalized.includes('มะรืนนี้')) {
-    checkInDate = shiftDateStr(formatLocalDate(today), 2);
+  } else if (fullThaiMatch) {
+    const d = parseInt(fullThaiMatch[1], 10);
+    const monthText = fullThaiMatch[2].trim();
+    let m = today.getMonth() + 1;
+    for (const [key, val] of Object.entries(THAI_MONTH_MAP)) {
+      if (monthText.includes(key)) {
+        m = val;
+        break;
+      }
+    }
+
+    let y = currentYear;
+    if (fullThaiMatch[3]) {
+      let rawY = parseInt(fullThaiMatch[3], 10);
+      if (rawY > 2500) rawY -= 543;
+      else if (rawY < 100) rawY += 2000;
+      y = rawY;
+    }
+
+    checkInDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    checkOutDate = shiftDateStr(checkInDate, 1);
+  } else if (normalized.includes('พรุ่งนี้')) {
+    checkInDate = shiftDateStr(contextDate || formatLocalDate(today), 1);
     checkOutDate = shiftDateStr(checkInDate, 1);
   } else {
-    // Single date pattern: วันที่ 15 ก.ย.
-    const singleDateRegex = /(?:วันที่|วัน)?\s*(\d{1,2})\s*([ก-๙.]+)?(?:\s*(\d{2,4}))?/;
-    const singleMatch = normalized.match(singleDateRegex);
-    if (singleMatch && parseInt(singleMatch[1], 10) <= 31) {
-      const d = parseInt(singleMatch[1], 10);
-      const monthText = singleMatch[2] ? singleMatch[2].trim() : '';
+    // Single date pattern: "วันที่ 12", "วันที่ 5"
+    const singleDateMatch = normalized.match(/วันที่\s*(\d{1,2})\b/);
+    if (singleDateMatch) {
+      const d = parseInt(singleDateMatch[1], 10);
       let m = today.getMonth() + 1;
-      if (monthText) {
-        for (const [key, val] of Object.entries(THAI_MONTH_MAP)) {
-          if (monthText.includes(key)) {
-            m = val;
-            break;
-          }
-        }
-      }
+      if (contextDate) m = parseInt(contextDate.split('-')[1], 10);
       checkInDate = `${currentYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       checkOutDate = shiftDateStr(checkInDate, 1);
     }
   }
 
-  // Detect Nights: 2 คืน, 3 คืน
-  const nightMatch = normalized.match(/(\d+)\s*คืน/);
-  if (nightMatch) {
-    totalNights = Math.max(1, parseInt(nightMatch[1], 10));
+  // Detect explicit nights: "จอง 2 คืน", "พัก 2 คืน", "3 คืน"
+  const nightsMatch = normalized.match(/(?:จอง|พัก)?\s*(\d+)\s*คืน/);
+  if (nightsMatch) {
+    totalNights = Math.max(1, parseInt(nightsMatch[1], 10));
     checkOutDate = shiftDateStr(checkInDate, totalNights);
   }
 
-  // Detect Add-Ons: หมูกระทะ & ที่นอนเสริม & อาหารเช้า
+  // 7. Detect Add-ons (Mookata, Breakfast, etc.)
   let mookataSmall = 0;
   let mookataLarge = 0;
-  let extraBeds = 0;
   let breakfast = 0;
 
-  // หมูกระทะชุดใหญ่
-  const mookataLargeMatch = normalized.match(/หมูกระทะ.*(?:ใหญ่|ชุดใหญ่)(?:\s*(\d+))?/);
-  if (mookataLargeMatch) {
-    mookataLarge = mookataLargeMatch[1] ? parseInt(mookataLargeMatch[1], 10) : 1;
+  if (normalized.includes('หมูกระทะ') || normalized.includes('หมูกะทะ')) {
+    if (normalized.includes('ชุดใหญ่') || normalized.includes('ใหญ่')) {
+      const q = normalized.match(/หมูกระ?ทะ.*(?:ใหญ่|ชุดใหญ่)(?:\s*(\d+))?/);
+      mookataLarge = q && q[1] ? parseInt(q[1], 10) : 1;
+    } else if (normalized.includes('ชุดเล็ก') || normalized.includes('เล็ก')) {
+      const q = normalized.match(/หมูกระ?ทะ.*(?:เล็ก|ชุดเล็ก)(?:\s*(\d+))?/);
+      mookataSmall = q && q[1] ? parseInt(q[1], 10) : 1;
+    } else {
+      mookataLarge = 1; // Default
+    }
   }
 
-  // หมูกระทะชุดเล็ก
-  const mookataSmallMatch = normalized.match(/หมูกระทะ.*(?:เล็ก|ชุดเล็ก)(?:\s*(\d+))?/);
-  if (mookataSmallMatch) {
-    mookataSmall = mookataSmallMatch[1] ? parseInt(mookataSmallMatch[1], 10) : 1;
-  } else if (!mookataLarge && normalized.includes('หมูกระทะ')) {
-    // If just "หมูกระทะ" without specifying size, default to large or small
-    const qtyMatch = normalized.match(/หมูกระทะ(?:\s*(\d+))?/);
-    mookataLarge = qtyMatch && qtyMatch[1] ? parseInt(qtyMatch[1], 10) : 1;
+  if (normalized.includes('อาหารเช้า')) {
+    const q = normalized.match(/อาหารเช้า(?:\s*(\d+))?/);
+    breakfast = q && q[1] ? parseInt(q[1], 10) : 2;
   }
 
-  // ที่นอนเสริม
-  const bedMatch = normalized.match(/(?:ที่นอนเสริม|เตียงเสริม|เสริมเตียง)(?:\s*(\d+))?/);
-  if (bedMatch) {
-    extraBeds = bedMatch[1] ? parseInt(bedMatch[1], 10) : 1;
-  }
-
-  // อาหารเช้า
-  const bfMatch = normalized.match(/(?:อาหารเช้า|breakfast)(?:\s*(\d+))?/);
-  if (bfMatch) {
-    breakfast = bfMatch[1] ? parseInt(bfMatch[1], 10) : 1;
-  }
-
-  // Detect Deposit & Payments
-  let depositAmount = 0;
+  // 8. Detect Payments & Deposits
   let paymentStatus: 'paid' | 'deposit' | 'pending' = 'pending';
+  let depositAmount = 0;
 
+  // Detect explicit total, e.g. "2,000 บาท เสริมที่นอน...", "3,000 บาท"
+  const priceRegex = /([1-9][0-9]{2,4}|[1-9],[0-9]{3})\s*บาท/g;
+  let pMatch: RegExpExecArray | null;
+  const foundPrices: number[] = [];
+  while ((pMatch = priceRegex.exec(normalized)) !== null) {
+    const val = parseInt(pMatch[1].replace(/,/g, ''), 10);
+    foundPrices.push(val);
+  }
+
+  // Check paid full
   if (
+    normalized.includes('โอนตังค์มาให้หมดแล้ว') ||
+    normalized.includes('จ่ายตังค์หมดแล้ว') ||
     normalized.includes('จ่ายครบ') ||
-    normalized.includes('โอนครบ') ||
-    normalized.includes('จ่ายเต็ม') ||
     normalized.includes('โอนเต็ม') ||
-    normalized.includes('ชำระครบ')
+    normalized.includes('เก็บตังค์มาแล้ว') ||
+    normalized.includes('จ่ายหมดแล้ว')
   ) {
     paymentStatus = 'paid';
-  } else {
-    // Look for deposit numbers: มัดจำ 1000, โอนมัดจำ 1,500, โอน 500
-    const depositMatch = normalized.match(/(?:มัดจำ|โอน|จ่าย)(?:\s*แล้ว)?(?:\s*มา)?\s*([0-9,]+)/);
-    if (depositMatch) {
-      depositAmount = parseInt(depositMatch[1].replace(/,/g, ''), 10);
-      if (depositAmount > 0) {
-        paymentStatus = 'deposit';
-      }
+  }
+
+  // Detect deposit: "มัดจำแล้ว 50% = 600 บาท", "โอนตังค์มาแล้ว 1,000 บาท", "มัดจำ 1000"
+  const depositMatch = normalized.match(/(?:มัดจำ(?:แล้ว)?|โอน(?:ตังค์)?(?:มาแล้ว)?)\s*(?:(?:50%|=|\s)*)?([0-9,]+)\s*(?:บาท)?/);
+  if (depositMatch) {
+    depositAmount = parseInt(depositMatch[1].replace(/,/g, ''), 10);
+    if (depositAmount > 0 && paymentStatus !== 'paid') {
+      paymentStatus = 'deposit';
     }
   }
 
-  // If at least a room is detected, construct the structured booking intent
-  const detectedRoomNumbers = Array.from(roomMatches);
-  if (detectedRoomNumbers.length > 0 || guestName || guestPhone) {
-    const finalRoomNumbers = detectedRoomNumbers.length > 0 ? detectedRoomNumbers : ['S1'];
-    
-    // Calculate total price
-    const selectedRooms = rooms.filter(r => finalRoomNumbers.includes(r.roomNumber));
-    const roomRatePerNight = selectedRooms.reduce((sum, r) => sum + r.pricePerNight, 0) || 1200;
-    const addOnsTotal = (mookataLarge * 500) + (mookataSmall * 350) + (extraBeds * 300) + (breakfast * 60);
-    const estimatedTotal = (roomRatePerNight * totalNights) + addOnsTotal;
+  // 9. If rooms or booking intent detected, build structured object
+  const finalRoomNumbers = Array.from(roomMatches);
+  const hasBookingKeywords = normalized.includes('จอง') || normalized.includes('เข้าพัก') || normalized.includes('โอน') || normalized.includes('มัดจำ') || finalRoomNumbers.length > 0;
 
-    if (paymentStatus === 'paid') {
-      depositAmount = estimatedTotal;
-    } else if (paymentStatus === 'deposit' && depositAmount === 0) {
-      depositAmount = Math.round(estimatedTotal * 0.5);
+  if (hasBookingKeywords && (finalRoomNumbers.length > 0 || guestName || guestPhone)) {
+    const targetRoomNumbers = finalRoomNumbers.length > 0 ? finalRoomNumbers : ['S1'];
+    const matchedRooms = rooms.filter(r => targetRoomNumbers.includes(r.roomNumber));
+    const roomRatePerNight = matchedRooms.reduce((sum, r) => sum + r.pricePerNight, 0) || (targetRoomNumbers.length * 1200);
+
+    const addOnsTotal = (mookataLarge * 500) + (mookataSmall * 350) + (extraBeds * 300) + (breakfast * 60);
+    let calculatedTotal = (roomRatePerNight * totalNights) + addOnsTotal;
+
+    // If explicit total was stated in chat (e.g. 2,000 บาท or 3,000 บาท) and is higher or matches, use it
+    if (foundPrices.length > 0) {
+      const maxFound = Math.max(...foundPrices);
+      if (maxFound >= 1000 && maxFound !== depositAmount) {
+        calculatedTotal = maxFound;
+      }
     }
 
-    // Construct Add-ons array
+    if (paymentStatus === 'paid') {
+      depositAmount = calculatedTotal;
+    } else if (paymentStatus === 'deposit' && depositAmount === 0) {
+      depositAmount = Math.round(calculatedTotal * 0.5);
+    }
+
+    // Build Add-ons list
     const addOnsList: AddOnItem[] = [];
     if (mookataLarge > 0) {
       addOnsList.push({
@@ -310,28 +495,29 @@ export function parseThaiBookingText(
       });
     }
 
-    // Check room conflicts in bookings list
+    // Check Room Conflicts against active bookings
     const activeBookings = bookings.filter(b => !b.deletedAt && b.status !== 'cancelled' && b.status !== 'checked_out');
     const conflicts: string[] = [];
-    finalRoomNumbers.forEach(rNum => {
+    targetRoomNumbers.forEach(rNum => {
       const conflict = activeBookings.find(b => 
         b.roomNumber === rNum &&
         checkInDate < b.checkOutDate &&
         checkOutDate > b.checkInDate
       );
       if (conflict) {
-        conflicts.push(`ห้อง ${rNum} ติดจองโดยคุณ ${conflict.guestName} (${conflict.checkInDate} ถึง ${conflict.checkOutDate})`);
+        conflicts.push(`ห้อง ${rNum} มีการจองแล้วโดยคุณ ${conflict.guestName} (${conflict.checkInDate} ถึง ${conflict.checkOutDate})`);
       }
     });
 
     return {
       type: 'booking',
-      roomNumbers: finalRoomNumbers,
-      guestName: guestName || 'ลูกค้ารอแจ้งชื่อ',
+      roomNumbers: targetRoomNumbers,
+      guestName: guestName || 'ลูกค้าจาก LINE',
       guestPhone: guestPhone || '-',
       checkInDate,
       checkOutDate,
       totalNights,
+      totalGuests,
       paymentStatus,
       depositAmount,
       addOns: addOnsList,
@@ -341,21 +527,22 @@ export function parseThaiBookingText(
       breakfast,
       isRoomAvailable: conflicts.length === 0,
       conflictDetails: conflicts.length > 0 ? conflicts.join(', ') : undefined,
-      estimatedTotal
+      estimatedTotal: calculatedTotal,
+      sourceText: text
     };
   }
 
-  // Greeting or general query
+  // Greeting
   if (lower.includes('สวัสดี') || lower.includes('hello') || lower.includes('hi')) {
     return {
       type: 'greeting',
-      message: 'สวัสดีครับ! ผมคือผู้ช่วย AI ของ Swan HILL Resort\nคุณสามารถพิมพ์หรือวางข้อความแชทเพื่อบันทึกการจองได้ทันที เช่น:\n"จองห้อง S1 คุณสมชาย 081-234-5678 วันที่ 10-12 ก.ย. มัดจำ 1000 หมูกระทะชุดใหญ่ 1 ชุด"'
+      message: 'สวัสดีครับ! ผมคือผู้ช่วย AI ของ Swan HILL Resort\n\nพนักงานสามารถวางข้อความแชทจาก LINE ได้เลยครับ ผมจะตัดเวลาและชื่อคนพิมพ์ออกให้อัตโนมัติ แล้วดึงเฉพาะข้อมูลลูกค้า ห้องพัก และวันที่เข้าพักขึ้นมาให้ตรวจสอบครับ ✨'
     };
   }
 
   return {
     type: 'unknown',
-    message: 'ผมยังไม่ค่อยเข้าใจข้อมูลการจองครับ ลองพิมพ์หรือวางข้อความระบุ:\n1. เลขห้องพัก (เช่น S1, S2, S3...)\n2. ชื่อลูกค้าและเบอร์โทร\n3. วันที่เข้าพัก (เช่น 10-12 ก.ย. หรือ พรุ่งนี้)\n\nหรือคลิกที่ตัวอย่างด้านล่างได้เลยครับ'
+    message: 'ยังไม่พบข้อมูลการจองในข้อความนี้ครับ\n\nลองวางข้อความที่มีเลขห้อง (เช่น ห้อง 2, บ้านหลังที่ 4, S1) หรือชื่อลูกค้าและวันที่เข้าพัก หรือคลิกตัวอย่างด้านล่างได้เลยครับ'
   };
 }
 
@@ -382,7 +569,7 @@ export function createBookingsFromIntent(
     const addOnsTotal = roomAddOns.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const roomTotal = roomBase + addOnsTotal;
 
-    // Distribute deposit proportionally or put on first room
+    // Distribute deposit
     let paidAmt = 0;
     if (intent.paymentStatus === 'paid') {
       paidAmt = roomTotal;
@@ -404,14 +591,14 @@ export function createBookingsFromIntent(
       checkInTime: '14:00',
       checkOutTime: '12:00',
       totalNights: intent.totalNights,
-      totalGuests: room.capacity || 2,
+      totalGuests: Math.ceil(intent.totalGuests / intent.roomNumbers.length),
       roomPrice: roomRate,
       addOns: roomAddOns,
       totalAmount: roomTotal,
       paidAmount: paidAmt,
       paymentStatus: intent.paymentStatus,
       status: 'confirmed',
-      specialRequests: 'บันทึกอัตโนมัติผ่านผู้ช่วยแชท AI',
+      specialRequests: 'บันทึกอัตโนมัติผ่านผู้ช่วยแชท AI จากข้อความ LINE',
       createdAt: new Date().toISOString(),
       groupId,
       groupBookingCode: groupCode,
