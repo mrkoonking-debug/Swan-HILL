@@ -20,7 +20,7 @@ import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
 import { QuickAvailabilityModal } from './components/QuickAvailabilityModal';
 import { AIAssistantModal } from './components/AIAssistantModal';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Calendar } from 'lucide-react';
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallModal, PWAUpdateBanner } from './components/PWAInstallModal';
 import { initialRooms, initialBookings, initialSettings, initialLogs } from './data/initialData';
@@ -55,6 +55,17 @@ const safeSetLocalStorage = (key: string, data: unknown) => {
   } catch (err) {
     console.warn(`[LocalStorage] Failed to cache ${key}:`, err);
   }
+};
+
+const getTodayThaiLongDate = () => {
+  const now = new Date();
+  const dayNames = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+  const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dayName = dayNames[now.getDay()];
+  const day = now.getDate();
+  const month = thaiMonths[now.getMonth()];
+  const yearBE = now.getFullYear() + 543;
+  return `${dayName}ที่ ${day} ${month} ${yearBE}`;
 };
 
 // Main PMS Dashboard Layout Component
@@ -762,6 +773,12 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 onSaveSettings={handleSaveSettings}
               />
             )}
+          </div>
+
+          {/* Mobile Bottom Date Indicator (moved from header right to bottom on mobile) */}
+          <div className="md:hidden mt-6 mb-24 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 bg-white/90 backdrop-blur-xs py-2 px-4 rounded-full border border-slate-200/80 shadow-2xs mx-auto w-fit select-none">
+            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+            <span>วันนี้: {getTodayThaiLongDate()}</span>
           </div>
         </main>
         {/* Snappy Dimming Overlay on the Pushed Canvas (Moves with canvas, covers header fully, zero blur lag) */}

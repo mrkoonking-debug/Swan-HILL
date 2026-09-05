@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw, Menu, Download, X, Sparkles } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, RefreshCw, Menu, X, Sparkles } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -28,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileDrawer,
   onCloseMobileDrawer,
   isMobileDrawerOpen = false,
-  onOpenInstallPWA,
-  isPWAInstalled = false,
+  onOpenInstallPWA: _onOpenInstallPWA,
+  isPWAInstalled: _isPWAInstalled = false,
   onOpenQuickChecker,
   onOpenAIAssistant,
 }) => {
@@ -37,6 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [isClearing, setIsClearing] = useState(false);
   const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+
+  const handleSimpleReload = () => {
+    window.location.reload();
+  };
 
   // Sync external reset during render without cascading effect
   if (searchTerm !== prevSearchTerm) {
@@ -146,11 +150,11 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenAIAssistant && (
             <button
               onClick={onOpenAIAssistant}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white text-[11px] font-black transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-black transition-all shadow-xs cursor-pointer"
               title="ผู้ช่วยแชท AI ลงข้อมูลอัตโนมัติ"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
-              <span>แชท AI</span>
+              <span>AI</span>
             </button>
           )}
 
@@ -165,35 +169,36 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {onOpenInstallPWA && !isPWAInstalled && (
-            <button
-              onClick={onOpenInstallPWA}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 active:scale-95 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all shadow-xs cursor-pointer"
-              title="ติดตั้งเป็นแอพลงเครื่อง (PWA)"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>โหลดแอพ</span>
-            </button>
-          )}
-
+          {/* Normal Page Reload (Icon Only) */}
           <button
+            type="button"
+            onClick={handleSimpleReload}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
+            title="รีเฟรชหน้าเว็บ"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Clear Cache Reload (Icon Only) */}
+          <button
+            type="button"
             onClick={handleClearCacheAndReload}
             disabled={isClearing}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-slate-700 text-[11px] font-bold transition-all"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-slate-700 transition-all cursor-pointer"
             title="ล้างแคชและโหลดข้อมูลใหม่"
           >
             <RotateCw className={`w-3.5 h-3.5 ${isClearing ? 'animate-spin' : ''}`} />
-            <span>{isClearing ? 'กำลังโหลด...' : 'รีแคช'}</span>
           </button>
 
           <button
+            type="button"
             onClick={async () => {
               localStorage.removeItem('swanhill_staff_session');
               sessionStorage.removeItem('swanhill_staff_session');
               try { await auth.signOut(); } catch {}
               window.location.href = '/login';
             }}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 active:scale-95 transition-all cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 active:scale-95 transition-all cursor-pointer"
             title="ออกจากระบบ"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -202,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Header Row (Desktop / Tablet) */}
-      <div className="px-4 md:px-6 py-2.5 md:py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
+      <div className="px-4 md:px-6 py-2.5 md:py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
         {/* Title */}
         <div>
           <h2 className="text-base md:text-lg font-extrabold text-slate-900">
@@ -214,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Controls */}
         <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
           {/* Search Bar */}
-          <div className="relative flex-1 md:w-56">
+          <div className="relative flex-1 md:w-52">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -233,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="ผู้ช่วยแชท AI สำหรับลงข้อมูลการจองอัตโนมัติ"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current text-yellow-300" />
-              <span>แชท AI ลงข้อมูล</span>
+              <span>AI</span>
             </button>
           )}
 
@@ -249,36 +254,34 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Desktop Install PWA Button */}
-          {onOpenInstallPWA && !isPWAInstalled && (
-            <button
-              onClick={onOpenInstallPWA}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
-              title="ติดตั้งเป็นแอพลงเครื่อง (PWA) ลื่นไหลและเร็วขึ้น"
-            >
-              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>ติดตั้งแอพ (PWA)</span>
-            </button>
-          )}
-
           {/* Available Badge */}
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
             ห้องว่าง {availableRoomsCount} หลัง
           </span>
 
-          {/* Desktop Clear Cache Button */}
+          {/* Normal Page Reload (Icon Only) */}
           <button
-            onClick={handleClearCacheAndReload}
-            disabled={isClearing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 text-xs font-bold transition-all"
-            title="ล้างแคชและโหลดข้อมูลล่าสุด"
+            type="button"
+            onClick={handleSimpleReload}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+            title="รีเฟรชหน้าเว็บ"
           >
-            <RotateCw className={`w-3.5 h-3.5 text-emerald-600 ${isClearing ? 'animate-spin' : ''}`} />
-            <span>{isClearing ? 'กำลังรีแคช...' : 'รีแคช (Ctrl+Shift+R)'}</span>
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
 
-          {/* Date Display */}
+          {/* Clear Cache Reload (Icon Only) */}
+          <button
+            type="button"
+            onClick={handleClearCacheAndReload}
+            disabled={isClearing}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-emerald-600 border border-slate-200 transition-all cursor-pointer"
+            title="ล้างแคชและโหลดข้อมูลล่าสุด (Deep Reload)"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isClearing ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* Date Display (Desktop Only) */}
           <div className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 shrink-0">
             <Calendar className="w-3.5 h-3.5 text-emerald-600" />
             <span>{currentDateTime}</span>
