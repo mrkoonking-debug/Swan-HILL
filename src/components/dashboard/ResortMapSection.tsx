@@ -167,55 +167,6 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
               </span>
             </div>
           </div>
-
-          {/* Top Room Status Explanation Strip (คำอธิบายสถานะด้านบนของแผนผัง) */}
-          <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-900 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span className="text-[10px] sm:text-[11px] font-black text-slate-400 shrink-0 mr-1 hidden sm:inline">
-              สถานะบ้านพัก:
-            </span>
-            {rooms.map((room) => {
-              const roomState = getRoomStatusOnDate(room);
-              const isSelected = selectedMapRoomNumber === room.roomNumber;
-              const isOccupied = roomState.status === 'occupied';
-              const isCleaning = roomState.status === 'cleaning';
-
-              const statusLabel = isOccupied
-                ? (roomState.booking?.guestName ? `มีคนพัก (${roomState.booking.guestName})` : 'มีคนพัก')
-                : isCleaning
-                ? 'รอทำความสะอาด'
-                : roomState.status === 'maintenance'
-                ? 'ปิดซ่อม'
-                : `ว่าง (฿${room.pricePerNight.toLocaleString()})`;
-
-              return (
-                <button
-                  key={room.id}
-                  type="button"
-                  onClick={() => {
-                    onSelectMapRoomNumber(room.roomNumber);
-                    onRightPanelTabChange('single');
-                  }}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                    isSelected
-                      ? 'ring-2 ring-emerald-400 bg-slate-800 text-white border-white/40 shadow-xs'
-                      : isOccupied
-                      ? 'bg-rose-950/70 text-rose-200 border-rose-800/80 hover:bg-rose-900/60'
-                      : isCleaning
-                      ? 'bg-amber-950/70 text-amber-200 border-amber-800/80 hover:bg-amber-900/60'
-                      : 'bg-emerald-950/70 text-emerald-200 border-emerald-800/80 hover:bg-emerald-900/60'
-                  }`}
-                  title={`คลิกเพื่อดูรายละเอียดบ้าน ${room.roomNumber}`}
-                >
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${
-                    isOccupied ? 'bg-rose-500' : isCleaning ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`} />
-                  <span className="font-black text-white">{room.roomNumber}:</span>
-                  <span className="truncate max-w-[120px] sm:max-w-[140px]">{statusLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Masterplan Image with Interactive Overlay Pins */}
           <div className="relative w-full aspect-video bg-slate-900 select-none overflow-hidden group">
             <img 
