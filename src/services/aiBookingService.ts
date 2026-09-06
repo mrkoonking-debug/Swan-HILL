@@ -235,9 +235,9 @@ export function parseThaiBookingText(
     if (['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].includes(rNum)) roomMatches.add(rNum);
   }
 
-  // Pattern C: Thai room identifier: 'ห้อง 1', 'ห้อง 02', 'ห้องที่ 3', 'บ้านหลังที่ 4', 'หลังที่ 5'
+  // Pattern C: Thai room identifier: 'ห้อง 1', 'ห้อง 02', 'ห้องที่ 3', 'บ้านหลังที่ 4', 'หลังที่ 5', 'บ้านพัก S1', 'ห้องพัก S2'
   // Note: Thai syntax: 'ห้อง' precedes the number (NOT '2 ห้อง' which is quantity)
-  const roomPrefixRegex = /(?:ห้องที่|ห้อง|บ้านหลังที่|หลังที่|บ้านที่)\s*(?:เบอร์)?\s*([sS]?0?[1-6])(?![0-9])/gi;
+  const roomPrefixRegex = /(?:ห้องที่|ห้องพัก|ห้อง|บ้านหลังที่|บ้านพัก|หลังที่|บ้านที่)\s*(?:เบอร์|:)?\s*([sS]?0?[1-6])(?![0-9])/gi;
   let prefixMatch: RegExpExecArray | null;
   while ((prefixMatch = roomPrefixRegex.exec(normalized)) !== null) {
     let rNum = prefixMatch[1].toUpperCase().replace(/^0/, '');
@@ -256,9 +256,10 @@ export function parseThaiBookingText(
     }
   }
 
-  // 3. Detect Phone Number (e.g. 0839507264, 081-234-5678, โทร. 0839507264)
-  const phoneRegex = /(?:โทร\.?|เบอร์)?\s*(0[689]\d{1}[- ]?\d{3}[- ]?\d{4}|0[2-57]\d{1}[- ]?\d{3}[- ]?\d{3,4})\b/;
-  const phoneMatch = normalized.match(phoneRegex);
+  // 3. Detect Phone Number (e.g. 0839507264, 081-234-5678, โทร. 0839507264, เบอร์โทรศัพท์: 081...)
+  const phoneRegex = /(?:โทร\.?|เบอร์(?:\s*โทร(?:ศัพท์)?)?|tel\.?|phone)\s*(?::|\.)?\s*(0[689]\d{1}[- ]?\d{3}[- ]?\d{4}|0[2-57]\d{1}[- ]?\d{3}[- ]?\d{3,4})\b/i;
+  const directPhoneRegex = /\b(0[689]\d{1}[- ]?\d{3}[- ]?\d{4}|0[2-57]\d{1}[- ]?\d{3}[- ]?\d{3,4})\b/;
+  const phoneMatch = normalized.match(phoneRegex) || normalized.match(directPhoneRegex);
   const guestPhone = phoneMatch ? phoneMatch[1].replace(/[- ]/g, '') : '';
 
   // 4. Detect Guest Name
@@ -271,8 +272,8 @@ export function parseThaiBookingText(
 
   let guestName = '';
 
-  // Pattern A: explicit "ชื่อ พันธิตรา (ออย)" or "ชื่อ: ..."
-  const explicitNameMatch = normalized.match(/ชื่อ\s*(?::|\.)?\s*([ก-๙a-zA-Z0-9]+(?:\s*\([ก-๙a-zA-Z0-9]+\))?(?:\s+[ก-๙a-zA-Z0-9]+)?)/);
+  // Pattern A: explicit bullet or label like "ชื่อผู้เข้าพัก: คุณสมชาย", "ชื่อลูกค้า: ออย", "ชื่อ: ...", "ลูกค้าชื่อ..."
+  const explicitNameMatch = normalized.match(/(?:ชื่อ(?:\s*(?:ผู้เข้าพัก|ลูกค้า))?|ลูกค้าชื่อ|ลูกค้า)\s*(?::|\.)?\s*([ก-๙a-zA-Z0-9]+(?:\s*\([ก-๙a-zA-Z0-9]+\))?(?:\s+[ก-๙a-zA-Z0-9]+)?)/);
   if (explicitNameMatch) {
     const raw = cleanRawGuestName(explicitNameMatch[1]);
     if (raw && !NON_GUEST_WORDS.has(raw)) {
@@ -447,15 +448,31 @@ export function parseThaiBookingText(
     normalized.includes('โอนตังค์มาให้หมดแล้ว') ||
     normalized.includes('จ่ายตังค์หมดแล้ว') ||
     normalized.includes('จ่ายครบ') ||
+    normalized.includes('จ่ายเต็ม') ||
     normalized.includes('โอนเต็ม') ||
+    normalized.includes('โอนครบ') ||
+    normalized.includes('100%') ||
     normalized.includes('เก็บตังค์มาแล้ว') ||
     normalized.includes('จ่ายหมดแล้ว')
   ) {
     paymentStatus = 'paid';
+  } else if (
+    normalized.includes('ยังไม่ชำระ') ||
+    normalized.includes('ยังไม่ได้จ่าย') ||
+    normalized.includes('รอชำระ') ||
+    normalized.includes('ค้างชำระ')
+  ) {
+    paymentStatus = 'pending';
+  } else if (
+    normalized.includes('50%') ||
+    normalized.includes('มัดจำ') ||
+    normalized.includes('โอนมัดจำ')
+  ) {
+    paymentStatus = 'deposit';
   }
 
-  // Detect deposit: "มัดจำแล้ว 50% = 600 บาท", "โอนตังค์มาแล้ว 1,000 บาท", "มัดจำ 1000"
-  const depositMatch = normalized.match(/(?:มัดจำ(?:แล้ว)?|โอน(?:ตังค์)?(?:มาแล้ว)?)\s*(?:(?:50%|=|\s)*)?([0-9,]+)\s*(?:บาท)?/);
+  // Detect deposit: "มัดจำแล้ว 50% = 600 บาท", "โอนตังค์มาแล้ว 1,000 บาท", "มัดจำ 1000", "มัดจำ: 1,000"
+  const depositMatch = normalized.match(/(?:มัดจำ(?:แล้ว)?|โอน(?:ตังค์)?(?:มาแล้ว)?)\s*(?::|\.)?\s*(?:(?:50%|=|\s)*)?([0-9,]+)\s*(?:บาท)?/);
   if (depositMatch) {
     depositAmount = parseInt(depositMatch[1].replace(/,/g, ''), 10);
     if (depositAmount > 0 && paymentStatus !== 'paid') {
