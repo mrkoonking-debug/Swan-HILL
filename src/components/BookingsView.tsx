@@ -18,7 +18,9 @@ import {
   ChevronRight,
   UtensilsCrossed,
   Copy,
-  Check
+  Check,
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import type { Booking, BookingStatus, AddOnItem, ResortSettings } from '../types/pms';
 import { HouseLogo } from './HouseLogo';
@@ -46,6 +48,8 @@ interface BookingsViewProps {
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenCheckoutModal?: (booking: Booking) => void;
   onOpenCloneBooking?: (booking: Booking) => void;
+  onOpenEditBooking?: (booking: Booking) => void;
+  onOpenCancelBooking?: (booking: Booking) => void;
   onUpdateBookingAddOns?: (bookingId: string, updatedAddOns: AddOnItem[]) => void;
   settings?: ResortSettings;
 }
@@ -76,6 +80,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   onOpenAddPayment,
   onOpenCheckoutModal,
   onOpenCloneBooking,
+  onOpenEditBooking,
+  onOpenCancelBooking,
   onUpdateBookingAddOns,
   settings,
 }) => {
@@ -471,6 +477,30 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
               >
                 <Receipt className="w-3.5 h-3.5" />
                 <span>ใบเสร็จ</span>
+              </button>
+            )}
+
+            {/* Edit Booking Button (Change Room, Dates, Guest info, Prices) */}
+            {onOpenEditBooking && b.status !== 'checked_out' && b.status !== 'cancelled' && (
+              <button
+                onClick={() => onOpenEditBooking(b)}
+                className="flex items-center gap-1 px-2.5 py-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 text-xs font-semibold rounded-xl border border-blue-200 transition-all cursor-pointer"
+                title="แก้ไขข้อมูลการจอง (เปลี่ยนบ้าน / วันที่ / ผู้พัก)"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                <span>แก้ไข</span>
+              </button>
+            )}
+
+            {/* Cancel Booking & Refund Deposit Button (Instant Room Unlock) */}
+            {onOpenCancelBooking && b.status !== 'checked_out' && b.status !== 'cancelled' && (
+              <button
+                onClick={() => onOpenCancelBooking(b)}
+                className="flex items-center gap-1 px-2.5 py-2 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 text-xs font-semibold rounded-xl border border-rose-200 transition-all cursor-pointer"
+                title="ยกเลิกการจอง & คืนเงินมัดจำ (ปลดห้องว่างทันที)"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                <span>ยกเลิก/คืนเงิน</span>
               </button>
             )}
 
@@ -1235,6 +1265,28 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                               >
                                 <DoorOpen className="w-3.5 h-3.5" />
                                 <span>เช็คเอาท์</span>
+                              </button>
+                            )}
+
+                            {/* Edit Booking */}
+                            {onOpenEditBooking && b.status !== 'checked_out' && b.status !== 'cancelled' && (
+                              <button
+                                onClick={() => onOpenEditBooking(b)}
+                                className="p-2 rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors cursor-pointer"
+                                title="แก้ไขข้อมูลการจอง (เปลี่ยนห้อง / วันที่ / ผู้พัก)"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Cancel Booking with Refund */}
+                            {onOpenCancelBooking && b.status !== 'checked_out' && b.status !== 'cancelled' && (
+                              <button
+                                onClick={() => onOpenCancelBooking(b)}
+                                className="p-2 rounded-xl text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="ยกเลิกการจอง & คืนเงินมัดจำ (ปลดห้องว่าง)"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
                               </button>
                             )}
 

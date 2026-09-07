@@ -13,7 +13,9 @@ import {
   Phone, 
   ChevronRight as ArrowRightIcon, 
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import type { Room, Booking } from '../types/pms';
 import { formatThaiDate, THAI_MONTHS_FULL, formatLocalDate, shiftDateStr } from '../utils/dateUtils';
@@ -29,6 +31,8 @@ interface TimelineCalendarViewProps {
   onOpenReceipt?: (booking: Booking) => void;
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenAddOrder?: (booking: Booking) => void;
+  onOpenEditBooking?: (booking: Booking) => void;
+  onOpenCancelBooking?: (booking: Booking) => void;
 }
 
 export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
@@ -39,6 +43,8 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
   onOpenReceipt,
   onOpenAddPayment,
   onOpenAddOrder,
+  onOpenEditBooking,
+  onOpenCancelBooking,
 }) => {
   const [selectedBookingModal, setSelectedBookingModal] = useState<Booking | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -1020,6 +1026,37 @@ export const TimelineCalendarView: React.FC<TimelineCalendarViewProps> = ({
                     >
                       <Receipt className="w-4 h-4 text-emerald-400" />
                       <span>พิมพ์ใบเสร็จรับเงิน</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Edit & Cancel Actions */}
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                  {onOpenEditBooking && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenEditBooking(selectedBookingModal);
+                        setSelectedBookingModal(null);
+                      }}
+                      className="py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>แก้ไขการจอง (ย้ายห้อง)</span>
+                    </button>
+                  )}
+
+                  {onOpenCancelBooking && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenCancelBooking(selectedBookingModal);
+                        setSelectedBookingModal(null);
+                      }}
+                      className="py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-200 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                      <span>ยกเลิก/คืนเงิน</span>
                     </button>
                   )}
                 </div>

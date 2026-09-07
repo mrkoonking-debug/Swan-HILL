@@ -78,6 +78,12 @@ export interface Booking {
   specialRequests?: string;
   createdAt: string;
   deletedAt?: string; // ISO string when moved to trash
+  // Cancellation & Refund Tracking
+  cancelledAt?: string;
+  cancellationReason?: string;
+  refundAmount?: number;
+  refundMethod?: PaymentMethod;
+  refundNote?: string;
   // Group Booking fields (when multiple rooms booked together or cloned)
   groupId?: string; // e.g. "grp-1788467123"
   groupBookingCode?: string; // e.g. "GRP-20260904-01"

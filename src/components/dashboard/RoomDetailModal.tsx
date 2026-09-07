@@ -7,7 +7,9 @@ import {
   Receipt, 
   ArrowRight,
   Plus,
-  Users
+  Users,
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../../types/pms';
 
@@ -22,6 +24,8 @@ export interface RoomDetailModalProps {
   onOpenAddPayment?: (booking: Booking) => void;
   onOpenReceipt?: (booking: Booking) => void;
   onOpenCloneBooking?: (booking: Booking) => void;
+  onOpenEditBooking?: (booking: Booking) => void;
+  onOpenCancelBooking?: (booking: Booking) => void;
 }
 
 export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
@@ -35,6 +39,8 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
   onOpenAddPayment,
   onOpenReceipt,
   onOpenCloneBooking,
+  onOpenEditBooking,
+  onOpenCancelBooking,
 }) => {
   if (!room) return null;
   const currentBooking = bookings.find(item => item.id === room.currentGuest?.bookingId);
@@ -179,6 +185,32 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
                 </button>
               )}
 
+              {currentBooking && onOpenEditBooking && (
+                <button
+                  onClick={() => {
+                    onOpenEditBooking(currentBooking);
+                    onClose();
+                  }}
+                  className="w-full py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200 transition-all cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>แก้ไขข้อมูลการจอง (ย้ายห้อง / เปลี่ยนวัน)</span>
+                </button>
+              )}
+
+              {currentBooking && onOpenCancelBooking && (
+                <button
+                  onClick={() => {
+                    onOpenCancelBooking(currentBooking);
+                    onClose();
+                  }}
+                  className="w-full py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-200 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                  <span>ยกเลิกการจอง & คืนเงินมัดจำ (ปลดห้องว่าง)</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   const bId = room.currentGuest?.bookingId;
@@ -189,7 +221,7 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
                     else onCheckOutGuest(bId);
                   }
                 }}
-                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
               >
                 <span>เช็คเอาท์ห้องพัก</span>
                 <ArrowRight className="w-4 h-4" />

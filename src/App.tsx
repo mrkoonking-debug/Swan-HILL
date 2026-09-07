@@ -16,6 +16,8 @@ import { AddOrderModal } from './components/AddOrderModal';
 import { ReceiptModal } from './components/ReceiptModal';
 import { PaymentModal } from './components/PaymentModal';
 import { CheckoutModal } from './components/CheckoutModal';
+import { CancelBookingModal } from './components/CancelBookingModal';
+import { EditBookingModal } from './components/EditBookingModal';
 import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
 import { QuickAvailabilityModal } from './components/QuickAvailabilityModal';
@@ -104,6 +106,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const [selectedBookingForReceiptId, setSelectedBookingForReceiptId] = useState<string | null>(null);
   const [selectedBookingForPaymentId, setSelectedBookingForPaymentId] = useState<string | null>(null);
   const [selectedBookingForCheckoutId, setSelectedBookingForCheckoutId] = useState<string | null>(null);
+  const [selectedBookingForCancelId, setSelectedBookingForCancelId] = useState<string | null>(null);
+  const [selectedBookingForEditId, setSelectedBookingForEditId] = useState<string | null>(null);
 
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
@@ -229,6 +233,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const selectedBookingForAddOrder = bookings.find(b => b.id === selectedBookingForAddOrderId) || null;
   const selectedBookingForReceipt = bookings.find(b => b.id === selectedBookingForReceiptId) || null;
   const selectedBookingForCheckout = bookings.find(b => b.id === selectedBookingForCheckoutId) || null;
+  const selectedBookingForCancel = bookings.find(b => b.id === selectedBookingForCancelId) || null;
+  const selectedBookingForEdit = bookings.find(b => b.id === selectedBookingForEditId) || null;
 
   // Helper: Auto-Record Audit Log
   const addLog = (
@@ -610,6 +616,137 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     addLog('ยกเลิกการจอง', `ย้ายการจองห้อง ${b.roomNumber} (${b.guestName}) รหัส ${b.bookingCode} ไปถังขยะ`, 'booking', b.roomNumber, b.bookingCode);
   };
 
+  // Action: Cancel Booking with Deposit Refund & Instant Room Unlocking
+  const handleCancelBookingWithRefund = (
+    bookingId: string,
+    refundData: {
+      refundAmount: number;
+      refundMethod: PaymentMethod;
+      reason: string;
+      note?: string;
+    }
+  ) => {
+    const b = bookings.find(item => item.id === bookingId);
+    if (!b) return;
+
+    const updatedTransactions = [...(b.transactions || [])];
+    const initialPaid = b.paidAmount || 0;
+    let newPaidAmount = initialPaid;
+
+    if (refundData.refundAmount > 0) {
+      newPaidAmount = Math.max(0, initialPaid - refundData.refundAmount);
+      updatedTransactions.push({
+        id: 'tx-refund-' + Date.now(),
+        amount: -refundData.refundAmount,
+        method: refundData.refundMethod,
+        note: `คืนเงินมัดจำ/ค่าห้อง (${refundData.reason}${refundData.note ? ` - ${refundData.note}` : ''})`,
+        paidAt: new Date().toISOString(),
+      });
+    }
+
+    const updatedBooking: Booking = {
+      ...b,
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      cancellationReason: refundData.reason,
+      refundAmount: refundData.refundAmount,
+      refundMethod: refundData.refundMethod,
+      refundNote: refundData.note,
+      paidAmount: newPaidAmount,
+      paymentStatus: newPaidAmount <= 0 ? 'pending' : (newPaidAmount >= b.totalAmount ? 'paid' : 'deposit'),
+      transactions: updatedTransactions,
+    };
+
+    setBookings(prev => prev.map(item => item.id === bookingId ? updatedBooking : item));
+    saveBookingToFirestore(updatedBooking);
+
+    // CRITICAL REQUIREMENT: Always unlock the room immediately so staff can sell it to other customers!
+    setRooms(prev => prev.map(r => {
+      if (r.id === b.roomId || r.roomNumber === b.roomNumber || r.currentGuest?.bookingId === bookingId) {
+        const updatedRoom: Room = { ...r, status: 'available', currentGuest: undefined };
+        saveRoomToFirestore(updatedRoom);
+        return updatedRoom;
+      }
+      return r;
+    }));
+
+    addLog(
+      'ยกเลิกการจองและคืนเงิน',
+      `ยกเลิกการจองห้อง ${b.roomNumber} (${b.guestName}) รหัส ${b.bookingCode} | คืนเงิน ฿${refundData.refundAmount.toLocaleString()} บาท [${refundData.refundMethod === 'transfer' ? 'โอนเงิน' : 'เงินสด'}] สาเหตุ: ${refundData.reason}${refundData.note ? ` (${refundData.note})` : ''} | ปลดล็อคห้อง ${b.roomNumber} ให้ว่างพร้อมขายทันที`,
+      'booking',
+      b.roomNumber,
+      b.bookingCode
+    );
+  };
+
+  // Action: Edit Booking (Switch Room, Adjust Dates, Guest details, Add-ons, Prices)
+  const handleEditBooking = (updatedBooking: Booking, oldRoomId: string) => {
+    const today = formatLocalDate(new Date());
+    const isRoomChanged = oldRoomId && oldRoomId !== updatedBooking.roomId;
+
+    setBookings(prev => prev.map(item => item.id === updatedBooking.id ? updatedBooking : item));
+    saveBookingToFirestore(updatedBooking);
+
+    if (isRoomChanged) {
+      // 1. Release old room back to available if it was occupied by this booking
+      setRooms(prev => prev.map(r => {
+        if (r.id === oldRoomId || (r.currentGuest?.bookingId === updatedBooking.id && r.id !== updatedBooking.roomId)) {
+          const freedRoom: Room = { ...r, status: 'available', currentGuest: undefined };
+          saveRoomToFirestore(freedRoom);
+          return freedRoom;
+        }
+
+        // 2. If new room should be occupied today
+        if (r.id === updatedBooking.roomId) {
+          const isActiveToday = updatedBooking.checkInDate <= today && updatedBooking.checkOutDate > today;
+          if (isActiveToday && (updatedBooking.status === 'checked_in' || updatedBooking.status === 'confirmed')) {
+            const occupiedRoom: Room = {
+              ...r,
+              status: updatedBooking.status === 'checked_in' ? 'occupied' : r.status,
+              currentGuest: {
+                name: updatedBooking.guestName,
+                phone: updatedBooking.guestPhone,
+                checkIn: updatedBooking.checkInDate,
+                checkOut: updatedBooking.checkOutDate,
+                bookingId: updatedBooking.id
+              }
+            };
+            saveRoomToFirestore(occupiedRoom);
+            return occupiedRoom;
+          }
+        }
+        return r;
+      }));
+    } else {
+      // Room wasn't changed, but guest details or dates might have changed
+      setRooms(prev => prev.map(r => {
+        if (r.id === updatedBooking.roomId && r.currentGuest?.bookingId === updatedBooking.id) {
+          const updatedRoom: Room = {
+            ...r,
+            currentGuest: {
+              name: updatedBooking.guestName,
+              phone: updatedBooking.guestPhone,
+              checkIn: updatedBooking.checkInDate,
+              checkOut: updatedBooking.checkOutDate,
+              bookingId: updatedBooking.id
+            }
+          };
+          saveRoomToFirestore(updatedRoom);
+          return updatedRoom;
+        }
+        return r;
+      }));
+    }
+
+    addLog(
+      'แก้ไขข้อมูลการจอง',
+      `แก้ไขข้อมูลการจองห้อง ${updatedBooking.roomNumber} (${updatedBooking.guestName}) รหัส ${updatedBooking.bookingCode}${isRoomChanged ? ` [ย้ายห้อง]` : ''}`,
+      'booking',
+      updatedBooking.roomNumber,
+      updatedBooking.bookingCode
+    );
+  };
+
   // Action: Restore Booking from Trash
   const handleRestoreBooking = (bookingId: string) => {
     const b = bookings.find(item => item.id === bookingId);
@@ -743,6 +880,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
                 onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
                 onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
+                onOpenEditBooking={(booking) => setSelectedBookingForEditId(booking.id)}
+                onOpenCancelBooking={(booking) => setSelectedBookingForCancelId(booking.id)}
               />
             )}
 
@@ -755,6 +894,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
                 onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
                 onOpenAddOrder={(booking) => setSelectedBookingForAddOrderId(booking.id)}
+                onOpenEditBooking={(booking) => setSelectedBookingForEditId(booking.id)}
+                onOpenCancelBooking={(booking) => setSelectedBookingForCancelId(booking.id)}
               />
             )}
 
@@ -778,6 +919,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 onOpenReceipt={(booking) => setSelectedBookingForReceiptId(booking.id)}
                 onOpenAddPayment={(booking) => setSelectedBookingForPaymentId(booking.id)}
                 onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
+                onOpenEditBooking={(booking) => setSelectedBookingForEditId(booking.id)}
+                onOpenCancelBooking={(booking) => setSelectedBookingForCancelId(booking.id)}
                 onUpdateBookingAddOns={handleUpdateBookingAddOns}
               />
             )}
@@ -820,7 +963,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       </div>
 
       {/* Mobile Floating AI Assistant Button (Floating quick access on smartphones) */}
-      {!isNewBookingOpen && !isAIAssistantOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
+      {!isNewBookingOpen && !isAIAssistantOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && (
         <div 
           className={`fixed bottom-20 right-3.5 z-30 md:hidden transition-transform duration-220 ease-out will-change-transform ${
             isMobileDrawerOpen ? 'translate-x-[280px]' : 'translate-x-0'
@@ -839,7 +982,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       )}
 
       {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
-      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && (
+      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && (
         <div 
           className={`fixed bottom-0 inset-x-0 z-30 pointer-events-none transition-transform duration-220 ease-out will-change-transform ${
             isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0' : 'translate-x-0'
@@ -946,6 +1089,24 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         onClose={() => setSelectedBookingForCheckoutId(null)}
         booking={selectedBookingForCheckout}
         onConfirmCheckout={handleConfirmCheckout}
+      />
+
+      {/* Cancel Booking & Refund Deposit Modal (Instant Room Unlocking) */}
+      <CancelBookingModal
+        isOpen={!!selectedBookingForCancelId}
+        onClose={() => setSelectedBookingForCancelId(null)}
+        booking={selectedBookingForCancel}
+        onConfirmCancel={handleCancelBookingWithRefund}
+      />
+
+      {/* Edit Booking Details & Switch Room Modal */}
+      <EditBookingModal
+        isOpen={!!selectedBookingForEditId}
+        onClose={() => setSelectedBookingForEditId(null)}
+        booking={selectedBookingForEdit}
+        rooms={rooms}
+        bookings={bookings}
+        onSaveEdit={handleEditBooking}
       />
 
       {/* PWA Update Banner */}
