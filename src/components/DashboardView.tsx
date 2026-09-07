@@ -37,6 +37,7 @@ interface DashboardViewProps {
   onOpenCloneBooking?: (booking: Booking) => void;
   onOpenEditBooking?: (booking: Booking) => void;
   onOpenCancelBooking?: (booking: Booking) => void;
+  onOpenChecklistModal?: (room?: Room) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -56,6 +57,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenCloneBooking,
   onOpenEditBooking,
   onOpenCancelBooking,
+  onOpenChecklistModal,
 }) => {
   const [selectedRoomModal, setSelectedRoomModal] = useState<Room | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
@@ -326,6 +328,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onCheckOutGuest={onCheckOutGuest}
           onTriggerConfirmClean={handleTriggerConfirmClean}
           onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
+          onOpenChecklistModal={onOpenChecklistModal}
         />
       )}
 
@@ -361,6 +364,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onCheckOutGuest={onCheckOutGuest}
                   onTriggerConfirmClean={handleTriggerConfirmClean}
                   onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
+                  onOpenChecklistModal={onOpenChecklistModal}
                 />
               ))}
             </div>
@@ -395,6 +399,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onCheckOutGuest={onCheckOutGuest}
                   onTriggerConfirmClean={handleTriggerConfirmClean}
                   onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
+                  onOpenChecklistModal={onOpenChecklistModal}
                 />
               ))}
             </div>
@@ -429,6 +434,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onCheckOutGuest={onCheckOutGuest}
                   onTriggerConfirmClean={handleTriggerConfirmClean}
                   onTriggerConfirmMaintenance={handleTriggerConfirmMaintenance}
+                  onOpenChecklistModal={onOpenChecklistModal}
                 />
               ))}
             </div>
@@ -450,6 +456,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onOpenCloneBooking={onOpenCloneBooking}
         onOpenEditBooking={onOpenEditBooking}
         onOpenCancelBooking={onOpenCancelBooking}
+        onOpenChecklistModal={onOpenChecklistModal}
       />
 
       {/* 7. CUSTOM CONFIRMATION POPUP */}

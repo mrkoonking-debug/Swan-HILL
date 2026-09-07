@@ -9,7 +9,8 @@ import {
   Plus,
   Users,
   Edit3,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react';
 import type { Room, Booking, RoomStatus } from '../../types/pms';
 
@@ -26,6 +27,7 @@ export interface RoomDetailModalProps {
   onOpenCloneBooking?: (booking: Booking) => void;
   onOpenEditBooking?: (booking: Booking) => void;
   onOpenCancelBooking?: (booking: Booking) => void;
+  onOpenChecklistModal?: (room: Room) => void;
 }
 
 export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
@@ -41,6 +43,7 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
   onOpenCloneBooking,
   onOpenEditBooking,
   onOpenCancelBooking,
+  onOpenChecklistModal,
 }) => {
   if (!room) return null;
   const currentBooking = bookings.find(item => item.id === room.currentGuest?.bookingId);
@@ -111,6 +114,20 @@ export const RoomDetailModal: React.FC<RoomDetailModalProps> = ({
                 ⚪ ปิดปรับปรุง
               </button>
             </div>
+
+            {onOpenChecklistModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChecklistModal(room);
+                  onClose();
+                }}
+                className="w-full mt-2.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>📋 เปิดเช็คลิสต์ตรวจห้องพัก & ของใช้แม่บ้าน</span>
+              </button>
+            )}
           </div>
 
           {/* Occupied Actions */}

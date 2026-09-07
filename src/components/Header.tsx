@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, LogOut, RotateCw, RefreshCw, Menu, X, Sparkles } from 'lucide-react';
+import { Search, Calendar, LogOut, RotateCw, RefreshCw, Menu, X, Sparkles, ClipboardCheck } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { BrandLogo } from './BrandLogo';
 import type { ActiveTab } from './Sidebar';
@@ -17,6 +17,7 @@ interface HeaderProps {
   isPWAInstalled?: boolean;
   onOpenQuickChecker?: () => void;
   onOpenAIAssistant?: () => void;
+  onOpenChecklistModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   isPWAInstalled: _isPWAInstalled = false,
   onOpenQuickChecker,
   onOpenAIAssistant,
+  onOpenChecklistModal,
 }) => {
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isClearing, setIsClearing] = useState(false);
@@ -174,6 +176,16 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {onOpenChecklistModal && (
+            <button
+              onClick={onOpenChecklistModal}
+              className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 active:scale-95 transition-all cursor-pointer"
+              title="เช็คลิสต์ตรวจห้องพัก & ของใช้แม่บ้าน"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           {/* Normal Page Reload (Icon Only) */}
           <button
             type="button"
@@ -256,6 +268,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Search className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>เช็คห้องว่างด่วน</span>
+            </button>
+          )}
+
+          {/* Housekeeping Checklist Button */}
+          {onOpenChecklistModal && (
+            <button
+              onClick={onOpenChecklistModal}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 active:scale-95 transition-all cursor-pointer shadow-2xs"
+              title="เช็คลิสต์ตรวจห้องพัก & ของใช้แม่บ้าน Swan HILL"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5 text-amber-700" />
+              <span>เช็คลิสต์แม่บ้าน</span>
             </button>
           )}
 

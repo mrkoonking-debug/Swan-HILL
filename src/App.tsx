@@ -18,6 +18,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { CancelBookingModal } from './components/CancelBookingModal';
 import { EditBookingModal } from './components/EditBookingModal';
+import { HousekeepingChecklistModal } from './components/HousekeepingChecklistModal';
 import { LogsView } from './components/LogsView';
 import { SettingsView } from './components/SettingsView';
 import { QuickAvailabilityModal } from './components/QuickAvailabilityModal';
@@ -108,6 +109,8 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
   const [selectedBookingForCheckoutId, setSelectedBookingForCheckoutId] = useState<string | null>(null);
   const [selectedBookingForCancelId, setSelectedBookingForCancelId] = useState<string | null>(null);
   const [selectedBookingForEditId, setSelectedBookingForEditId] = useState<string | null>(null);
+  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
+  const [selectedChecklistRoomId, setSelectedChecklistRoomId] = useState<string | undefined>();
 
   const [prefillRoomId, setPrefillRoomId] = useState<string | undefined>();
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
@@ -747,6 +750,18 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
     );
   };
 
+  // Action: Confirm Housekeeping Checklist & Mark Room as Available
+  const handleConfirmRoomReady = (roomId: string, inspectorName: string, notes?: string) => {
+    handleUpdateRoomStatus(roomId, 'available');
+    const r = rooms.find(item => item.id === roomId || item.roomNumber === roomId);
+    addLog(
+      'ตรวจความพร้อมห้องพักแม่บ้าน',
+      `ผู้ตรวจ: ${inspectorName} | ตรวจเช็คลิสต์ความพร้อมและเติมของใช้ (ผ้าห่ม, แปรงสีฟัน, มินิบาร์, ระบบไฟ) บ้าน ${r?.roomNumber || roomId} ครบถ้วนตามมาตรฐาน พร้อมเปิดขายทันที${notes ? ` (หมายเหตุ: ${notes})` : ''}`,
+      'room',
+      r?.roomNumber
+    );
+  };
+
   // Action: Restore Booking from Trash
   const handleRestoreBooking = (bookingId: string) => {
     const b = bookings.find(item => item.id === bookingId);
@@ -837,6 +852,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
           isPWAInstalled={isInstalled}
           onOpenQuickChecker={() => setIsQuickCheckerOpen(true)}
           onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
+          onOpenChecklistModal={() => {
+            setSelectedChecklistRoomId(undefined);
+            setIsChecklistOpen(true);
+          }}
         />
 
         {/* Dynamic Viewport Container */}
@@ -882,6 +901,10 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
                 onOpenCheckoutModal={(booking) => setSelectedBookingForCheckoutId(booking.id)}
                 onOpenEditBooking={(booking) => setSelectedBookingForEditId(booking.id)}
                 onOpenCancelBooking={(booking) => setSelectedBookingForCancelId(booking.id)}
+                onOpenChecklistModal={(room) => {
+                  setSelectedChecklistRoomId(room?.id);
+                  setIsChecklistOpen(true);
+                }}
               />
             )}
 
@@ -963,7 +986,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       </div>
 
       {/* Mobile Floating AI Assistant Button (Floating quick access on smartphones) */}
-      {!isNewBookingOpen && !isAIAssistantOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && (
+      {!isNewBookingOpen && !isAIAssistantOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && !isChecklistOpen && (
         <div 
           className={`fixed bottom-20 right-3.5 z-30 md:hidden transition-transform duration-220 ease-out will-change-transform ${
             isMobileDrawerOpen ? 'translate-x-[280px]' : 'translate-x-0'
@@ -982,7 +1005,7 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
       )}
 
       {/* Mobile Floating Bottom Navigation (Hidden when modals are open, shifts right with main screen) */}
-      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && (
+      {!isNewBookingOpen && !selectedBookingForAddOrderId && !selectedBookingForReceiptId && !selectedBookingForPaymentId && !selectedBookingForCheckoutId && !selectedBookingForCancelId && !selectedBookingForEditId && !isChecklistOpen && (
         <div 
           className={`fixed bottom-0 inset-x-0 z-30 pointer-events-none transition-transform duration-220 ease-out will-change-transform ${
             isMobileDrawerOpen ? 'translate-x-[280px] lg:translate-x-0' : 'translate-x-0'
@@ -1107,6 +1130,15 @@ const MainDashboard = ({ user }: { user: AuthUser }) => {
         rooms={rooms}
         bookings={bookings}
         onSaveEdit={handleEditBooking}
+      />
+
+      {/* Housekeeping Room Inspection & Amenities Checklist Modal */}
+      <HousekeepingChecklistModal
+        isOpen={isChecklistOpen}
+        onClose={() => setIsChecklistOpen(false)}
+        rooms={rooms}
+        initialRoomId={selectedChecklistRoomId}
+        onConfirmRoomReady={handleConfirmRoomReady}
       />
 
       {/* PWA Update Banner */}

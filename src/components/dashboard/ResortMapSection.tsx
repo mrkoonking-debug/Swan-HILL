@@ -57,6 +57,7 @@ export interface ResortMapSectionProps {
   onCheckOutGuest: (bookingId: string) => void;
   onTriggerConfirmClean: (room: Room) => void;
   onTriggerConfirmMaintenance: (room: Room) => void;
+  onOpenChecklistModal?: (room: Room) => void;
 }
 
 export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
@@ -85,6 +86,7 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
   onCheckOutGuest,
   onTriggerConfirmClean,
   onTriggerConfirmMaintenance,
+  onOpenChecklistModal,
 }) => {
   const selectedMapRoom = rooms.find(r => r.roomNumber === selectedMapRoomNumber) || rooms[0];
   const selectedMapRoomState = selectedMapRoom 
@@ -381,11 +383,14 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                         ) : isClean ? (
                           <button
                             type="button"
-                            onClick={() => onTriggerConfirmClean(room)}
+                            onClick={() => {
+                              if (onOpenChecklistModal) onOpenChecklistModal(room);
+                              else onTriggerConfirmClean(room);
+                            }}
                             className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold rounded-lg border border-amber-300 transition-all cursor-pointer"
-                            title="กดเมื่อทำความสะอาดเสร็จแล้ว"
+                            title="ตรวจของใช้ & เปิดห้องว่าง"
                           >
-                            เปิดห้องว่าง
+                            ตรวจเปิดห้อง
                           </button>
                         ) : (
                           <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200">
@@ -708,11 +713,14 @@ export const ResortMapSection: React.FC<ResortMapSectionProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => onTriggerConfirmClean(selectedMapRoom)}
-                        className="col-span-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                        onClick={() => {
+                          if (onOpenChecklistModal) onOpenChecklistModal(selectedMapRoom);
+                          else onTriggerConfirmClean(selectedMapRoom);
+                        }}
+                        className="col-span-2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>ทำความสะอาดเสร็จแล้ว (เปิดห้องว่าง)</span>
+                        <span>ตรวจของใช้แม่บ้าน & เปิดห้องว่าง</span>
                       </button>
                       <button
                         type="button"

@@ -30,6 +30,7 @@ export interface RoomCardProps {
   onCheckOutGuest: (bookingId: string) => void;
   onTriggerConfirmClean: (room: Room) => void;
   onTriggerConfirmMaintenance: (room: Room) => void;
+  onOpenChecklistModal?: (room: Room) => void;
 }
 
 export const RoomCard: React.FC<RoomCardProps> = ({
@@ -47,6 +48,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({
   onCheckOutGuest,
   onTriggerConfirmClean,
   onTriggerConfirmMaintenance,
+  onOpenChecklistModal,
 }) => {
   const isAvailable = roomState.status === 'available';
   const isOccupied = roomState.status === 'occupied';
@@ -304,12 +306,17 @@ export const RoomCard: React.FC<RoomCardProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onTriggerConfirmClean(room);
+              if (onOpenChecklistModal) {
+                onOpenChecklistModal(room);
+              } else {
+                onTriggerConfirmClean(room);
+              }
             }}
-            className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-all"
+            className="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            title="เปิดเช็คลิสต์ตรวจของใช้แม่บ้าน & เปิดห้องว่าง"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>ทำความสะอาดเสร็จแล้ว (เปิดว่าง)</span>
+            <span>ตรวจของใช้ & เปิดห้องว่าง</span>
           </button>
         )}
 
