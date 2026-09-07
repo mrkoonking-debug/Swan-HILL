@@ -55,13 +55,18 @@ async function computeSha256Hex(text: string): Promise<string> {
   // Fetch latest staff list & email whitelist from Firestore on mount
   useEffect(() => {
     const fetchStaffConfig = async () => {
+      let firestoreStaffLoaded = false;
+
       try {
         const docRef = doc(db, 'settings', 'resort_config');
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as ResortSettings;
-          if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+
+          // ใช้ staffList จาก Firestore เสมอ (ไม่ว่าจะมีกี่คน) เพื่อให้ staff ที่เพิ่งเพิ่มเข้ามา login ได้
+          if (data.staffList && Array.isArray(data.staffList)) {
             setStaffList(data.staffList);
+            firestoreStaffLoaded = data.staffList.length > 0; // ถือว่าโหลดสำเร็จเฉพาะตอนมีข้อมูล
           }
           if (data.allowedEmails && Array.isArray(data.allowedEmails)) {
             setAllowedEmails(data.allowedEmails);
@@ -69,25 +74,26 @@ async function computeSha256Hex(text: string): Promise<string> {
           if (data.allowGoogleLogin !== undefined) {
             setAllowGoogleLogin(data.allowGoogleLogin);
           }
-          return;
         }
       } catch (err) {
         console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
       }
 
-      // Check localStorage cached settings
-      const localSettings = localStorage.getItem('swanhill_settings_v1');
-      if (localSettings) {
-        try {
-          const parsed = JSON.parse(localSettings);
-          if (parsed.staffList && Array.isArray(parsed.staffList)) {
-            setStaffList(parsed.staffList);
+      // ถ้า Firestore ไม่มีรายชื่อ staff (ว่างหรือดึงไม่ได้) → ให้ fallback ไปที่ localStorage cache
+      if (!firestoreStaffLoaded) {
+        const localSettings = localStorage.getItem('swanhill_settings_v1');
+        if (localSettings) {
+          try {
+            const parsed = JSON.parse(localSettings);
+            if (parsed.staffList && Array.isArray(parsed.staffList) && parsed.staffList.length > 0) {
+              setStaffList(parsed.staffList);
+            }
+            if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
+              setAllowedEmails(parsed.allowedEmails);
+            }
+          } catch {
+            // ignore
           }
-          if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
-            setAllowedEmails(parsed.allowedEmails);
-          }
-        } catch {
-          // ignore
         }
       }
     };

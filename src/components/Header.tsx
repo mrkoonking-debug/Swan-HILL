@@ -79,7 +79,12 @@ export const Header: React.FC<HeaderProps> = ({
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
+      // Preserve staff session so user stays logged in after cache clear
+      const savedSession = sessionStorage.getItem('swanhill_staff_session');
       sessionStorage.clear();
+      if (savedSession) {
+        sessionStorage.setItem('swanhill_staff_session', savedSession);
+      }
     } catch (e) {
       console.error('Error clearing cache:', e);
     }

@@ -119,7 +119,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const updatedList = [...currentStaffList, newStaff];
-    setFormData(prev => ({ ...prev, staffList: updatedList }));
+    const updatedFormData = { ...formData, staffList: updatedList };
+    setFormData(updatedFormData);
+    // Auto-save ทันที ไม่ต้องรอกดปุ่มบันทึกหลัก
+    onSaveSettings(updatedFormData);
     setNewStaffName('');
     setNewStaffPhone('');
     setNewStaffPassword('');
@@ -133,13 +136,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return;
     }
     const updatedList = currentStaffList.filter(s => s.id !== id);
-    setFormData(prev => ({ ...prev, staffList: updatedList }));
+    const updatedFormData = { ...formData, staffList: updatedList };
+    setFormData(updatedFormData);
+    // Auto-save ทันที
+    onSaveSettings(updatedFormData);
   };
 
   const handleUpdateStaffPassword = (id: string, newPassword: string) => {
     const clean = newPassword.trim();
     const updatedList = currentStaffList.map(s => s.id === id ? { ...s, pin: clean, password: clean } : s);
-    setFormData(prev => ({ ...prev, staffList: updatedList }));
+    const updatedFormData = { ...formData, staffList: updatedList };
+    setFormData(updatedFormData);
+    // Auto-save ทันที
+    onSaveSettings(updatedFormData);
   };
 
   const handleChange = (field: keyof ResortSettings, value: any) => {
