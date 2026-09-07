@@ -988,6 +988,10 @@ export function App() {
       }
     } catch {}
 
+    // ถ้ายังไม่ได้ระบุ Whitelist ไว้ ให้ผ่านได้เสมอ (เพื่อเปิดให้เจ้าของ/ผู้ดูแลเข้าใช้งานได้สะดวก)
+    if (allowed.length === 0 && staffList.length === 0) return true;
+    if (allowed.length === 0) return true;
+
     if (allowed.some((e: string) => e.toLowerCase().trim() === clean)) return true;
     if (staffList.some((s: any) => s.email?.toLowerCase().trim() === clean)) return true;
     return false;

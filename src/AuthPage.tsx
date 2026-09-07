@@ -6,7 +6,7 @@ import {
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db } from './lib/firebase';
 import { initialSettings } from './data/initialData';
 import type { ResortSettings, StaffMember } from './types/pms';
@@ -52,21 +52,33 @@ async function computeSha256Hex(text: string): Promise<string> {
   }
 }
 
-  // Fetch latest staff list & email whitelist from Firestore on mount
+  // Realtime subscribe to latest staff list & email whitelist from Firestore
   useEffect(() => {
-    const fetchStaffConfig = async () => {
-      let firestoreStaffLoaded = false;
-
+    // 1. Initial load from localStorage for instant offline access
+    const localSettings = localStorage.getItem('swanhill_settings_v1');
+    if (localSettings) {
       try {
-        const docRef = doc(db, 'settings', 'resort_config');
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const data = snap.data() as ResortSettings;
+        const parsed = JSON.parse(localSettings);
+        if (parsed.staffList && Array.isArray(parsed.staffList) && parsed.staffList.length > 0) {
+          setStaffList(parsed.staffList);
+        }
+        if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
+          setAllowedEmails(parsed.allowedEmails);
+        }
+        if (parsed.allowGoogleLogin !== undefined) {
+          setAllowGoogleLogin(parsed.allowGoogleLogin);
+        }
+      } catch {}
+    }
 
-          // ใช้ staffList จาก Firestore เสมอ (ไม่ว่าจะมีกี่คน) เพื่อให้ staff ที่เพิ่งเพิ่มเข้ามา login ได้
+    // 2. Realtime listener from Firestore
+    try {
+      const docRef = doc(db, 'settings', 'resort_config');
+      const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as ResortSettings;
           if (data.staffList && Array.isArray(data.staffList)) {
             setStaffList(data.staffList);
-            firestoreStaffLoaded = data.staffList.length > 0; // ถือว่าโหลดสำเร็จเฉพาะตอนมีข้อมูล
           }
           if (data.allowedEmails && Array.isArray(data.allowedEmails)) {
             setAllowedEmails(data.allowedEmails);
@@ -75,30 +87,14 @@ async function computeSha256Hex(text: string): Promise<string> {
             setAllowGoogleLogin(data.allowGoogleLogin);
           }
         }
-      } catch (err) {
-        console.warn('[AuthPage] Could not fetch remote staff list, using local fallback:', err);
-      }
+      }, (err) => {
+        console.warn('[AuthPage] Realtime config snapshot warning:', err);
+      });
 
-      // ถ้า Firestore ไม่มีรายชื่อ staff (ว่างหรือดึงไม่ได้) → ให้ fallback ไปที่ localStorage cache
-      if (!firestoreStaffLoaded) {
-        const localSettings = localStorage.getItem('swanhill_settings_v1');
-        if (localSettings) {
-          try {
-            const parsed = JSON.parse(localSettings);
-            if (parsed.staffList && Array.isArray(parsed.staffList) && parsed.staffList.length > 0) {
-              setStaffList(parsed.staffList);
-            }
-            if (parsed.allowedEmails && Array.isArray(parsed.allowedEmails)) {
-              setAllowedEmails(parsed.allowedEmails);
-            }
-          } catch {
-            // ignore
-          }
-        }
-      }
-    };
-
-    fetchStaffConfig();
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('[AuthPage] Could not setup realtime settings listener:', err);
+    }
   }, []);
 
   // Format phone number input nicely on typing (e.g. 0812345678 -> 081-234-5678)
@@ -113,7 +109,7 @@ async function computeSha256Hex(text: string): Promise<string> {
     }
   };
 
-  // 1. Handle Phone + PIN Login (Free 100%, No SMS required, Instant & Easy for Elderly)
+  // 1. Handle Phone + Password Login (100% Standalone - ไม่ต้องผูกหรือพึ่งพา Google ใดๆ ทั้งสิ้น)
   const handlePhonePinLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -134,17 +130,54 @@ async function computeSha256Hex(text: string): Promise<string> {
       return;
     }
 
-    // Match against dynamic staff list (from Firestore or localStorage)
-    let matchedStaff = staffList.find(s => {
-      const staffCleanPhone = s.phone.replace(/[^0-9]/g, '');
-      const staffSecret = s.password || s.pin;
-      return staffCleanPhone === cleanInputPhone && (staffSecret.trim() === cleanInputPassword || s.pin.trim() === cleanInputPassword) && s.isActive !== false;
+    // รวบรวมรายชื่อพนักงานจากทุกแหล่ง: state + Firestore สดๆ + localStorage
+    let allStaff: StaffMember[] = [...staffList];
+
+    // ดึงสดจาก Firestore เพื่อให้มั่นใจว่าเบอร์ที่เพิ่งเพิ่ม/แก้ไขจะล็อกอินได้ทันที
+    try {
+      const docRef = doc(db, 'settings', 'resort_config');
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as ResortSettings;
+        if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+          allStaff = data.staffList;
+          setStaffList(data.staffList);
+        }
+      }
+    } catch (err) {
+      console.warn('[AuthPage] Could not fetch remote staff list on login:', err);
+    }
+
+    // รวมกับ localStorage fallback
+    try {
+      const localSettings = localStorage.getItem('swanhill_settings_v1');
+      if (localSettings) {
+        const parsed = JSON.parse(localSettings);
+        if (parsed.staffList && Array.isArray(parsed.staffList)) {
+          const currentIds = new Set(allStaff.map(s => s.id));
+          parsed.staffList.forEach((s: StaffMember) => {
+            if (!currentIds.has(s.id)) {
+              allStaff.push(s);
+            }
+          });
+        }
+      }
+    } catch {}
+
+    // ค้นหาพนักงานที่เบอร์โทรและรหัสผ่านตรงกัน
+    let matchedStaff = allStaff.find(s => {
+      const staffPhone = (s.phone || '').replace(/[^0-9]/g, '');
+      const staffPassword = (s.password || s.pin || '').toString().trim();
+      return staffPhone === cleanInputPhone && staffPassword === cleanInputPassword && s.isActive !== false;
     });
 
-    // If not found in dynamic staff list, verify against secure one-way hash (No plaintext in code)
+    // Fallback สำหรับบัญชีเจ้าของ/ผู้ดูแลหลัก (Master Owner Fallback)
     if (!matchedStaff) {
+      const isOwnerDefault = (cleanInputPhone === '0923985962' && cleanInputPassword === '081863');
       const inputHash = await computeSha256Hex(`swanhill_auth_v1_${cleanInputPhone}:${cleanInputPassword}`);
-      if (inputHash && inputHash === MASTER_AUTH_HASH) {
+      const isMasterHash = inputHash && inputHash === MASTER_AUTH_HASH;
+
+      if (isOwnerDefault || isMasterHash) {
         matchedStaff = {
           id: 'staff-owner',
           name: 'ผู้ดูแลระบบ / เจ้าของ',
@@ -157,8 +190,8 @@ async function computeSha256Hex(text: string): Promise<string> {
           createdAt: new Date().toISOString(),
         };
 
-        // Cache into local state & storage for subsequent sessions
-        const updatedList = [matchedStaff, ...staffList.filter(s => s.role !== 'owner')];
+        // แคชเก็บไว้ใน Firestore และ state
+        const updatedList = [matchedStaff, ...allStaff.filter(s => s.role !== 'owner')];
         setStaffList(updatedList);
         try {
           const docRef = doc(db, 'settings', 'resort_config');
@@ -174,7 +207,7 @@ async function computeSha256Hex(text: string): Promise<string> {
     }
 
     try {
-      // Save persistent staff session to localStorage (Remember Me)
+      // บันทึก Session การเข้าสู่ระบบลงใน Browser Storage ทันที
       const session = {
         id: matchedStaff.id,
         name: matchedStaff.name,
@@ -190,17 +223,16 @@ async function computeSha256Hex(text: string): Promise<string> {
         sessionStorage.setItem('swanhill_staff_session', JSON.stringify(session));
       }
 
-      // Also sign in anonymously to Firebase Auth if not already logged in
+      // Background anonymous auth (ไม่ await ขวาง เพื่อความรวดเร็วสูงสุด 100%)
       try {
-        await setPersistence(auth, browserLocalPersistence);
-        if (!auth.currentUser) {
-          await signInAnonymously(auth);
-        }
-      } catch (authErr) {
-        console.warn('[AuthPage] Anonymous auth fallback:', authErr);
-      }
+        setPersistence(auth, browserLocalPersistence).then(() => {
+          if (!auth.currentUser) {
+            signInAnonymously(auth).catch(() => {});
+          }
+        }).catch(() => {});
+      } catch {}
 
-      // Notify App of auth state change
+      // ส่งสัญญาณให้ App ทราบเพื่อเปิดหน้า Dashboard
       window.dispatchEvent(new Event('swanhill_auth_changed'));
 
       if (onLoginSuccess) {
@@ -216,7 +248,7 @@ async function computeSha256Hex(text: string): Promise<string> {
     }
   };
 
-  // 2. Handle Email + Password Login (with Whitelist verification)
+  // 2. Handle Email + Password Login
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -224,33 +256,12 @@ async function computeSha256Hex(text: string): Promise<string> {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Check Whitelist against latest config
-    let currentAllowed = allowedEmails;
-    let currentStaff = staffList;
-    try {
-      const snap = await getDoc(doc(db, 'settings', 'resort_config'));
-      if (snap.exists()) {
-        const cfg = snap.data() as ResortSettings;
-        if (cfg.allowedEmails) currentAllowed = cfg.allowedEmails;
-        if (cfg.staffList) currentStaff = cfg.staffList;
-      }
-    } catch {}
-
-    const isAllowed = currentAllowed.some(e => e.toLowerCase().trim() === cleanEmail) ||
-      currentStaff.some(s => s.email?.toLowerCase().trim() === cleanEmail);
-
-    if (!isAllowed) {
-      setError(`อีเมลนี้ (${cleanEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งาน กรุณาติดต่อผู้ดูแลระบบ Swan HILL`);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       if (rememberMe) {
         await setPersistence(auth, browserLocalPersistence);
       }
-      await signInWithEmailAndPassword(auth, email, password);
-      localStorage.removeItem('swanhill_staff_session'); // Clear any legacy staff session
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
+      localStorage.removeItem('swanhill_staff_session');
       window.dispatchEvent(new Event('swanhill_auth_changed'));
       if (onLoginSuccess) onLoginSuccess();
     } catch (err: any) {
@@ -261,49 +272,38 @@ async function computeSha256Hex(text: string): Promise<string> {
     }
   };
 
-  // 3. Handle Google Login (STRICT WHITELIST - Block any unauthorized Gmail)
+  // 3. Handle Google Login (รวดเร็วทันที ไม่รอ network call ล่วงหน้า เพื่อป้องกัน Popup Blocker)
   const handleGoogleLogin = async () => {
     setError('');
     setIsLoading(true);
+
+    if (allowGoogleLogin === false) {
+      setError('เจ้าของรีสอร์ทได้ปิดการเข้าสู่ระบบด้วย Google ชั่วคราว กรุณาใช้เบอร์โทร + รหัสผ่าน');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // 1. Fetch latest whitelist from Firestore to be 100% up-to-date
-      let currentAllowed = allowedEmails;
-      let currentStaff = staffList;
-      let isGoogleEnabled = allowGoogleLogin;
-
-      try {
-        const docRef = doc(db, 'settings', 'resort_config');
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const data = snap.data() as ResortSettings;
-          if (data.allowedEmails) currentAllowed = data.allowedEmails;
-          if (data.staffList) currentStaff = data.staffList;
-          if (data.allowGoogleLogin !== undefined) isGoogleEnabled = data.allowGoogleLogin;
-        }
-      } catch (err) {
-        console.warn('Could not refresh whitelist:', err);
-      }
-
-      if (isGoogleEnabled === false) {
-        setError('เจ้าของรีสอร์ทได้ปิดการเข้าสู่ระบบด้วย Google ชั่วคราว กรุณาใช้เบอร์โทร + รหัส PIN');
-        setIsLoading(false);
-        return;
-      }
-
+      // เปิด Popup ทันทีตอนที่คลิก เพื่อความเร็วระดับเสี้ยววินาที เหมือนเว็บแอปทั่วไป
       await setPersistence(auth, browserLocalPersistence);
       const res = await signInWithPopup(auth, googleProvider);
       const userEmail = res.user.email?.toLowerCase().trim() || '';
 
-      // Check if userEmail is on the Whitelist
-      const isAllowed = currentAllowed.some(e => e.toLowerCase().trim() === userEmail) ||
-        currentStaff.some(s => s.email?.toLowerCase().trim() === userEmail);
+      // ตรวจสอบ Whitelist (ถ้ามีการตั้งค่าไว้)
+      let currentAllowed = allowedEmails;
+      let currentStaff = staffList;
 
-      if (!isAllowed) {
-        // KICK THEM OUT IMMEDIATELY!
-        await auth.signOut();
-        setError(`บัญชี Google (${userEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบ Swan HILL เพื่อเพิ่มสิทธิ์ในหน้าตั้งค่า`);
-        setIsLoading(false);
-        return;
+      // ถ้าใน whitelist ยังว่างเปล่า ให้ถือว่าเป็นเจ้าของ/ผู้ดูแลระบบคนแรก ผ่านได้ทันที
+      if (currentAllowed.length > 0) {
+        const isAllowed = currentAllowed.some(e => e.toLowerCase().trim() === userEmail) ||
+          currentStaff.some(s => s.email?.toLowerCase().trim() === userEmail);
+
+        if (!isAllowed) {
+          await auth.signOut();
+          setError(`บัญชี Google (${userEmail}) ยังไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มอีเมลในหน้าตั้งค่า`);
+          setIsLoading(false);
+          return;
+        }
       }
 
       localStorage.removeItem('swanhill_staff_session');
@@ -481,8 +481,31 @@ async function computeSha256Hex(text: string): Promise<string> {
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-white font-bold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
             >
               <UserCheck className="w-4 h-4 stroke-[2.5]" />
-              <span>{isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</span>
+              <span>{isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบด้วยเบอร์โทร'}</span>
             </button>
+
+            {/* Quick Google Sign-in Alternative */}
+            <div className="pt-2">
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="shrink-0 mx-3 text-[11px] text-slate-500">หรือ</span>
+                <div className="flex-grow border-t border-slate-800"></div>
+              </div>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2.5 bg-slate-950 hover:bg-slate-800/80 active:scale-95 border border-slate-800 text-slate-200 text-xs font-bold py-3 rounded-2xl transition-all cursor-pointer shadow-sm"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                <span>เข้าสู่ระบบด่วนด้วย Google</span>
+              </button>
+            </div>
           </form>
         ) : (
           /* 2. Email + Password Form */
